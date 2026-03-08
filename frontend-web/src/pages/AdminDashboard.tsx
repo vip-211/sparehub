@@ -46,6 +46,9 @@ const AdminDashboard = () => {
     address: ''
   });
 
+  const [productSelectionMode, setProductSelectionMode] = useState(false);
+  const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
+
   useEffect(() => {
     fetchUsers();
     fetchOrders();
@@ -481,9 +484,71 @@ const AdminDashboard = () => {
 
       {activeTab === 'products' && (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto">
+          <div className="flex items-center justify-between p-4 border-b border-gray-100">
+            {!productSelectionMode ? (
+              <button
+                onClick={() => setProductSelectionMode(true)}
+                className="px-3 py-1.5 bg-gray-50 text-primary-700 rounded-lg text-xs font-bold hover:bg-primary-50 transition"
+              >
+                Select Multiple
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setProductSelectionMode(false);
+                    setSelectedProductIds([]);
+                  }}
+                  className="px-3 py-1.5 bg-gray-50 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-100 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => setSelectedProductIds(products.map((p: any) => p.id))}
+                  className="px-3 py-1.5 bg-gray-50 text-primary-700 rounded-lg text-xs font-bold hover:bg-primary-50 transition"
+                >
+                  Select All
+                </button>
+                <button
+                  onClick={async () => {
+                    if (selectedProductIds.length === 0) return;
+                    if (!confirm(`Delete ${selectedProductIds.length} selected products?`)) return;
+                    try {
+                      await api.post('/products/delete-bulk', selectedProductIds);
+                      setSelectedProductIds([]);
+                      setProductSelectionMode(false);
+                      fetchProducts();
+                    } catch (err) {
+                      console.error(err);
+                      alert('Bulk delete failed');
+                    }
+                  }}
+                  className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 transition"
+                >
+                  Delete Selected
+                </button>
+              </div>
+            )}
+            <div />
+          </div>
           <table className="min-w-full divide-y divide-gray-100">
             <thead className="bg-gray-50/50">
               <tr>
+                {productSelectionMode && (
+                  <th className="px-4 py-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedProductIds.length === products.length && products.length > 0}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedProductIds(products.map((p: any) => p.id));
+                        } else {
+                          setSelectedProductIds([]);
+                        }
+                      }}
+                    />
+                  </th>
+                )}
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Product Name</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Part Number</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Pricing</th>
@@ -492,8 +557,23 @@ const AdminDashboard = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
-              {products.map((product) => (
+              {products.map((product: any) => (
                 <tr key={product.id} className="hover:bg-gray-50/50 transition">
+                  {productSelectionMode && (
+                    <td className="px-4 py-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedProductIds.includes(product.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedProductIds((prev) => [...new Set([...prev, product.id])]);
+                          } else {
+                            setSelectedProductIds((prev) => prev.filter((id) => id !== product.id));
+                          }
+                        }}
+                      />
+                    </td>
+                  )}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
                       {product.imagePath ? (
