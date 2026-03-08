@@ -54,6 +54,33 @@ public class AdminController {
         return ResponseEntity.ok(orderService.getSalesReport(type));
     }
 
+    @DeleteMapping("/users/{userId}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    public ResponseEntity<?> deleteUser(@PathVariable Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (user.getRole() != null && "ROLE_SUPER_MANAGER".equals(user.getRole().getName().name())) {
+            return ResponseEntity.status(403).body("Cannot delete SUPER_MANAGER");
+        }
+        userRepository.delete(user);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/users/delete-bulk")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    public ResponseEntity<?> deleteUsersBulk(@RequestBody List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return ResponseEntity.ok().build();
+        }
+        List<User> toDelete = userRepository.findAllById(ids).stream()
+                .filter(u -> !(u.getRole() != null && "ROLE_SUPER_MANAGER".equals(u.getRole().getName().name())))
+                .collect(Collectors.toList());
+        if (!toDelete.isEmpty()) {
+            userRepository.deleteAllInBatch(toDelete);
+        }
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping("/notifications")
     public ResponseEntity<?> sendNotification(@RequestBody Notification notification) {
         Notification saved = notificationRepository.save(notification);

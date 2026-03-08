@@ -113,6 +113,14 @@ public class ProductService {
         productRepository.deleteById(id);
     }
 
+    @Transactional
+    public void deleteProductsBulk(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        productRepository.deleteAllByIdInBatch(ids);
+    }
+
     private ProductDto convertToDto(Product product) {
         ProductDto dto = new ProductDto();
         dto.setId(product.getId());

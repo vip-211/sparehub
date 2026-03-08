@@ -1,0 +1,8 @@
+com\spareparts\inventory\entity\Notification.class
+com\spareparts\inventory\repository\NotificationRepository.class
+com\spareparts\inventory\config\DatabaseConfig.class
+com\spareparts\inventory\controller\NotificationController.class
+com\spareparts\inventory\service\AIService.class
+com\spareparts\inventory\controller\FileController.class
+com\spareparts\inventory\controller\AIController.class
+com\spareparts\inventory\dto\AdminOrderRequest.class

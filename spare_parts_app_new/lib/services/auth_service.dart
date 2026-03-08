@@ -627,6 +627,31 @@ class AuthService {
     });
   }
 
+  Future<bool> deleteUser(int userId) async {
+    if (Constants.useRemote) {
+      await _remote.delete('/admin/users/$userId');
+      return true;
+    }
+    final db = await _dbService.database;
+    final count =
+        await db.delete('users', where: 'id = ?', whereArgs: [userId]);
+    return count > 0;
+  }
+
+  Future<void> deleteUsersBulk(List<int> ids) async {
+    if (ids.isEmpty) return;
+    if (Constants.useRemote) {
+      await _remote.postJson('/admin/users/delete-bulk', ids);
+      return;
+    }
+    final db = await _dbService.database;
+    final batch = db.batch();
+    for (final id in ids) {
+      batch.delete('users', where: 'id = ?', whereArgs: [id]);
+    }
+    await batch.commit(noResult: true);
+  }
+
   // Future<void> logout() async {
   //   final prefs = await _prefs();
   //   await prefs.remove("user");

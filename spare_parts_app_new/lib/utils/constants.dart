@@ -25,6 +25,9 @@ class Constants {
     } else if (!segments.contains('ws')) {
       segments.insert(0, 'ws');
     }
+    if (segments.isEmpty || segments.last != 'websocket') {
+      segments.add('websocket');
+    }
     final wsUri = uri.replace(
       scheme: scheme,
       pathSegments: segments,

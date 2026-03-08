@@ -64,4 +64,11 @@ public class ProductController {
         productService.deleteProduct(id);
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/delete-bulk")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    public ResponseEntity<?> deleteProductsBulk(@RequestBody List<Long> ids) {
+        productService.deleteProductsBulk(ids);
+        return ResponseEntity.ok().build();
+    }
 }

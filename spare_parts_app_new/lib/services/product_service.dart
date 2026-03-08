@@ -555,5 +555,25 @@ class ProductService {
     }
   }
 
+  Future<bool> deleteProductsBulk(List<int> ids) async {
+    if (ids.isEmpty) return true;
+    try {
+      if (Constants.useRemote) {
+        await _remote.postJson('/products/delete-bulk', ids);
+        return true;
+      }
+      final db = await _dbService.database;
+      final batch = db.batch();
+      for (final id in ids) {
+        batch.delete('products', where: 'id = ?', whereArgs: [id]);
+      }
+      await batch.commit(noResult: true);
+      return true;
+    } catch (e) {
+      debugPrint('Bulk delete products error: $e');
+      return false;
+    }
+  }
+
   void clearCache() {}
 }

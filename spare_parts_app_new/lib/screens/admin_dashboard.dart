@@ -12,6 +12,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:path_provider/path_provider.dart';
+import 'dart:async';
 import 'dart:io';
 import '../providers/auth_provider.dart';
 import '../services/order_service.dart';
@@ -893,14 +894,18 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
   final OCRService _ocrService = OCRService();
   final stt.SpeechToText _speech = stt.SpeechToText();
   final _searchController = TextEditingController();
+  Timer? _debounce;
   List<Product> _products = [];
   bool _isLoading = true;
   bool _isListening = false;
   bool _showExtraIcons = false;
+  bool _selectionMode = false;
+  final Set<int> _selectedIds = {};
   @override
   void dispose() {
     _ocrService.dispose();
     _searchController.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
@@ -944,7 +949,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
 
   Future<void> _fetchProducts({String? query}) async {
     setState(() => _isLoading = true);
-    final products = query != null && query.isNotEmpty
+    final products = (query != null && query.isNotEmpty)
         ? await _productService.searchProducts(query)
         : await _productService.getAllProducts();
     if (mounted) {
@@ -953,6 +958,17 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  void _onSearchChanged(String val) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (val.isEmpty) {
+        _fetchProducts();
+      } else {
+        _fetchProducts(query: val);
+      }
+    });
   }
 
   void _scanQRCode() async {
@@ -1092,6 +1108,39 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
     final success = await _productService.deleteProduct(id);
     if (success) {
       _fetchProducts();
+    }
+  }
+
+  Future<void> _deleteSelected() async {
+    final ids = _selectedIds.toList();
+    if (ids.isEmpty) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Selected'),
+        content: Text('Delete ${ids.length} selected products?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final ok = await _productService.deleteProductsBulk(ids);
+    if (ok) {
+      setState(() {
+        _selectionMode = false;
+        _selectedIds.clear();
+      });
+      _fetchProducts();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Bulk delete failed')),
+      );
     }
   }
 
@@ -1437,11 +1486,20 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                     decoration: InputDecoration(
                       hintText: 'Search product or part #',
                       prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                _onSearchChanged('');
+                              },
+                            )
+                          : null,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    onChanged: (val) => _fetchProducts(query: val),
+                    onChanged: _onSearchChanged,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -1450,6 +1508,45 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                   backgroundColor: Colors.grey.shade200,
                 ),
                 const SizedBox(width: 10),
+                if (_selectionMode) ...[
+                  IconButton(
+                    tooltip: 'Select All',
+                    onPressed: () {
+                      setState(() {
+                        _selectedIds
+                          ..clear()
+                          ..addAll(_products.map((e) => e.id));
+                      });
+                    },
+                    icon: const Icon(Icons.select_all, color: Colors.redAccent),
+                  ),
+                  IconButton(
+                    tooltip: 'Delete Selected',
+                    onPressed: _selectedIds.isEmpty ? null : _deleteSelected,
+                    icon: const Icon(Icons.delete_forever, color: Colors.red),
+                  ),
+                  IconButton(
+                    tooltip: 'Exit Selection',
+                    onPressed: () {
+                      setState(() {
+                        _selectionMode = false;
+                        _selectedIds.clear();
+                      });
+                    },
+                    icon: const Icon(Icons.close, color: Colors.grey),
+                  ),
+                ] else ...[
+                  IconButton(
+                    tooltip: 'Select Multiple',
+                    onPressed: () {
+                      setState(() {
+                        _selectionMode = true;
+                      });
+                    },
+                    icon: const Icon(Icons.check_box, color: Colors.redAccent),
+                  ),
+                ],
+                const SizedBox(width: 4),
                 IconButton(
                   onPressed: () =>
                       setState(() => _showExtraIcons = !_showExtraIcons),
@@ -1472,7 +1569,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                           await _ocrService.pickAndExtractPartNumber();
                       if (partNumber != null) {
                         _searchController.text = partNumber;
-                        _fetchProducts(query: partNumber);
+                        _onSearchChanged(partNumber);
                       }
                     },
                     icon: const Icon(Icons.camera_alt),
@@ -1497,22 +1594,40 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                     itemBuilder: (ctx, i) {
                       final p = _products[i];
                       return ListTile(
-                        leading: Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            borderRadius: BorderRadius.circular(4),
-                            image: p.imagePath != null
-                                ? DecorationImage(
-                                    image: FileImage(File(p.imagePath!)),
-                                    fit: BoxFit.cover,
-                                  )
-                                : null,
-                          ),
-                          child: p.imagePath == null
-                              ? const Icon(Icons.image, color: Colors.grey)
-                              : null,
+                        leading: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (_selectionMode)
+                              Checkbox(
+                                value: _selectedIds.contains(p.id),
+                                onChanged: (val) {
+                                  setState(() {
+                                    if (val == true) {
+                                      _selectedIds.add(p.id);
+                                    } else {
+                                      _selectedIds.remove(p.id);
+                                    }
+                                  });
+                                },
+                              ),
+                            Container(
+                              width: 50,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[200],
+                                borderRadius: BorderRadius.circular(4),
+                                image: p.imagePath != null
+                                    ? DecorationImage(
+                                        image: FileImage(File(p.imagePath!)),
+                                        fit: BoxFit.cover,
+                                      )
+                                    : null,
+                              ),
+                              child: p.imagePath == null
+                                  ? const Icon(Icons.image, color: Colors.grey)
+                                  : null,
+                            ),
+                          ],
                         ),
                         title: Text(p.name),
                         subtitle: Text(
@@ -1543,6 +1658,12 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                             ),
                           ],
                         ),
+                        onLongPress: () {
+                          setState(() {
+                            _selectionMode = true;
+                            _selectedIds.add(p.id);
+                          });
+                        },
                       );
                     },
                   ),
@@ -2899,6 +3020,10 @@ class _AllUsersScreenState extends State<AllUsersScreen> {
                           if (val == 'VIEW_SHOP') {
                             _viewShopImage(user['shopImagePath'] as String?);
                           }
+                          if (val == 'DELETE') {
+                            _confirmAndDeleteUser(
+                                userId, user['role'] as String);
+                          }
                         },
                         itemBuilder: (ctx) => [
                           if (isPending &&
@@ -2931,6 +3056,11 @@ class _AllUsersScreenState extends State<AllUsersScreen> {
                               value: 'VIEW_LOCATION',
                               child: Text('View Location'),
                             ),
+                          if (user['role'] != Constants.roleSuperManager)
+                            const PopupMenuItem(
+                              value: 'DELETE',
+                              child: Text('Delete User'),
+                            ),
                         ],
                       ),
                     ),
@@ -2944,6 +3074,47 @@ class _AllUsersScreenState extends State<AllUsersScreen> {
         child: const Icon(Icons.person_add),
       ),
     );
+  }
+
+  Future<void> _confirmAndDeleteUser(int userId, String role) async {
+    if (role == Constants.roleSuperManager) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cannot delete Super Manager.')),
+      );
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete User'),
+        content: const Text(
+            'Are you sure you want to delete this user? This action cannot be undone.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final ok = await _authService.deleteUser(userId);
+    if (ok) {
+      _fetchUsers();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User deleted')),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to delete user')),
+        );
+      }
+    }
   }
 
   void _viewShopImage(String? path) {
