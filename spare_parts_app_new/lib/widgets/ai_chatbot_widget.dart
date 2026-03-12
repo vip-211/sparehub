@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import '../services/remote_client.dart';
 import '../services/product_service.dart';
 import '../models/product.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:provider/provider.dart';
+import '../providers/cart_provider.dart';
 
 class AIChatbotWidget extends StatefulWidget {
   const AIChatbotWidget({super.key});
@@ -24,6 +28,8 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
   bool _isLoading = false;
   final RemoteClient _remoteClient = RemoteClient();
   final ProductService _productService = ProductService();
+  final ImagePicker _picker = ImagePicker();
+  List<Product> _matches = [];
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -87,6 +93,77 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
           });
         });
       }
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+      _scrollToBottom();
+    }
+  }
+
+  Future<void> _handlePhotoSearch() async {
+    try {
+      final XFile? img = await _picker.pickImage(source: ImageSource.gallery);
+      if (img == null) return;
+      setState(() {
+        _isLoading = true;
+        _messages.add({'text': 'Analyzing image...', 'isBot': true});
+      });
+      final bytes = await img.readAsBytes();
+      final res = await _remoteClient.postMultipart(
+        '/ai/search/photo',
+        headers: {'X-AI-Provider': 'gemini'},
+        fileField: 'image',
+        fileName: img.name,
+        bytes: bytes,
+      );
+      setState(() {
+        _messages
+            .add({'text': res['response'] ?? 'No response', 'isBot': true});
+      final products = await _productService.searchProducts((res['response'] ?? '') as String);
+      setState(() {
+        _matches = products;
+      });
+    } catch (e) {
+      setState(() {
+        _messages.add({'text': 'Failed to analyze image.', 'isBot': true});
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+      _scrollToBottom();
+    }
+  }
+
+  Future<void> _handleVoiceSearch() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(type: FileType.audio);
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.first;
+      if (file.bytes == null) return;
+      setState(() {
+        _isLoading = true;
+        _messages.add({'text': 'Processing audio query...', 'isBot': true});
+      });
+      final res = await _remoteClient.postMultipart(
+        '/ai/search/voice',
+        headers: {'X-AI-Provider': 'gemini'},
+        fileField: 'audio',
+        fileName: file.name,
+        bytes: file.bytes!,
+      );
+      setState(() {
+        _messages
+            .add({'text': res['response'] ?? 'No response', 'isBot': true});
+      final products = await _productService.searchProducts((res['response'] ?? '') as String);
+      setState(() {
+        _matches = products;
+      });
+    } catch (e) {
+      setState(() {
+        _messages.add({'text': 'Failed to process audio.', 'isBot': true});
+      });
     } finally {
       setState(() {
         _isLoading = false;
@@ -235,6 +312,67 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
                         ),
                       ),
                     ),
+                    if (_matches.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        color: const Color(0xFFF8FAFC),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Matched Products',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 8),
+                            ..._matches.take(6).map((p) {
+                              final displayPrice = p.sellingPrice;
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 40,
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF1F5F9),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Icon(Icons.build, color: Colors.grey),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(p.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                          Text('Part: ${p.partNumber ?? 'N/A'}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                        ],
+                                      ),
+                                    ),
+                                    Text('₹${displayPrice.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                    const SizedBox(width: 8),
+                                    Builder(builder: (ctx) {
+                                      return TextButton(
+                                        onPressed: () {
+                                          final cart = Provider.of<CartProvider>(ctx, listen: false);
+                                          cart.addItem(p, displayPrice);
+                                        },
+                                        child: const Text('ADD'),
+                                      );
+                                    }),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
                     if (_isLoading)
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -277,6 +415,18 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
                       ),
                       child: Row(
                         children: [
+                          IconButton(
+                            icon: const Icon(Icons.image,
+                                color: Color(0xFF2563EB)),
+                            onPressed: _handlePhotoSearch,
+                            tooltip: 'Search by photo',
+                          ),
+                          IconButton(
+                            icon:
+                                const Icon(Icons.mic, color: Color(0xFF2563EB)),
+                            onPressed: _handleVoiceSearch,
+                            tooltip: 'Search by voice (upload audio)',
+                          ),
                           Expanded(
                             child: TextField(
                               controller: _controller,

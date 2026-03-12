@@ -5,6 +5,7 @@ import { useLanguage } from '../context/LanguageContext';
 import AuthService from '../services/auth.service';
 import { ROLE_MECHANIC, ROLE_RETAILER, ROLE_WHOLESALER } from '../services/constants';
 import { Search, ShoppingCart, Package, Info, CheckCircle2 } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 
 const Shop: React.FC = () => {
   const { t, tp } = useLanguage();
@@ -14,6 +15,7 @@ const Shop: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const { addItem } = useCart();
   const currentUser = AuthService.getCurrentUser();
+  const location = useLocation();
 
   const getImageUrl = (path: string) => {
     if (!path) return '';
@@ -55,6 +57,12 @@ const Shop: React.FC = () => {
     };
     run();
   }, [currentUser, t]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const q = params.get('q') || '';
+    if (q) setSearchTerm(q);
+  }, [location.search]);
 
   const getPriceForRole = (p: any) => {
     if (currentUser?.roles?.includes(ROLE_MECHANIC)) {

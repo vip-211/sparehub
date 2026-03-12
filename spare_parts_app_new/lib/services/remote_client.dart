@@ -38,6 +38,32 @@ class RemoteClient {
     throw 'HTTP ${res.statusCode}: ${res.body}';
   }
 
+  Future<dynamic> postMultipart(
+    String path, {
+    Map<String, String>? fields,
+    Map<String, String>? headers,
+    required String fileField,
+    required String fileName,
+    required List<int> bytes,
+  }) async {
+    final authHeaders = await _getHeaders(headers);
+    authHeaders.remove('Content-Type');
+    final uri = Uri.parse('$baseUrl$path');
+    final req = http.MultipartRequest('POST', uri);
+    req.headers.addAll(authHeaders);
+    if (fields != null) {
+      req.fields.addAll(fields);
+    }
+    req.files.add(http.MultipartFile.fromBytes(fileField, bytes, filename: fileName));
+    final streamed = await req.send();
+    final res = await http.Response.fromStream(streamed);
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      if (res.body.isEmpty) return null;
+      return jsonDecode(res.body);
+    }
+    throw 'HTTP ${res.statusCode}: ${res.body}';
+  }
+
   Future<dynamic> getJson(
     String path, {
     Map<String, String>? headers,
