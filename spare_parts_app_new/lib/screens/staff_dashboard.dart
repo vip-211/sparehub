@@ -8,6 +8,7 @@ import '../services/database_service.dart';
 import '../models/order.dart';
 import 'profile_screen.dart';
 import 'notification_screen.dart';
+import '../widgets/notification_badge.dart';
 
 class StaffDashboard extends StatefulWidget {
   const StaffDashboard({super.key});
@@ -29,21 +30,21 @@ class _StaffDashboardState extends State<StaffDashboard> {
     final auth = Provider.of<AuthProvider>(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Staff Dashboard', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Staff Dashboard',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.blueGrey,
         foregroundColor: Colors.white,
         actions: [
+          const NotificationBadge(),
           IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationScreen())),
-          ),
-          IconButton(icon: const Icon(Icons.logout), onPressed: () => auth.logout()),
+              icon: const Icon(Icons.logout), onPressed: () => auth.logout()),
         ],
       ),
       body: _widgetOptions[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.delivery_dining), label: 'Deliveries'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.delivery_dining), label: 'Deliveries'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
         currentIndex: _selectedIndex,
@@ -87,23 +88,27 @@ class _StaffOrdersScreenState extends State<StaffOrdersScreen> {
     if (updated != null) {
       _fetchOrders();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Order marked as $status')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Order marked as $status')));
       }
     }
   }
 
   Future<void> _openMap(double lat, double lng) async {
-    final Uri url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+    final Uri url =
+        Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open the map.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not open the map.')));
       }
     }
   }
 
   void _viewShopImage(int customerId) async {
     final db = await DatabaseService().database;
-    final List<Map<String, dynamic>> maps = await db.query('users', where: 'id = ?', whereArgs: [customerId]);
+    final List<Map<String, dynamic>> maps =
+        await db.query('users', where: 'id = ?', whereArgs: [customerId]);
     if (maps.isNotEmpty) {
       final String? path = maps.first['shopImagePath'] as String?;
       if (path != null && mounted) {
@@ -115,16 +120,20 @@ class _StaffOrdersScreenState extends State<StaffOrdersScreen> {
               children: [
                 const Padding(
                   padding: EdgeInsets.all(8.0),
-                  child: Text('Customer Shop Image', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text('Customer Shop Image',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
                 Image.file(File(path)),
-                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Close')),
               ],
             ),
           ),
         );
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No shop image uploaded by customer.')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('No shop image uploaded by customer.')));
       }
     }
   }
@@ -132,9 +141,12 @@ class _StaffOrdersScreenState extends State<StaffOrdersScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
-    
-    final activeOrders = _orders.where((o) => o.status == 'APPROVED' || o.status == 'IN_TRANSIT').toList();
-    if (activeOrders.isEmpty) return const Center(child: Text('No active deliveries.'));
+
+    final activeOrders = _orders
+        .where((o) => o.status == 'APPROVED' || o.status == 'IN_TRANSIT')
+        .toList();
+    if (activeOrders.isEmpty)
+      return const Center(child: Text('No active deliveries.'));
 
     return RefreshIndicator(
       onRefresh: _fetchOrders,
@@ -149,9 +161,9 @@ class _StaffOrdersScreenState extends State<StaffOrdersScreen> {
               subtitle: Text('To: ${order.customerName}'),
               children: [
                 ...order.items.map((item) => ListTile(
-                  title: Text(item.productName),
-                  subtitle: Text('Qty: ${item.quantity}'),
-                )),
+                      title: Text(item.productName),
+                      subtitle: Text('Qty: ${item.quantity}'),
+                    )),
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Row(
@@ -159,27 +171,36 @@ class _StaffOrdersScreenState extends State<StaffOrdersScreen> {
                     children: [
                       if (order.latitude != null && order.longitude != null)
                         ElevatedButton.icon(
-                          onPressed: () => _openMap(order.latitude!, order.longitude!),
+                          onPressed: () =>
+                              _openMap(order.latitude!, order.longitude!),
                           icon: const Icon(Icons.map),
                           label: const Text('Navigate'),
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white),
                         ),
                       ElevatedButton.icon(
                         onPressed: () => _viewShopImage(order.customerId),
                         icon: const Icon(Icons.storefront),
                         label: const Text('Shop Image'),
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey, foregroundColor: Colors.white),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blueGrey,
+                            foregroundColor: Colors.white),
                       ),
                       if (order.status == 'APPROVED')
                         ElevatedButton(
-                          onPressed: () => _updateStatus(order.id, 'IN_TRANSIT'),
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                          onPressed: () =>
+                              _updateStatus(order.id, 'IN_TRANSIT'),
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange),
                           child: const Text('Mark In Transit'),
                         ),
                       if (order.status == 'IN_TRANSIT')
                         ElevatedButton(
                           onPressed: () => _updateStatus(order.id, 'DELIVERED'),
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white),
                           child: const Text('Mark Delivered'),
                         ),
                     ],

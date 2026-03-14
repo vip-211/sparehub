@@ -80,6 +80,9 @@ dependencies:
   # Date formatting
   intl: ^0.20.2
 
+  # Notifications
+  flutter_local_notifications: ^17.2.3
+
   # Password hashing
   bcrypt: ^1.1.3
 

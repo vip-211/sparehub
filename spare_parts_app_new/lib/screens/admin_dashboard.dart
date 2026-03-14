@@ -36,6 +36,7 @@ import '../widgets/ai_chatbot_widget.dart';
 import 'admin_settings_screen.dart';
 import '../services/settings_service.dart';
 import '../widgets/cart_badge.dart';
+import '../widgets/notification_badge.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -62,76 +63,156 @@ class _AdminDashboardState extends State<AdminDashboard> {
   void _sendNotification() {
     final titleController = TextEditingController();
     final messageController = TextEditingController();
+    final imageUrlController = TextEditingController();
     String targetRole = 'ALL';
+    bool isUploading = false;
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Send Notification'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleController,
-              decoration: const InputDecoration(labelText: 'Title'),
-            ),
-            TextField(
-              controller: messageController,
-              decoration: const InputDecoration(labelText: 'Message'),
-            ),
-            const SizedBox(height: 10),
-            DropdownButtonFormField<String>(
-              value: targetRole,
-              items: [
-                const DropdownMenuItem(value: 'ALL', child: Text('All Roles')),
-                DropdownMenuItem(
-                  value: Constants.roleMechanic,
-                  child: const Text('Mechanics'),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Send Notification'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(labelText: 'Title'),
                 ),
-                DropdownMenuItem(
-                  value: Constants.roleRetailer,
-                  child: const Text('Retailers'),
+                TextField(
+                  controller: messageController,
+                  decoration: const InputDecoration(labelText: 'Message'),
+                  maxLines: 2,
                 ),
-                DropdownMenuItem(
-                  value: Constants.roleWholesaler,
-                  child: const Text('Wholesalers'),
+                TextField(
+                  controller: imageUrlController,
+                  decoration: const InputDecoration(
+                    labelText: 'Image URL (Optional)',
+                    hintText: 'https://example.com/image.jpg',
+                  ),
                 ),
-                DropdownMenuItem(
-                  value: Constants.roleStaff,
-                  child: const Text('Staff'),
+                const SizedBox(height: 10),
+                ElevatedButton.icon(
+                  onPressed: isUploading
+                      ? null
+                      : () async {
+                          final picker = ImagePicker();
+                          final XFile? image = await picker.pickImage(
+                              source: ImageSource.gallery);
+                          if (image != null) {
+                            setDialogState(() => isUploading = true);
+                            try {
+                              final url = await ProductService()
+                                  .uploadProductImage(File(image.path));
+                              if (url != null) {
+                                setDialogState(() {
+                                  imageUrlController.text =
+                                      '${Constants.serverUrl}$url';
+                                  isUploading = false;
+                                });
+                              }
+                            } catch (e) {
+                              setDialogState(() => isUploading = false);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Upload failed: $e')),
+                              );
+                            }
+                          }
+                        },
+                  icon: isUploading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.image),
+                  label: Text(isUploading ? 'Uploading...' : 'Upload Image'),
                 ),
-                DropdownMenuItem(
-                  value: Constants.roleSuperManager,
-                  child: const Text('Super Managers'),
+                if (imageUrlController.text.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        imageUrlController.text,
+                        height: 100,
+                        width: double.maxFinite,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.broken_image, size: 50),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: targetRole,
+                  items: [
+                    const DropdownMenuItem(
+                        value: 'ALL', child: Text('All Roles')),
+                    DropdownMenuItem(
+                      value: Constants.roleMechanic,
+                      child: const Text('Mechanics'),
+                    ),
+                    DropdownMenuItem(
+                      value: Constants.roleRetailer,
+                      child: const Text('Retailers'),
+                    ),
+                    DropdownMenuItem(
+                      value: Constants.roleWholesaler,
+                      child: const Text('Wholesalers'),
+                    ),
+                    DropdownMenuItem(
+                      value: Constants.roleStaff,
+                      child: const Text('Staff'),
+                    ),
+                    DropdownMenuItem(
+                      value: Constants.roleSuperManager,
+                      child: const Text('Super Managers'),
+                    ),
+                  ],
+                  onChanged: (val) => targetRole = val!,
                 ),
               ],
-              onChanged: (val) => targetRole = val!,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isUploading
+                  ? null
+                  : () async {
+                      if (titleController.text.isEmpty ||
+                          messageController.text.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text('Title and message are required')),
+                        );
+                        return;
+                      }
+                      await NotificationService().sendNotification(
+                        titleController.text,
+                        messageController.text,
+                        targetRole,
+                        imageUrl: imageUrlController.text.isNotEmpty
+                            ? imageUrlController.text
+                            : null,
+                      );
+                      if (mounted) {
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Notification sent successfully!'),
+                          ),
+                        );
+                      }
+                    },
+              child: const Text('Send'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await NotificationService().sendNotification(
-                titleController.text,
-                messageController.text,
-                targetRole,
-              );
-              if (mounted) {
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Notification sent successfully!'),
-                  ),
-                );
-              }
-            },
-            child: const Text('Send'),
-          ),
-        ],
       ),
     );
   }
@@ -148,6 +229,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final auth = Provider.of<AuthProvider>(context);
     final isSuperManager =
         auth.user?.roles.contains(Constants.roleSuperManager) ?? false;
+    final isAdmin = auth.user?.roles.contains(Constants.roleAdmin) ?? false;
+    final hasAdminPrivileges = isSuperManager || isAdmin;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -159,6 +243,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         foregroundColor: Colors.white,
         actions: [
           const CartBadge(),
+          const NotificationBadge(),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
@@ -214,14 +299,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   Navigator.pop(context);
                 },
               ),
-              ListTile(
-                leading: const Icon(Icons.category),
-                title: const Text('Categories'),
-                onTap: () {
-                  setState(() => _selectedIndex = 3);
-                  Navigator.pop(context);
-                },
-              ),
+              if (hasAdminPrivileges)
+                ListTile(
+                  leading: const Icon(Icons.category),
+                  title: const Text('Categories'),
+                  onTap: () {
+                    setState(() => _selectedIndex = 3);
+                    Navigator.pop(context);
+                  },
+                ),
               ListTile(
                 leading: const Icon(Icons.bar_chart),
                 title: const Text('Reports'),
@@ -3899,17 +3985,26 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen> {
   Future<void> _fetchCategories() async {
     setState(() => _isLoading = true);
     try {
-      final res = await _remote.getList('/categories');
+      final res = await _remote.getList('/admin/categories');
       setState(() {
         _categories = res;
         _isLoading = false;
       });
     } catch (e) {
-      setState(() => _isLoading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error fetching categories: $e')),
-        );
+      // Fallback if /admin/categories is not the correct path
+      try {
+        final res = await _remote.getList('/categories');
+        setState(() {
+          _categories = res;
+          _isLoading = false;
+        });
+      } catch (e2) {
+        setState(() => _isLoading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error fetching categories: $e2')),
+          );
+        }
       }
     }
   }
@@ -3933,11 +4028,11 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen> {
               if (nameController.text.isEmpty) return;
               try {
                 if (category == null) {
-                  await _remote.postJson('/categories', {
+                  await _remote.postJson('/admin/categories', {
                     'name': nameController.text,
                   });
                 } else {
-                  await _remote.putJson('/categories/${category['id']}', {
+                  await _remote.putJson('/admin/categories/${category['id']}', {
                     'id': category['id'],
                     'name': nameController.text,
                   });
@@ -3945,10 +4040,26 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen> {
                 Navigator.pop(ctx);
                 _fetchCategories();
               } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e')),
-                  );
+                // Try fallback paths
+                try {
+                  if (category == null) {
+                    await _remote.postJson('/categories', {
+                      'name': nameController.text,
+                    });
+                  } else {
+                    await _remote.putJson('/categories/${category['id']}', {
+                      'id': category['id'],
+                      'name': nameController.text,
+                    });
+                  }
+                  Navigator.pop(ctx);
+                  _fetchCategories();
+                } catch (e2) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error: $e2')),
+                    );
+                  }
                 }
               }
             },
@@ -3979,13 +4090,18 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen> {
     if (confirmed != true) return;
 
     try {
-      await _remote.delete('/categories/$id');
+      await _remote.delete('/admin/categories/$id');
       _fetchCategories();
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error deleting category: $e')),
-        );
+      try {
+        await _remote.delete('/categories/$id');
+        _fetchCategories();
+      } catch (e2) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error deleting category: $e2')),
+          );
+        }
       }
     }
   }

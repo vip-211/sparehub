@@ -18,8 +18,9 @@ class NotificationService {
   Future<void> sendNotification(
     String title,
     String message,
-    String targetRole,
-  ) async {
+    String targetRole, {
+    String? imageUrl,
+  }) async {
     try {
       if (Constants.useRemote) {
         final prefs = await SharedPreferences.getInstance();
@@ -40,6 +41,7 @@ class NotificationService {
             'title': title,
             'message': message,
             'targetRole': targetRole,
+            'imageUrl': imageUrl,
           }),
         );
 
@@ -52,6 +54,7 @@ class NotificationService {
         'title': title,
         'message': message,
         'targetRole': targetRole,
+        'imageUrl': imageUrl,
         'createdAt': DateTime.now().toIso8601String(),
       });
     } catch (e) {

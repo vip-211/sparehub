@@ -51,26 +51,35 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
 
   void _fetchInitialData() async {
     setState(() => _isLoading = true);
-    final results = await Future.wait([
-      _productService.getAllProducts(),
-      _productService.getCategories(),
-    ]);
+    try {
+      final results = await Future.wait([
+        _productService.getAllProducts(),
+        _productService.getCategories(),
+      ]);
 
-    final products = results[0] as List<Product>;
-    final categories = results[1] as List<Map<String, dynamic>>;
+      final products = results[0] as List<Product>;
+      final categories = results[1] as List<Map<String, dynamic>>;
 
-    final Map<int, double> prices = {};
-    for (var p in products) {
-      prices[p.id] = await _productService.getPriceForUser(p);
-    }
+      final Map<int, double> prices = {};
+      for (var p in products) {
+        prices[p.id] = await _productService.getPriceForUser(p);
+      }
 
-    if (mounted) {
-      setState(() {
-        _products = products;
-        _categories = categories;
-        _prices = prices;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _products = products;
+          _categories = categories;
+          _prices = prices;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load data: $e')),
+        );
+      }
     }
   }
 
@@ -400,15 +409,23 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
               onPressed: () async {
                 final text = requestController.text.trim();
                 if (text.isEmpty) return;
-                final id = await _orderService.createOrderRequest(
-                  text,
-                  photoPath: pickedImage?.path,
-                );
-                if (id != null && mounted) {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Request submitted')),
+                try {
+                  final id = await _orderService.createOrderRequest(
+                    text,
+                    photoPath: pickedImage?.path,
                   );
+                  if (id != null && mounted) {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Request submitted')),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error: $e')),
+                    );
+                  }
                 }
               },
               child: const Text('Submit'),
@@ -561,121 +578,7 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                           horizontal: 16,
                           vertical: 8,
                         ),
-                        child: ListTile(
-                          leading: Stack(
-                            children: [
-                              Container(
-                                width: 50,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[200],
-                                  borderRadius: BorderRadius.circular(4),
-                                  image: DecorationImage(
-                                    image: getImageProvider(product.imagePath),
-                                    fit: BoxFit.cover,
-                                    onError: (exception, stackTrace) =>
-                                        const Icon(Icons.image,
-                                            color: Colors.grey),
-                                  ),
-                                ),
-                              ),
-                              if (product.stock > 0 && product.stock <= 5)
-                                Positioned(
-                                  top: 0,
-                                  right: 0,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(2),
-                                    decoration: const BoxDecoration(
-                                      color: Colors.orange,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(Icons.warning_amber,
-                                        size: 10, color: Colors.white),
-                                  ),
-                                ),
-                            ],
-                          ),
-                          title: Text(
-                            product.name,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Part: ${product.partNumber} | Stock: ${isOutOfStock ? "Out of Stock" : product.stock}',
-                                style: TextStyle(
-                                  color:
-                                      (product.stock > 0 && product.stock <= 5)
-                                          ? Colors.orange.shade700
-                                          : null,
-                                  fontWeight:
-                                      (product.stock > 0 && product.stock <= 5)
-                                          ? FontWeight.bold
-                                          : null,
-                                ),
-                              ),
-                              if (discountPercent > 0)
-                                Text(
-                                  '${discountPercent.toStringAsFixed(0)}% OFF',
-                                  style: const TextStyle(
-                                    color: Colors.red,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                            ],
-                          ),
-                          trailing: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              if (product.mrp > price)
-                                Text(
-                                  '₹${product.mrp.toStringAsFixed(0)}',
-                                  style: const TextStyle(
-                                    decoration: TextDecoration.lineThrough,
-                                    color: Colors.grey,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              Text(
-                                '₹$price',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.blue,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              if (!isOutOfStock)
-                                ElevatedButton.icon(
-                                  onPressed: () {
-                                    cart.addItem(product, price);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          '${product.name} added to cart',
-                                        ),
-                                        duration: const Duration(seconds: 1),
-                                        backgroundColor: Colors.blue,
-                                      ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.add_shopping_cart,
-                                      size: 14),
-                                  label: const Text('Add',
-                                      style: TextStyle(fontSize: 12)),
-                                  style: ElevatedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 0),
-                                    minimumSize: const Size(60, 30),
-                                    backgroundColor: Colors.blue,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                ),
-                            ],
-                          ),
+                        child: InkWell(
                           onTap: () {
                             final authProvider = Provider.of<AuthProvider>(
                               context,
@@ -747,6 +650,159 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                               );
                             }
                           },
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Leading Image
+                                Stack(
+                                  children: [
+                                    Container(
+                                      width: 60,
+                                      height: 60,
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[200],
+                                        borderRadius: BorderRadius.circular(8),
+                                        image: DecorationImage(
+                                          image: getImageProvider(
+                                              product.imagePath),
+                                          fit: BoxFit.cover,
+                                          onError: (exception, stackTrace) =>
+                                              debugPrint('Image load error'),
+                                        ),
+                                      ),
+                                    ),
+                                    if (product.stock > 0 && product.stock <= 5)
+                                      Positioned(
+                                        top: 0,
+                                        right: 0,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(2),
+                                          decoration: const BoxDecoration(
+                                            color: Colors.orange,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(Icons.warning_amber,
+                                              size: 12, color: Colors.white),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(width: 12),
+                                // Title and Subtitle
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        product.name,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Part: ${product.partNumber}',
+                                        style: const TextStyle(
+                                            color: Colors.grey, fontSize: 13),
+                                      ),
+                                      Text(
+                                        'Stock: ${isOutOfStock ? "Out of Stock" : product.stock}',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: (product.stock > 0 &&
+                                                  product.stock <= 5)
+                                              ? Colors.orange.shade700
+                                              : Colors.grey,
+                                          fontWeight: (product.stock > 0 &&
+                                                  product.stock <= 5)
+                                              ? FontWeight.bold
+                                              : null,
+                                        ),
+                                      ),
+                                      if (discountPercent > 0)
+                                        Container(
+                                          margin: const EdgeInsets.only(top: 4),
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red.shade50,
+                                            borderRadius:
+                                                BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            '${discountPercent.toStringAsFixed(0)}% OFF',
+                                            style: const TextStyle(
+                                              color: Colors.red,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                // Trailing Prices and Button
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    if (product.mrp > price)
+                                      Text(
+                                        '₹${product.mrp.toStringAsFixed(0)}',
+                                        style: const TextStyle(
+                                          decoration:
+                                              TextDecoration.lineThrough,
+                                          color: Colors.grey,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    Text(
+                                      '₹$price',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.blue,
+                                        fontSize: 17,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    if (!isOutOfStock)
+                                      ElevatedButton(
+                                        onPressed: () {
+                                          cart.addItem(product, price);
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                '${product.name} added to cart',
+                                              ),
+                                              duration:
+                                                  const Duration(seconds: 1),
+                                              backgroundColor: Colors.blue,
+                                            ),
+                                          );
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 12, vertical: 0),
+                                          minimumSize: const Size(60, 32),
+                                          backgroundColor: Colors.blue,
+                                          foregroundColor: Colors.white,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                        child: const Text('Add',
+                                            style: TextStyle(fontSize: 13)),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       );
                     },

@@ -8,6 +8,7 @@ import 'notification_screen.dart';
 import '../widgets/ai_chatbot_widget.dart';
 import '../services/settings_service.dart';
 import '../widgets/cart_badge.dart';
+import '../widgets/notification_badge.dart';
 
 class MechanicDashboard extends StatefulWidget {
   const MechanicDashboard({super.key});
@@ -45,11 +46,7 @@ class _MechanicDashboardState extends State<MechanicDashboard> {
         foregroundColor: Colors.white,
         actions: [
           const CartBadge(),
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const NotificationScreen())),
-          ),
+          const NotificationBadge(),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => authProvider.logout(),
