@@ -6,6 +6,8 @@ import com.spareparts.inventory.entity.RoleName;
 import com.spareparts.inventory.entity.User;
 import com.spareparts.inventory.repository.RoleRepository;
 import com.spareparts.inventory.repository.UserRepository;
+import com.spareparts.inventory.entity.Product;
+import com.spareparts.inventory.repository.ProductRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -19,118 +21,76 @@ public class InventoryApplication {
     }
 
     @Bean
-    CommandLineRunner init(RoleRepository roleRepository, UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    CommandLineRunner init(RoleRepository roleRepository, UserRepository userRepository, ProductRepository productRepository, PasswordEncoder passwordEncoder) {
         return args -> {
             // Check and create roles if they don't exist
+            java.util.Map<RoleName, Role> roles = new java.util.HashMap<>();
             for (RoleName roleName : RoleName.values()) {
-                if (roleRepository.findByName(roleName).isEmpty()) {
-                    roleRepository.save(new Role(null, roleName));
-                }
+                Role role = roleRepository.findByName(roleName).orElseGet(() -> {
+                    Role newRole = new Role(null, roleName);
+                    return roleRepository.save(newRole);
+                });
+                roles.put(roleName, role);
             }
 
             // Create test users if they don't exist
             String defaultPassword = passwordEncoder.encode("password123");
 
-            if (userRepository.findByEmail("supermanager@example.com").isEmpty()) {
-                Role superManagerRole = roleRepository.findByName(RoleName.ROLE_SUPER_MANAGER).orElseThrow();
-                User superManager = new User();
-                superManager.setName("Super Manager");
-                superManager.setEmail("supermanager@example.com");
-                superManager.setPassword(defaultPassword);
-                superManager.setPhone("9999999999");
-                superManager.setAddress("Super Manager HQ");
-                superManager.setRole(superManagerRole);
-                superManager.setStatus(User.UserStatus.ACTIVE);
-                userRepository.save(superManager);
-            } else {
-                userRepository.findByEmail("supermanager@example.com").ifPresent(u -> {
-                    Role superManagerRole = roleRepository.findByName(RoleName.ROLE_SUPER_MANAGER).orElseThrow();
-                    u.setRole(superManagerRole);
-                    u.setStatus(User.UserStatus.ACTIVE);
-                    u.setPassword(defaultPassword); // Reset to password123 for troubleshooting
-                    userRepository.save(u);
-                });
-            }
+            User superManager = autoCreateUser(userRepository, "supermanager@example.com", "Super Manager", defaultPassword, "9999999999", roles.get(RoleName.ROLE_SUPER_MANAGER));
+            autoCreateUser(userRepository, "super.manager@example.com", "Super Manager Dot", defaultPassword, "9999999998", roles.get(RoleName.ROLE_SUPER_MANAGER));
+            User admin = autoCreateUser(userRepository, "admin@example.com", "System Admin", defaultPassword, "1234567890", roles.get(RoleName.ROLE_ADMIN));
+            User wholesaler = autoCreateUser(userRepository, "wholesaler@example.com", "Best Wholesaler", defaultPassword, "1234567891", roles.get(RoleName.ROLE_WHOLESALER));
+            autoCreateUser(userRepository, "retailer@example.com", "City Retailer", defaultPassword, "1234567892", roles.get(RoleName.ROLE_RETAILER));
+            autoCreateUser(userRepository, "mechanic@example.com", "Expert Mechanic", defaultPassword, "1234567893", roles.get(RoleName.ROLE_MECHANIC));
 
-            if (userRepository.findByEmail("super.manager@example.com").isEmpty()) {
-                Role superManagerRole = roleRepository.findByName(RoleName.ROLE_SUPER_MANAGER).orElseThrow();
-                User superManager = new User();
-                superManager.setName("Super Manager Dot");
-                superManager.setEmail("super.manager@example.com");
-                superManager.setPassword(defaultPassword);
-                superManager.setPhone("9999999998");
-                superManager.setAddress("Super Manager HQ");
-                superManager.setRole(superManagerRole);
-                superManager.setStatus(User.UserStatus.ACTIVE);
-                userRepository.save(superManager);
-            } else {
-                // Ensure role is set for existing user
-                userRepository.findByEmail("super.manager@example.com").ifPresent(u -> {
-                    if (u.getRole() == null) {
-                        Role superManagerRole = roleRepository.findByName(RoleName.ROLE_SUPER_MANAGER).orElseThrow();
-                        u.setRole(superManagerRole);
-                        u.setStatus(User.UserStatus.ACTIVE);
-                        userRepository.save(u);
-                    }
-                });
-            }
+            // Seed sample products if none exist
+            if (productRepository.count() == 0 && wholesaler != null) {
+                Product p1 = new Product();
+                p1.setName("Engine Oil 5W-30");
+                p1.setPartNumber("EO-5W30-001");
+                p1.setRackNumber("A-101");
+                p1.setMrp(1200.0);
+                p1.setSellingPrice(950.0);
+                p1.setWholesalerPrice(800.0);
+                p1.setRetailerPrice(850.0);
+                p1.setMechanicPrice(900.0);
+                p1.setStock(50);
+                p1.setEnabled(true);
+                p1.setDeleted(false);
+                p1.setWholesaler(wholesaler);
+                productRepository.save(p1);
 
-            if (userRepository.findByEmail("admin@example.com").isEmpty()) {
-                Role adminRole = roleRepository.findByName(RoleName.ROLE_ADMIN).orElseThrow();
-                User admin = new User();
-                admin.setName("System Admin");
-                admin.setEmail("admin@example.com");
-                admin.setPassword(defaultPassword);
-                admin.setPhone("1234567890");
-                admin.setAddress("Admin Address");
-                admin.setRole(adminRole);
-                admin.setStatus(User.UserStatus.ACTIVE);
-                userRepository.save(admin);
-            } else {
-                userRepository.findByEmail("admin@example.com").ifPresent(u -> {
-                    u.setPassword(defaultPassword);
-                    userRepository.save(u);
-                });
-            }
-
-            if (userRepository.findByEmail("wholesaler@example.com").isEmpty()) {
-                Role wholesalerRole = roleRepository.findByName(RoleName.ROLE_WHOLESALER).orElseThrow();
-                User wholesaler = new User();
-                wholesaler.setName("Best Wholesaler");
-                wholesaler.setEmail("wholesaler@example.com");
-                wholesaler.setPassword(defaultPassword);
-                wholesaler.setPhone("1234567890");
-                wholesaler.setAddress("Wholesaler Address");
-                wholesaler.setRole(wholesalerRole);
-                wholesaler.setStatus(User.UserStatus.ACTIVE);
-                userRepository.save(wholesaler);
-            }
-
-            if (userRepository.findByEmail("retailer@example.com").isEmpty()) {
-                Role retailerRole = roleRepository.findByName(RoleName.ROLE_RETAILER).orElseThrow();
-                User retailer = new User();
-                retailer.setName("City Retailer");
-                retailer.setEmail("retailer@example.com");
-                retailer.setPassword(defaultPassword);
-                retailer.setPhone("1234567890");
-                retailer.setAddress("Retailer Address");
-                retailer.setRole(retailerRole);
-                retailer.setStatus(User.UserStatus.ACTIVE);
-                userRepository.save(retailer);
-            }
-
-            if (userRepository.findByEmail("mechanic@example.com").isEmpty()) {
-                Role mechanicRole = roleRepository.findByName(RoleName.ROLE_MECHANIC).orElseThrow();
-                User mechanic = new User();
-                mechanic.setName("Expert Mechanic");
-                mechanic.setEmail("mechanic@example.com");
-                mechanic.setPassword(defaultPassword);
-                mechanic.setPhone("1234567890");
-                mechanic.setAddress("Mechanic Address");
-                mechanic.setRole(mechanicRole);
-                mechanic.setStatus(User.UserStatus.ACTIVE);
-                userRepository.save(mechanic);
+                Product p2 = new Product();
+                p2.setName("Brake Pads Front");
+                p2.setPartNumber("BP-F-002");
+                p2.setRackNumber("B-205");
+                p2.setMrp(2500.0);
+                p2.setSellingPrice(1800.0);
+                p2.setWholesalerPrice(1400.0);
+                p2.setRetailerPrice(1550.0);
+                p2.setMechanicPrice(1650.0);
+                p2.setStock(20);
+                p2.setEnabled(true);
+                p2.setDeleted(false);
+                p2.setWholesaler(wholesaler);
+                productRepository.save(p2);
             }
         };
+    }
+
+    private User autoCreateUser(UserRepository userRepository, String email, String name, String password, String phone, Role role) {
+        java.util.Optional<User> existing = userRepository.findByEmail(email);
+        if (existing.isEmpty()) {
+            User user = new User();
+            user.setName(name);
+            user.setEmail(email);
+            user.setPassword(password);
+            user.setPhone(phone);
+            user.setAddress("System Default Address");
+            user.setRole(role);
+            user.setStatus(User.UserStatus.ACTIVE);
+            return userRepository.save(user);
+        }
+        return existing.get();
     }
 }

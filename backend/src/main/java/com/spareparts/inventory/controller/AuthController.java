@@ -262,20 +262,27 @@ public class AuthController {
 
     @PostMapping("/google")
     public ResponseEntity<?> googleLogin(@RequestBody Map<String, Object> body) {
+        System.out.println("Google SSO login request: " + body);
         String email = String.valueOf(body.get("email"));
         String name = String.valueOf(body.get("name"));
         
+        if (email == null || email.isEmpty() || email.equals("null")) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Email is required for Google SSO"));
+        }
+
         java.util.Optional<User> userOptional = userRepository.findByEmail(email);
         
         User user;
         if (userOptional.isPresent()) {
             user = userOptional.get();
+            System.out.println("Existing user found for Google SSO: " + email);
         } else {
             // Create new user if not exists
+            System.out.println("Creating new user for Google SSO: " + email);
             user = new User();
             user.setEmail(email);
-            user.setName(name);
-            user.setPassword(encoder.encode("sso_google_password"));
+            user.setName(name != null && !name.equals("null") ? name : email.split("@")[0]);
+            user.setPassword(encoder.encode("sso_google_password_" + new java.util.Random().nextInt(10000)));
             
             Role defaultRole = roleRepository.findByName(RoleName.ROLE_RETAILER)
                     .orElseGet(() -> {
@@ -297,6 +304,8 @@ public class AuthController {
             roleName = user.getRole().getName().name();
         }
         List<String> roles = List.of(roleName);
+
+        System.out.println("Google SSO login successful for: " + email + " with roles: " + roles);
 
         return ResponseEntity.ok(new JwtResponse(jwt,
                 user.getId(),

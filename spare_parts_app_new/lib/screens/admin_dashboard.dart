@@ -19,6 +19,7 @@ import '../services/order_service.dart';
 import '../services/database_service.dart';
 import '../services/product_service.dart';
 import '../services/auth_service.dart';
+import '../services/remote_client.dart';
 import '../services/notification_service.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -48,6 +49,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     const AllOrdersScreen(),
     const OrderRequestsScreen(),
     const ManageProductsScreen(),
+    const ManageCategoriesScreen(),
     const SalesReportsScreen(),
     const InvoicingScreen(),
     const AllUsersScreen(),
@@ -210,10 +212,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 },
               ),
               ListTile(
+                leading: const Icon(Icons.category),
+                title: const Text('Categories'),
+                onTap: () {
+                  setState(() => _selectedIndex = 3);
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
                 leading: const Icon(Icons.bar_chart),
                 title: const Text('Reports'),
                 onTap: () {
-                  setState(() => _selectedIndex = 3);
+                  setState(() => _selectedIndex = 4);
                   Navigator.pop(context);
                 },
               ),
@@ -221,7 +231,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 leading: const Icon(Icons.receipt),
                 title: const Text('Invoicing'),
                 onTap: () {
-                  setState(() => _selectedIndex = 4);
+                  setState(() => _selectedIndex = 5);
                   Navigator.pop(context);
                 },
               ),
@@ -229,7 +239,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 leading: const Icon(Icons.people),
                 title: const Text('Users'),
                 onTap: () {
-                  setState(() => _selectedIndex = 5);
+                  setState(() => _selectedIndex = 6);
                   Navigator.pop(context);
                 },
               ),
@@ -237,7 +247,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 leading: const Icon(Icons.restore_from_trash),
                 title: const Text('Recycle Bin'),
                 onTap: () {
-                  setState(() => _selectedIndex = 6);
+                  setState(() => _selectedIndex = 7);
                   Navigator.pop(context);
                 },
               ),
@@ -246,7 +256,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   leading: const Icon(Icons.record_voice_over),
                   title: const Text('Voice Training'),
                   onTap: () {
-                    setState(() => _selectedIndex = 7);
+                    setState(() => _selectedIndex = 8);
                     Navigator.pop(context);
                   },
                 ),
@@ -254,7 +264,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 leading: const Icon(Icons.person),
                 title: const Text('Profile'),
                 onTap: () {
-                  setState(() => _selectedIndex = 8);
+                  setState(() => _selectedIndex = 9);
                   Navigator.pop(context);
                 },
               ),
@@ -1777,77 +1787,155 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                     itemCount: _products.length,
                     itemBuilder: (ctx, i) {
                       final p = _products[i];
-                      return ListTile(
-                        leading: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (_selectionMode)
-                              Checkbox(
-                                value: _selectedIds.contains(p.id),
-                                onChanged: (val) {
-                                  setState(() {
-                                    if (val == true) {
-                                      _selectedIds.add(p.id);
-                                    } else {
-                                      _selectedIds.remove(p.id);
-                                    }
-                                  });
-                                },
-                              ),
-                            Container(
-                              width: 50,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: Colors.grey[200],
-                                borderRadius: BorderRadius.circular(4),
-                                image: p.imagePath != null
-                                    ? DecorationImage(
-                                        image: FileImage(File(p.imagePath!)),
-                                        fit: BoxFit.cover,
-                                      )
-                                    : null,
-                              ),
-                              child: p.imagePath == null
-                                  ? const Icon(Icons.image, color: Colors.grey)
-                                  : null,
+                      return Card(
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        child: InkWell(
+                          onTap: () => _showAddProductDialog(product: p),
+                          onLongPress: () {
+                            setState(() {
+                              _selectionMode = true;
+                              _selectedIds.add(p.id);
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (_selectionMode)
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 8.0),
+                                    child: Checkbox(
+                                      value: _selectedIds.contains(p.id),
+                                      onChanged: (val) {
+                                        setState(() {
+                                          if (val == true) {
+                                            _selectedIds.add(p.id);
+                                          } else {
+                                            _selectedIds.remove(p.id);
+                                          }
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                Container(
+                                  width: 80,
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[100],
+                                    borderRadius: BorderRadius.circular(12),
+                                    border:
+                                        Border.all(color: Colors.grey[300]!),
+                                    image: p.imagePath != null
+                                        ? DecorationImage(
+                                            image:
+                                                FileImage(File(p.imagePath!)),
+                                            fit: BoxFit.cover,
+                                          )
+                                        : null,
+                                  ),
+                                  child: p.imagePath == null
+                                      ? Icon(Icons.image_not_supported,
+                                          color: Colors.grey[400], size: 32)
+                                      : null,
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        p.name,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Part: ${p.partNumber}',
+                                        style: TextStyle(
+                                            color: Colors.grey[600],
+                                            fontSize: 13),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: Colors.blue.shade50,
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              'Rack: ${p.rackNumber ?? "-"}',
+                                              style: TextStyle(
+                                                  color: Colors.blue.shade700,
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Stock: ${p.stock}',
+                                            style: TextStyle(
+                                              color: p.stock > 0
+                                                  ? Colors.green.shade700
+                                                  : Colors.red.shade700,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Rs. ${p.sellingPrice.toStringAsFixed(2)}',
+                                        style: const TextStyle(
+                                          color: Colors.redAccent,
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Column(
+                                  children: [
+                                    Switch(
+                                      value: p.enabled,
+                                      activeColor: Colors.redAccent,
+                                      onChanged: (val) async {
+                                        final updated =
+                                            p.copyWith(enabled: val);
+                                        await _productService
+                                            .addProduct(updated);
+                                        setState(() {
+                                          _products[i] = updated;
+                                        });
+                                      },
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline,
+                                          color: Colors.red),
+                                      onPressed: () => _deleteProduct(p.id),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
-                        title: Text(p.name),
-                        subtitle: Text(
-                          'Part: ${p.partNumber} | Rack: ${p.rackNumber ?? "-"} | Stock: ${p.stock}',
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('Rs. ${p.sellingPrice}'),
-                            Switch(
-                              value: p.enabled,
-                              onChanged: (val) async {
-                                final updated = p.copyWith(enabled: val);
-                                await _productService.addProduct(updated);
-                                setState(() {
-                                  _products[i] = updated;
-                                });
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.edit, color: Colors.blue),
-                              onPressed: () =>
-                                  _showAddProductDialog(product: p),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () => _deleteProduct(p.id),
-                            ),
-                          ],
-                        ),
-                        onLongPress: () {
-                          setState(() {
-                            _selectionMode = true;
-                            _selectedIds.add(p.id);
-                          });
-                        },
                       );
                     },
                   ),
@@ -3545,6 +3633,167 @@ class _RecycleBinScreenState extends State<RecycleBinScreen>
           ),
         );
       },
+    );
+  }
+}
+
+class ManageCategoriesScreen extends StatefulWidget {
+  const ManageCategoriesScreen({super.key});
+
+  @override
+  State<ManageCategoriesScreen> createState() => _ManageCategoriesScreenState();
+}
+
+class _ManageCategoriesScreenState extends State<ManageCategoriesScreen> {
+  final RemoteClient _remote = RemoteClient();
+  List<dynamic> _categories = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCategories();
+  }
+
+  Future<void> _fetchCategories() async {
+    setState(() => _isLoading = true);
+    try {
+      final res = await _remote.getList('/categories');
+      setState(() {
+        _categories = res;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error fetching categories: $e')),
+        );
+      }
+    }
+  }
+
+  void _showAddCategoryDialog({Map<String, dynamic>? category}) {
+    final nameController =
+        TextEditingController(text: category != null ? category['name'] : '');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(category == null ? 'Add Category' : 'Edit Category'),
+        content: TextField(
+          controller: nameController,
+          decoration: const InputDecoration(labelText: 'Category Name'),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              if (nameController.text.isEmpty) return;
+              try {
+                if (category == null) {
+                  await _remote.postJson('/categories', {
+                    'name': nameController.text,
+                  });
+                } else {
+                  await _remote.putJson('/categories/${category['id']}', {
+                    'id': category['id'],
+                    'name': nameController.text,
+                  });
+                }
+                Navigator.pop(ctx);
+                _fetchCategories();
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteCategory(int id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Category'),
+        content: const Text(
+            'Are you sure? Products in this category will become uncategorized.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await _remote.delete('/categories/$id');
+      _fetchCategories();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error deleting category: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) return const Center(child: CircularProgressIndicator());
+
+    return Scaffold(
+      body: RefreshIndicator(
+        onRefresh: _fetchCategories,
+        child: ListView.builder(
+          itemCount: _categories.length,
+          itemBuilder: (ctx, i) {
+            final cat = _categories[i] as Map<String, dynamic>;
+            return Card(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: Colors.redAccent,
+                  child: Icon(Icons.category, color: Colors.white),
+                ),
+                title: Text(
+                  cat['name'],
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit, color: Colors.blue),
+                      onPressed: () => _showAddCategoryDialog(category: cat),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () => _deleteCategory(cat['id'] as int),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddCategoryDialog(),
+        backgroundColor: Colors.redAccent,
+        child: const Icon(Icons.add),
+      ),
     );
   }
 }
