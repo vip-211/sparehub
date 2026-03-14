@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import api from '../services/api';
+import api, { API_BASE_URL } from '../services/api';
 import { MessageSquare, Send, X, Bot, User, Loader2, ThumbsUp, ThumbsDown, Edit3 } from 'lucide-react';
 import { Image as ImageIcon, Mic } from 'lucide-react';
 import { useCart } from '../context/CartContext';

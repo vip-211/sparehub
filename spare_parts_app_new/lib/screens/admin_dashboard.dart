@@ -34,6 +34,7 @@ import 'package:open_file/open_file.dart';
 import '../widgets/ai_chatbot_widget.dart';
 import 'admin_settings_screen.dart';
 import '../services/settings_service.dart';
+import '../widgets/cart_badge.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -156,6 +157,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
             isSuperManager ? Colors.deepPurpleAccent : Colors.redAccent,
         foregroundColor: Colors.white,
         actions: [
+          const CartBadge(),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
@@ -514,6 +516,7 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
           title: const Text('Order Requests'),
           content: SizedBox(
             width: double.maxFinite,
+            height: 400,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1037,6 +1040,25 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
     _fetchProducts();
   }
 
+  ImageProvider _getImageProvider(String? path) {
+    if (path == null || path.isEmpty) {
+      return const AssetImage('assets/images/logo.png');
+    }
+    if (path.startsWith('http') || path.startsWith('blob:')) {
+      return NetworkImage(path);
+    }
+    if (path.startsWith('/api/files/display/')) {
+      return NetworkImage('${Constants.serverUrl}$path');
+    }
+    if (!kIsWeb) {
+      final file = File(path);
+      if (file.existsSync()) {
+        return FileImage(file);
+      }
+    }
+    return const AssetImage('assets/images/logo.png');
+  }
+
   void _listen() async {
     if (!_isListening) {
       bool available = await _speech.initialize(
@@ -1137,7 +1159,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
       if (result != null) {
         setState(() => _isLoading = true);
         Uint8List? bytes = result.files.first.bytes;
-        if (bytes == null && result.files.first.path != null) {
+        if (bytes == null && !kIsWeb && result.files.first.path != null) {
           bytes = await File(result.files.first.path!).readAsBytes();
         }
 
@@ -1166,7 +1188,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
 
   void _exportExcel() async {
     try {
-      if (Platform.isAndroid) {
+      if (!kIsWeb && Platform.isAndroid) {
         var status = await Permission.storage.request();
         if (status.isDenied) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1189,6 +1211,10 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
       }
 
       String? path;
+      if (kIsWeb) {
+        // Web export is already handled by FilePicker.platform.saveFile
+        return;
+      }
       if (Platform.isAndroid) {
         // In Android 11+ /storage/emulated/0/Download might be restricted
         // but we'll try it first, then fallback to app-specific directory.
@@ -1308,200 +1334,221 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
     final wholesalerController = TextEditingController(
       text: product?.wholesalerId.toString() ?? '1',
     );
+    final imageLinkController = TextEditingController(
+      text: (product?.imagePath?.startsWith('http') ?? false)
+          ? product!.imagePath
+          : '',
+    );
     String? imagePath = product?.imagePath;
+    Uint8List? pickedImageBytes;
     bool productEnabled = product?.enabled ?? true;
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
+          scrollable: true,
           title: Text(product == null ? 'Add Product' : 'Edit Product'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  onTap: () async {
-                    final ImagePicker picker = ImagePicker();
-                    final XFile? image = await picker.pickImage(
-                      source: ImageSource.gallery,
-                    );
-                    if (image != null) {
-                      setDialogState(() => imagePath = image.path);
-                    }
-                  },
-                  child: Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(8),
-                      image: imagePath != null
-                          ? DecorationImage(
-                              image: FileImage(File(imagePath!)),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
-                    ),
-                    child: imagePath == null
-                        ? const Icon(
-                            Icons.add_a_photo,
-                            size: 40,
-                            color: Colors.grey,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              GestureDetector(
+                onTap: () async {
+                  final ImagePicker picker = ImagePicker();
+                  final XFile? image = await picker.pickImage(
+                    source: ImageSource.gallery,
+                  );
+                  if (image != null) {
+                    final bytes = await image.readAsBytes();
+                    setDialogState(() {
+                      imagePath = image.path;
+                      pickedImageBytes = bytes;
+                    });
+                    imageLinkController.clear();
+                  }
+                },
+                child: Container(
+                  height: 100,
+                  width: 100,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(8),
+                    image: imagePath != null
+                        ? DecorationImage(
+                            image: _getImageProvider(imagePath),
+                            fit: BoxFit.cover,
                           )
                         : null,
                   ),
+                  child: imagePath == null
+                      ? const Icon(
+                          Icons.add_a_photo,
+                          size: 40,
+                          color: Colors.grey,
+                        )
+                      : null,
                 ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Name'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Name'),
+              ),
+              TextField(
+                controller: imageLinkController,
+                decoration: const InputDecoration(
+                  labelText: 'Image Link (URL)',
+                  hintText: 'https://example.com/image.jpg',
                 ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: partController,
-                        decoration: const InputDecoration(
-                          labelText: 'Part Number',
-                        ),
+                onChanged: (val) {
+                  setDialogState(() {
+                    imagePath = val.isEmpty ? null : val;
+                  });
+                },
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: partController,
+                      decoration: const InputDecoration(
+                        labelText: 'Part Number',
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.qr_code_scanner,
-                        color: Colors.redAccent,
-                      ),
-                      onPressed: () async {
-                        final result = await showDialog<String>(
-                          context: context,
-                          builder: (ctx) => Scaffold(
-                            appBar: AppBar(title: const Text('Scan Part QR')),
-                            body: MobileScanner(
-                              onDetect: (capture) {
-                                final barcodes = capture.barcodes;
-                                if (barcodes.isNotEmpty) {
-                                  Navigator.pop(ctx, barcodes.first.rawValue);
-                                }
-                              },
-                            ),
-                          ),
-                        );
-                        if (result != null) {
-                          setDialogState(() {
-                            partController.text = result;
-                          });
-                        }
-                      },
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.camera_alt,
-                        color: Colors.redAccent,
-                      ),
-                      onPressed: () async {
-                        final partNumber =
-                            await _ocrService.pickAndExtractPartNumber();
-                        if (partNumber != null) {
-                          setDialogState(() {
-                            partController.text = partNumber;
-                          });
-                        }
-                      },
-                    ),
-                  ],
-                ),
-                TextField(
-                  controller: mrpController,
-                  decoration: const InputDecoration(labelText: 'MRP'),
-                  keyboardType: TextInputType.number,
-                ),
-                TextField(
-                  controller: rackController,
-                  decoration: const InputDecoration(labelText: 'Rack Number'),
-                ),
-                TextField(
-                  controller: priceController,
-                  decoration: const InputDecoration(
-                    labelText: 'Default Selling Price',
                   ),
-                  keyboardType: TextInputType.number,
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Enabled'),
-                    Switch(
-                      value: productEnabled,
-                      onChanged: (v) => setDialogState(() {
-                        productEnabled = v;
-                      }),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.qr_code_scanner,
+                      color: Colors.redAccent,
                     ),
-                  ],
-                ),
-                const Divider(),
-                const Text(
-                  'Role Specific Prices',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                TextField(
-                  controller: wholesalerPriceController,
-                  decoration: const InputDecoration(
-                    labelText: 'Wholesaler Price',
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-                TextField(
-                  controller: retailerPriceController,
-                  decoration: const InputDecoration(
-                    labelText: 'Retailer Price',
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-                TextField(
-                  controller: mechanicPriceController,
-                  decoration: const InputDecoration(
-                    labelText: 'Mechanic Price',
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-                const Divider(),
-                TextField(
-                  controller: stockController,
-                  decoration: const InputDecoration(labelText: 'Stock'),
-                  keyboardType: TextInputType.number,
-                ),
-                TextField(
-                  controller: wholesalerController,
-                  decoration: const InputDecoration(labelText: 'Wholesaler ID'),
-                  keyboardType: TextInputType.number,
-                ),
-                if (product != null && product.categoryName != null) ...[
-                  const SizedBox(height: 10),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.blue.shade200),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.category,
-                            size: 16, color: Colors.blue),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Category: ${product.categoryName}',
-                            style: const TextStyle(
-                                fontSize: 12, color: Colors.blue),
+                    onPressed: () async {
+                      final result = await showDialog<String>(
+                        context: context,
+                        builder: (ctx) => Scaffold(
+                          appBar: AppBar(title: const Text('Scan Part QR')),
+                          body: MobileScanner(
+                            onDetect: (capture) {
+                              final barcodes = capture.barcodes;
+                              if (barcodes.isNotEmpty) {
+                                Navigator.pop(ctx, barcodes.first.rawValue);
+                              }
+                            },
                           ),
                         ),
-                      ],
+                      );
+                      if (result != null) {
+                        setDialogState(() {
+                          partController.text = result;
+                        });
+                      }
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.camera_alt,
+                      color: Colors.redAccent,
                     ),
+                    onPressed: () async {
+                      final partNumber =
+                          await _ocrService.pickAndExtractPartNumber();
+                      if (partNumber != null) {
+                        setDialogState(() {
+                          partController.text = partNumber;
+                        });
+                      }
+                    },
                   ),
                 ],
+              ),
+              TextField(
+                controller: mrpController,
+                decoration: const InputDecoration(labelText: 'MRP'),
+                keyboardType: TextInputType.number,
+              ),
+              TextField(
+                controller: rackController,
+                decoration: const InputDecoration(labelText: 'Rack Number'),
+              ),
+              TextField(
+                controller: priceController,
+                decoration: const InputDecoration(
+                  labelText: 'Default Selling Price',
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Enabled'),
+                  Switch(
+                    value: productEnabled,
+                    onChanged: (v) => setDialogState(() {
+                      productEnabled = v;
+                    }),
+                  ),
+                ],
+              ),
+              const Divider(),
+              const Text(
+                'Role Specific Prices',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              TextField(
+                controller: wholesalerPriceController,
+                decoration: const InputDecoration(
+                  labelText: 'Wholesaler Price',
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              TextField(
+                controller: retailerPriceController,
+                decoration: const InputDecoration(
+                  labelText: 'Retailer Price',
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              TextField(
+                controller: mechanicPriceController,
+                decoration: const InputDecoration(
+                  labelText: 'Mechanic Price',
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const Divider(),
+              TextField(
+                controller: stockController,
+                decoration: const InputDecoration(labelText: 'Stock'),
+                keyboardType: TextInputType.number,
+              ),
+              TextField(
+                controller: wholesalerController,
+                decoration: const InputDecoration(labelText: 'Wholesaler ID'),
+                keyboardType: TextInputType.number,
+              ),
+              if (product != null && product.categoryName != null) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.category, size: 16, color: Colors.blue),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Category: ${product.categoryName}',
+                          style:
+                              const TextStyle(fontSize: 12, color: Colors.blue),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
-            ),
+            ],
           ),
           actions: [
             TextButton(
@@ -1510,6 +1557,19 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
+                if (nameController.text.isEmpty ||
+                    partController.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Name and Part Number are required')),
+                  );
+                  return;
+                }
+
+                final finalImagePath = imageLinkController.text.isNotEmpty
+                    ? imageLinkController.text
+                    : imagePath;
+
                 final newProduct = Product(
                   id: product?.id ?? 0,
                   name: nameController.text,
@@ -1526,42 +1586,75 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                       double.tryParse(mechanicPriceController.text) ?? 0,
                   stock: int.tryParse(stockController.text) ?? 0,
                   wholesalerId: int.tryParse(wholesalerController.text) ?? 1,
-                  imagePath: imagePath,
+                  imagePath: finalImagePath,
                   enabled: productEnabled,
                 );
-                if (product == null) {
-                  final existing = await _productService
-                      .getByPartNumber(newProduct.partNumber.trim());
-                  if (existing != null) {
+                try {
+                  if (product == null) {
+                    final existing = await _productService
+                        .getByPartNumber(newProduct.partNumber.trim());
+                    if (existing != null) {
+                      if (mounted) {
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Product with this part number exists. Opening it.',
+                            ),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                        _showAddProductDialog(product: existing);
+                      }
+                      return;
+                    }
+                  }
+                  final savedProduct = await _productService.addProduct(
+                    newProduct,
+                    imageBytes: pickedImageBytes,
+                  );
+                  if (savedProduct != null) {
                     if (mounted) {
                       Navigator.pop(ctx);
+                      if (product == null &&
+                          savedProduct.categoryName != null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                                'Added & Auto-categorized as: ${savedProduct.categoryName}'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Product saved successfully'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
+                      _fetchProducts();
+                    }
+                  } else {
+                    if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text(
-                            'Product with this part number exists. Opening it.',
-                          ),
-                          duration: Duration(seconds: 2),
+                              'Failed to save product. Part number might already exist.'),
+                          backgroundColor: Colors.red,
                         ),
                       );
-                      _showAddProductDialog(product: existing);
                     }
-                    return;
                   }
-                }
-                final savedProduct =
-                    await _productService.addProduct(newProduct);
-                if (savedProduct != null && mounted) {
-                  Navigator.pop(ctx);
-                  if (product == null && savedProduct.categoryName != null) {
+                } catch (e) {
+                  if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(
-                            'Added & Auto-categorized as: ${savedProduct.categoryName}'),
-                        backgroundColor: Colors.green,
+                        content: Text('Error: $e'),
+                        backgroundColor: Colors.red,
                       ),
                     );
                   }
-                  _fetchProducts();
                 }
               },
               child: const Text('Save'),
@@ -1622,6 +1715,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                             .toDouble(),
                         stock: item['stock'],
                         wholesalerId: item['wholesalerId'] ?? 1,
+                        imagePath: item['imagePath'],
                       ),
                     )
                     .toList();
@@ -1841,13 +1935,13 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                     borderRadius: BorderRadius.circular(12),
                                     border:
                                         Border.all(color: Colors.grey[300]!),
-                                    image: p.imagePath != null
-                                        ? DecorationImage(
-                                            image:
-                                                FileImage(File(p.imagePath!)),
-                                            fit: BoxFit.cover,
-                                          )
-                                        : null,
+                                    image: DecorationImage(
+                                      image: _getImageProvider(p.imagePath),
+                                      fit: BoxFit.cover,
+                                      onError: (exception, stackTrace) =>
+                                          debugPrint(
+                                              'Image load error: $exception'),
+                                    ),
                                   ),
                                   child: p.imagePath == null
                                       ? Icon(Icons.image_not_supported,
@@ -2084,8 +2178,8 @@ class _InvoicingScreenState extends State<InvoicingScreen> {
         title: const Text('Select Customer'),
         content: SizedBox(
           width: double.maxFinite,
+          height: 300,
           child: ListView.builder(
-            shrinkWrap: true,
             itemCount: filteredUsers.length,
             itemBuilder: (context, index) {
               final user = filteredUsers[index];
@@ -2236,7 +2330,7 @@ class _InvoicingScreenState extends State<InvoicingScreen> {
                             borderRadius: BorderRadius.circular(4),
                             image: p.imagePath != null
                                 ? DecorationImage(
-                                    image: FileImage(File(p.imagePath!)),
+                                    image: _getImageProvider(p.imagePath),
                                     fit: BoxFit.cover,
                                   )
                                 : null,
@@ -3286,7 +3380,8 @@ class _AllUsersScreenState extends State<AllUsersScreen> {
                         backgroundColor:
                             isPending ? Colors.orange : Colors.blueGrey,
                         backgroundImage: user['shopImagePath'] != null
-                            ? FileImage(File(user['shopImagePath'] as String))
+                            ? _getImageProvider(
+                                user['shopImagePath'] as String?)
                             : null,
                         child: user['shopImagePath'] == null
                             ? const Icon(Icons.person, color: Colors.white)
@@ -3439,7 +3534,7 @@ class _AllUsersScreenState extends State<AllUsersScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Image.file(File(path)),
+            Image(image: _getImageProvider(path)),
             TextButton(
               onPressed: () => Navigator.pop(ctx),
               child: const Text('Close'),
@@ -3476,6 +3571,8 @@ class _RecycleBinScreenState extends State<RecycleBinScreen>
   final ProductService _productService = ProductService();
   final OrderService _orderService = OrderService();
   final AuthService _authService = AuthService();
+  final RemoteClient _remote = RemoteClient();
+  final DatabaseService _dbService = DatabaseService();
 
   List<Product> _deletedProducts = [];
   List<Order> _deletedOrders = [];
@@ -3487,6 +3584,12 @@ class _RecycleBinScreenState extends State<RecycleBinScreen>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _fetchDeletedItems();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchDeletedItems() async {
@@ -3518,6 +3621,45 @@ class _RecycleBinScreenState extends State<RecycleBinScreen>
     }
   }
 
+  Future<void> _permanentDeleteProduct(int id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Permanent Delete'),
+        content: const Text(
+            'Are you sure you want to permanently delete this product? This cannot be undone.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    if (Constants.useRemote) {
+      try {
+        await _remote.delete('/admin/recycle-bin/products/$id/permanent');
+        _fetchDeletedItems();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Product deleted permanently')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } else {
+      // Local delete logic
+      final db = await _dbService.database;
+      await db.delete('products', where: 'id = ?', whereArgs: [id]);
+      _fetchDeletedItems();
+    }
+  }
+
   Future<void> _restoreOrder(int id) async {
     final ok = await _orderService.restoreOrder(id);
     if (ok) {
@@ -3535,6 +3677,84 @@ class _RecycleBinScreenState extends State<RecycleBinScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('User restored')),
       );
+    }
+  }
+
+  Future<void> _permanentDeleteUser(int id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Permanent Delete'),
+        content: const Text(
+            'Are you sure you want to permanently delete this user? This cannot be undone.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    if (Constants.useRemote) {
+      try {
+        await _remote.delete('/admin/recycle-bin/users/$id/permanent');
+        _fetchDeletedItems();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User deleted permanently')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } else {
+      // Local delete logic
+      final db = await _dbService.database;
+      await db.delete('users', where: 'id = ?', whereArgs: [id]);
+      _fetchDeletedItems();
+    }
+  }
+
+  Future<void> _permanentDeleteOrder(int id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Permanent Delete'),
+        content: const Text(
+            'Are you sure you want to permanently delete this order? This cannot be undone.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    if (Constants.useRemote) {
+      try {
+        await _remote.delete('/admin/recycle-bin/orders/$id/permanent');
+        _fetchDeletedItems();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Order deleted permanently')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } else {
+      // Local delete logic
+      final db = await _dbService.database;
+      await db.delete('orders', where: 'id = ?', whereArgs: [id]);
+      _fetchDeletedItems();
     }
   }
 
@@ -3580,20 +3800,57 @@ class _RecycleBinScreenState extends State<RecycleBinScreen>
       itemBuilder: (ctx, i) {
         final p = _deletedProducts[i];
         return ListTile(
+          leading: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(4),
+              image: DecorationImage(
+                image: _getImageProvider(p.imagePath),
+                fit: BoxFit.cover,
+                onError: (_, __) => debugPrint('Image error'),
+              ),
+            ),
+          ),
           title: Text(p.name),
           subtitle: Text('Part: ${p.partNumber}'),
-          trailing: ElevatedButton.icon(
-            onPressed: () => _restoreProduct(p.id),
-            icon: const Icon(Icons.restore),
-            label: const Text('Restore'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-            ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                onPressed: () => _restoreProduct(p.id),
+                icon: const Icon(Icons.restore, color: Colors.blue),
+                tooltip: 'Restore',
+              ),
+              IconButton(
+                onPressed: () => _permanentDeleteProduct(p.id),
+                icon: const Icon(Icons.delete_forever, color: Colors.red),
+                tooltip: 'Delete Permanent',
+              ),
+            ],
           ),
         );
       },
     );
+  }
+
+  ImageProvider _getImageProvider(String? path) {
+    if (path == null || path.isEmpty) {
+      return const AssetImage('assets/images/logo.png');
+    }
+    if (path.startsWith('http') || path.startsWith('blob:')) {
+      return NetworkImage(path);
+    }
+    if (path.startsWith('/api/files/display/')) {
+      return NetworkImage('${Constants.serverUrl}$path');
+    }
+    if (!kIsWeb) {
+      final file = File(path);
+      if (file.existsSync()) {
+        return FileImage(file);
+      }
+    }
+    return const AssetImage('assets/images/logo.png');
   }
 
   Widget _buildDeletedOrdersList() {
@@ -3607,14 +3864,20 @@ class _RecycleBinScreenState extends State<RecycleBinScreen>
         return ListTile(
           title: Text('Order #${o.id}'),
           subtitle: Text('Customer: ${o.customerName}'),
-          trailing: ElevatedButton.icon(
-            onPressed: () => _restoreOrder(o.id),
-            icon: const Icon(Icons.restore),
-            label: const Text('Restore'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-            ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                onPressed: () => _restoreOrder(o.id),
+                icon: const Icon(Icons.restore, color: Colors.blue),
+                tooltip: 'Restore',
+              ),
+              IconButton(
+                onPressed: () => _permanentDeleteOrder(o.id),
+                icon: const Icon(Icons.delete_forever, color: Colors.red),
+                tooltip: 'Delete Permanent',
+              ),
+            ],
           ),
         );
       },
@@ -3632,14 +3895,20 @@ class _RecycleBinScreenState extends State<RecycleBinScreen>
         return ListTile(
           title: Text(u['name'] ?? 'No Name'),
           subtitle: Text(u['email'] ?? ''),
-          trailing: ElevatedButton.icon(
-            onPressed: () => _restoreUser(u['id'] as int),
-            icon: const Icon(Icons.restore),
-            label: const Text('Restore'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-            ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                onPressed: () => _restoreUser(u['id'] as int),
+                icon: const Icon(Icons.restore, color: Colors.blue),
+                tooltip: 'Restore',
+              ),
+              IconButton(
+                onPressed: () => _permanentDeleteUser(u['id'] as int),
+                icon: const Icon(Icons.delete_forever, color: Colors.red),
+                tooltip: 'Delete Permanent',
+              ),
+            ],
           ),
         );
       },

@@ -18,7 +18,7 @@ class ProductService {
   final DatabaseService _dbService = DatabaseService();
   final RemoteClient _remote = RemoteClient();
 
-  Future<String?> uploadProductImage(File file) async {
+  Future<String?> uploadProductImage(String path, {Uint8List? bytes}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userStr = prefs.getString('user');
@@ -28,20 +28,30 @@ class ProductService {
         token = user['token'];
       }
 
-      var request = http.MultipartRequest(
-        'POST',
-        Uri.parse('${Constants.baseUrl}/files/upload'),
-      );
-      if (token != null) {
-        request.headers['Authorization'] = 'Bearer $token';
-      }
-      request.files.add(await http.MultipartFile.fromPath('file', file.path));
+      if (kIsWeb && bytes != null) {
+        final res = await _remote.postMultipart(
+          '/files/upload',
+          fileField: 'file',
+          fileName: path.split('/').last,
+          bytes: bytes,
+        );
+        return res['url'];
+      } else if (!kIsWeb) {
+        var request = http.MultipartRequest(
+          'POST',
+          Uri.parse('${Constants.baseUrl}/files/upload'),
+        );
+        if (token != null) {
+          request.headers['Authorization'] = 'Bearer $token';
+        }
+        request.files.add(await http.MultipartFile.fromPath('file', path));
 
-      var response = await request.send();
-      if (response.statusCode == 200) {
-        var resBody = await response.stream.bytesToString();
-        var json = jsonDecode(resBody);
-        return json['url'];
+        var response = await request.send();
+        if (response.statusCode == 200) {
+          var resBody = await response.stream.bytesToString();
+          var json = jsonDecode(resBody);
+          return json['url'];
+        }
       }
     } catch (e) {
       debugPrint('Image upload error: $e');
@@ -218,6 +228,68 @@ class ProductService {
     }
 
     return result;
+  }
+
+  Future<List<Map<String, dynamic>>> getCategories() async {
+    try {
+      if (Constants.useRemote) {
+        final list = await _remote.getList('/categories');
+        return list.map((e) => e as Map<String, dynamic>).toList();
+      }
+      final db = await _dbService.database;
+      return await db.query('categories', where: 'deleted = 0');
+    } catch (e) {
+      debugPrint('Get categories error: $e');
+      return [];
+    }
+  }
+
+  Future<List<Product>> getProductsByCategory(int categoryId) async {
+    try {
+      if (Constants.useRemote) {
+        final list = await _remote.getList('/products/category/$categoryId');
+        final products = list
+            .map((e) => Product.fromJson(e as Map<String, dynamic>))
+            .toList();
+
+        final prefs = await SharedPreferences.getInstance();
+        final userStr = prefs.getString('user');
+        if (userStr == null) return products;
+
+        final user = User.fromJson(jsonDecode(userStr));
+        if (user.roles.contains(Constants.roleAdmin) ||
+            user.roles.contains(Constants.roleSuperManager) ||
+            user.roles.contains(Constants.roleStaff)) {
+          return products;
+        }
+
+        final enabledOnly = products.where((p) => p.enabled).toList();
+        if (user.roles.contains(Constants.roleWholesaler)) {
+          return enabledOnly
+              .where((p) => p.wholesalerPrice > 0 || p.sellingPrice > 0)
+              .toList();
+        }
+        if (user.roles.contains(Constants.roleRetailer)) {
+          return enabledOnly
+              .where((p) => p.retailerPrice > 0 || p.sellingPrice > 0)
+              .toList();
+        }
+        if (user.roles.contains(Constants.roleMechanic)) {
+          return enabledOnly
+              .where((p) => p.mechanicPrice > 0 || p.sellingPrice > 0)
+              .toList();
+        }
+        return enabledOnly.where((p) => p.sellingPrice > 0).toList();
+      }
+
+      final db = await _dbService.database;
+      final maps = await db.query('products',
+          where: 'categoryId = ? AND deleted = 0', whereArgs: [categoryId]);
+      return maps.map((p) => Product.fromJson(p)).toList();
+    } catch (e) {
+      debugPrint('Get products by category error: $e');
+      return [];
+    }
   }
 
   Future<List<Product>> getAllProducts() async {
@@ -451,9 +523,23 @@ class ProductService {
     }
   }
 
-  Future<Product?> addProduct(Product product) async {
+  Future<Product?> addProduct(Product product, {Uint8List? imageBytes}) async {
     try {
       if (Constants.useRemote) {
+        String? currentImagePath = product.imagePath;
+        if (currentImagePath != null &&
+            !currentImagePath.startsWith('http') &&
+            !currentImagePath.startsWith('/api/files/display/')) {
+          // It's likely a local file path or web blob URL
+          final uploadedUrl = await uploadProductImage(
+            currentImagePath,
+            bytes: imageBytes,
+          );
+          if (uploadedUrl != null) {
+            product = product.copyWith(imagePath: uploadedUrl);
+          }
+        }
+
         final Map<String, dynamic> res;
         if (product.id != 0) {
           res = await _remote.putJson(

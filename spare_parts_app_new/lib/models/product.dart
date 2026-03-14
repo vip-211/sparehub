@@ -37,19 +37,22 @@ class Product {
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
-      id: json['id'],
-      name: json['name'],
-      partNumber: json['partNumber'],
+      id: json['id'] ?? 0,
+      name: json['name'] ?? '',
+      partNumber: json['partNumber'] ?? '',
       rackNumber: json['rackNumber'],
-      mrp: (json['mrp'] as num).toDouble(),
-      sellingPrice: (json['sellingPrice'] as num).toDouble(),
+      mrp: (json['mrp'] as num? ?? 0).toDouble(),
+      sellingPrice: (json['sellingPrice'] as num? ?? 0).toDouble(),
       wholesalerPrice:
-          (json['wholesalerPrice'] ?? json['sellingPrice'] as num).toDouble(),
+          (json['wholesalerPrice'] as num? ?? json['sellingPrice'] as num? ?? 0)
+              .toDouble(),
       retailerPrice:
-          (json['retailerPrice'] ?? json['sellingPrice'] as num).toDouble(),
+          (json['retailerPrice'] as num? ?? json['sellingPrice'] as num? ?? 0)
+              .toDouble(),
       mechanicPrice:
-          (json['mechanicPrice'] ?? json['sellingPrice'] as num).toDouble(),
-      stock: json['stock'],
+          (json['mechanicPrice'] as num? ?? json['sellingPrice'] as num? ?? 0)
+              .toDouble(),
+      stock: json['stock'] ?? 0,
       wholesalerId: json['wholesalerId'] ?? 0,
       imagePath: json['imagePath'],
       description: json['description'],

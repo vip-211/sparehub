@@ -16,6 +16,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.math.BigDecimal;
 
+import com.spareparts.inventory.entity.Category;
+import com.spareparts.inventory.repository.CategoryRepository;
+
 @SpringBootApplication
 public class InventoryApplication {
     public static void main(String[] args) {
@@ -23,7 +26,7 @@ public class InventoryApplication {
     }
 
     @Bean
-    CommandLineRunner init(RoleRepository roleRepository, UserRepository userRepository, ProductRepository productRepository, PasswordEncoder passwordEncoder) {
+    CommandLineRunner init(RoleRepository roleRepository, UserRepository userRepository, ProductRepository productRepository, CategoryRepository categoryRepository, PasswordEncoder passwordEncoder) {
         return args -> {
             // Fix existing null deleted flags
             userRepository.findAll().forEach(u -> {
@@ -59,6 +62,30 @@ public class InventoryApplication {
             autoCreateUser(userRepository, "retailer@example.com", "City Retailer", defaultPassword, "1234567892", roles.get(RoleName.ROLE_RETAILER));
             autoCreateUser(userRepository, "mechanic@example.com", "Expert Mechanic", defaultPassword, "1234567893", roles.get(RoleName.ROLE_MECHANIC));
 
+            // Seed Categories if none exist
+            Category chainKitCat = null;
+            if (categoryRepository.count() == 0) {
+                Category c1 = new Category();
+                c1.setName("Engine Oil");
+                c1.setDescription("Premium quality oils for all engines");
+                categoryRepository.save(c1);
+
+                Category c2 = new Category();
+                c2.setName("Brake Pads");
+                c2.setDescription("Durable brake pads and shoes");
+                categoryRepository.save(c2);
+
+                Category c3 = new Category();
+                c3.setName("Chain Kit");
+                c3.setDescription("High performance chain and sprocket kits");
+                chainKitCat = categoryRepository.save(c3);
+            } else {
+                chainKitCat = categoryRepository.findAll().stream()
+                        .filter(c -> "Chain Kit".equals(c.getName()))
+                        .findFirst()
+                        .orElse(null);
+            }
+
             // Seed sample products if none exist
             if (productRepository.count() == 0 && wholesaler != null) {
                 Product p1 = new Product();
@@ -90,6 +117,24 @@ public class InventoryApplication {
                 p2.setDeleted(false);
                 p2.setWholesaler(wholesaler);
                 productRepository.save(p2);
+
+                if (chainKitCat != null) {
+                    Product p3 = new Product();
+                    p3.setName("Gold Chain Kit Pro");
+                    p3.setPartNumber("CK-GOLD-001");
+                    p3.setRackNumber("C-301");
+                    p3.setMrp(new BigDecimal("3500.0"));
+                    p3.setSellingPrice(new BigDecimal("3200.0"));
+                    p3.setWholesalerPrice(new BigDecimal("2800.0"));
+                    p3.setRetailerPrice(new BigDecimal("3000.0"));
+                    p3.setMechanicPrice(new BigDecimal("3100.0"));
+                    p3.setStock(15);
+                    p3.setEnabled(true);
+                    p3.setDeleted(false);
+                    p3.setWholesaler(wholesaler);
+                    p3.setCategory(chainKitCat);
+                    productRepository.save(p3);
+                }
             }
         };
     }

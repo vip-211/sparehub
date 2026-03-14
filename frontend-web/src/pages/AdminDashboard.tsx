@@ -318,13 +318,13 @@ const AdminDashboard = () => {
     try {
       const res = await api.post('/products', {
         ...newProduct,
-        mrp: parseFloat(String(newProduct.mrp)),
-        sellingPrice: parseFloat(String(newProduct.sellingPrice)),
+        mrp: parseFloat(String(newProduct.mrp)) || 0,
+        sellingPrice: parseFloat(String(newProduct.sellingPrice)) || 0,
         wholesalerPrice: newProduct.wholesalerPrice ? parseFloat(String(newProduct.wholesalerPrice)) : undefined,
         retailerPrice: newProduct.retailerPrice ? parseFloat(String(newProduct.retailerPrice)) : undefined,
         mechanicPrice: newProduct.mechanicPrice ? parseFloat(String(newProduct.mechanicPrice)) : undefined,
-        stock: parseInt(String(newProduct.stock)),
-        wholesalerId: newProduct.wholesalerId ? parseInt(newProduct.wholesalerId as any) : undefined,
+        stock: parseInt(String(newProduct.stock)) || 0,
+        wholesalerId: newProduct.wholesalerId ? parseInt(newProduct.wholesalerId as any) : 1,
         categoryId: newProduct.categoryId ? parseInt(newProduct.categoryId as any) : undefined
       });
       setShowAddProduct(false);
@@ -365,9 +365,12 @@ const AdminDashboard = () => {
     try {
       await api.put(`/products/${editingProduct.id}`, {
         ...editingProduct,
-        mrp: parseFloat(String(editingProduct.mrp)),
-        sellingPrice: parseFloat(String(editingProduct.sellingPrice)),
-        stock: parseInt(String(editingProduct.stock)),
+        mrp: parseFloat(String(editingProduct.mrp)) || 0,
+        sellingPrice: parseFloat(String(editingProduct.sellingPrice)) || 0,
+        wholesalerPrice: editingProduct.wholesalerPrice ? parseFloat(String(editingProduct.wholesalerPrice)) : undefined,
+        retailerPrice: editingProduct.retailerPrice ? parseFloat(String(editingProduct.retailerPrice)) : undefined,
+        mechanicPrice: editingProduct.mechanicPrice ? parseFloat(String(editingProduct.mechanicPrice)) : undefined,
+        stock: parseInt(String(editingProduct.stock)) || 0,
         categoryId: editingProduct.categoryId ? parseInt(editingProduct.categoryId as any) : undefined
       });
       setShowEditProduct(false);
@@ -850,12 +853,30 @@ const AdminDashboard = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <button 
-                      onClick={() => { setEditingProduct(product); setShowEditProduct(true); }}
-                      className="px-3 py-1.5 bg-gray-50 text-primary-600 rounded-lg text-xs font-bold hover:bg-primary-50 transition"
-                    >
-                      Edit
-                    </button>
+                    <div className="flex items-center justify-center gap-2">
+                      <button 
+                        onClick={() => { setEditingProduct(product); setShowEditProduct(true); }}
+                        className="px-3 py-1.5 bg-gray-50 text-primary-600 rounded-lg text-xs font-bold hover:bg-primary-100 transition"
+                      >
+                        Edit
+                      </button>
+                      <button 
+                        onClick={async () => {
+                          if (!window.confirm(`Delete product ${product.name}?`)) return;
+                          try {
+                            await api.delete(`/products/${product.id}`);
+                            fetchProducts();
+                          } catch (err) {
+                            console.error(err);
+                            alert('Failed to delete product');
+                          }
+                        }}
+                        className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition"
+                        title="Delete Product"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -1258,15 +1279,45 @@ const AdminDashboard = () => {
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Initial Stock</label>
-                <input
-                  type="number"
-                  className="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                  value={newProduct.stock}
-                  onChange={e => setNewProduct({...newProduct, stock: e.target.value})}
-                  required
-                />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Initial Stock</label>
+                  <input
+                    type="number"
+                    className="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    value={newProduct.stock}
+                    onChange={e => setNewProduct({...newProduct, stock: e.target.value})}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Wholesaler Price</label>
+                  <input
+                    type="number"
+                    className="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm"
+                    value={newProduct.wholesalerPrice}
+                    onChange={e => setNewProduct({...newProduct, wholesalerPrice: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Retailer Price</label>
+                  <input
+                    type="number"
+                    className="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm"
+                    value={newProduct.retailerPrice}
+                    onChange={e => setNewProduct({...newProduct, retailerPrice: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Mechanic Price</label>
+                  <input
+                    type="number"
+                    className="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm"
+                    value={newProduct.mechanicPrice}
+                    onChange={e => setNewProduct({...newProduct, mechanicPrice: e.target.value})}
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Product Image</label>
@@ -1281,6 +1332,16 @@ const AdminDashboard = () => {
                   {uploading && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>}
                 </div>
                 {newProduct.imagePath && <p className="text-xs text-green-600 mt-1">Image uploaded!</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Product Image URL (Optional)</label>
+                <input
+                  type="text"
+                  className="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                  value={newProduct.imagePath || ''}
+                  onChange={e => setNewProduct({...newProduct, imagePath: e.target.value})}
+                  placeholder="https://example.com/image.jpg"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Description</label>
@@ -1361,15 +1422,45 @@ const AdminDashboard = () => {
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Stock</label>
-                <input
-                  type="number"
-                  className="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                  value={editingProduct.stock}
-                  onChange={e => setEditingProduct({...editingProduct, stock: e.target.value})}
-                  required
-                />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Stock</label>
+                  <input
+                    type="number"
+                    className="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                    value={editingProduct.stock}
+                    onChange={e => setEditingProduct({...editingProduct, stock: e.target.value})}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Wholesaler Price</label>
+                  <input
+                    type="number"
+                    className="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm"
+                    value={editingProduct.wholesalerPrice || ''}
+                    onChange={e => setEditingProduct({...editingProduct, wholesalerPrice: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Retailer Price</label>
+                  <input
+                    type="number"
+                    className="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm"
+                    value={editingProduct.retailerPrice || ''}
+                    onChange={e => setEditingProduct({...editingProduct, retailerPrice: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Mechanic Price</label>
+                  <input
+                    type="number"
+                    className="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm"
+                    value={editingProduct.mechanicPrice || ''}
+                    onChange={e => setEditingProduct({...editingProduct, mechanicPrice: e.target.value})}
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Product Image</label>

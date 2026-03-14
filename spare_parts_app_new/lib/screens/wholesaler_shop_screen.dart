@@ -15,6 +15,7 @@ import '../models/product.dart';
 import '../providers/cart_provider.dart';
 import '../services/order_service.dart';
 import 'order_confirmation_screen.dart';
+import 'cart_screen.dart';
 import '../utils/constants.dart';
 
 import 'package:spare_parts_app/screens/edit_product_screen.dart';
@@ -529,9 +530,8 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                                             image: _getImageProvider(
                                                 product.imagePath),
                                             fit: BoxFit.cover,
-                                            onError: (exception, stackTrace) =>
-                                                const Icon(Icons.image,
-                                                    color: Colors.grey),
+                                            onError: (e, _) =>
+                                                debugPrint('Image error: $e'),
                                           ),
                                         ),
                                       ),
@@ -610,6 +610,36 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                                           fontSize: 16,
                                         ),
                                       ),
+                                      const SizedBox(height: 4),
+                                      if (!isOutOfStock)
+                                        ElevatedButton.icon(
+                                          onPressed: () {
+                                            cart.addItem(product, price);
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  '${product.name} added to cart',
+                                                ),
+                                                duration:
+                                                    const Duration(seconds: 1),
+                                                backgroundColor: Colors.green,
+                                              ),
+                                            );
+                                          },
+                                          icon: const Icon(
+                                              Icons.add_shopping_cart,
+                                              size: 14),
+                                          label: const Text('Add',
+                                              style: TextStyle(fontSize: 12)),
+                                          style: ElevatedButton.styleFrom(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 8, vertical: 0),
+                                            minimumSize: const Size(60, 30),
+                                            backgroundColor: Colors.green,
+                                            foregroundColor: Colors.white,
+                                          ),
+                                        ),
                                     ],
                                   ),
                                   onTap: () {
@@ -712,11 +742,16 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                       children: [
                         if (cart.items.isNotEmpty)
                           ListTile(
-                            leading: const Icon(Icons.shopping_cart_checkout),
-                            title: Text('Checkout (₹${cart.totalAmount})'),
+                            leading: const Icon(Icons.shopping_cart),
+                            title: Text('View Cart (₹${cart.totalAmount})'),
                             onTap: () {
                               Navigator.pop(ctx);
-                              _placeOrder();
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const CartScreen(),
+                                ),
+                              );
                             },
                           ),
                         if (!isMechanic)

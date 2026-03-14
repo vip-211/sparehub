@@ -7,6 +7,7 @@ import 'profile_screen.dart';
 import 'notification_screen.dart';
 import '../widgets/ai_chatbot_widget.dart';
 import '../services/settings_service.dart';
+import '../widgets/cart_badge.dart';
 
 class RetailerDashboard extends StatefulWidget {
   const RetailerDashboard({super.key});
@@ -44,6 +45,7 @@ class _RetailerDashboardState extends State<RetailerDashboard> {
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
         actions: [
+          const CartBadge(),
           IconButton(
             icon: const Icon(Icons.notifications),
             onPressed: () => Navigator.push(context,

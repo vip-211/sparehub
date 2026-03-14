@@ -33,6 +33,8 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   final _translator = GoogleTranslator();
   List<Product> _products = [];
+  List<Map<String, dynamic>> _categories = [];
+  int? _selectedCategoryId;
   Map<int, double> _prices = {};
   bool _isLoading = false;
   bool _isListening = false;
@@ -43,7 +45,59 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchInitialProducts();
+    _fetchInitialData();
+  }
+
+  void _fetchInitialData() async {
+    setState(() => _isLoading = true);
+    final results = await Future.wait([
+      _productService.getAllProducts(),
+      _productService.getCategories(),
+    ]);
+
+    final products = results[0] as List<Product>;
+    final categories = results[1] as List<Map<String, dynamic>>;
+
+    final Map<int, double> prices = {};
+    for (var p in products) {
+      prices[p.id] = await _productService.getPriceForUser(p);
+    }
+
+    if (mounted) {
+      setState(() {
+        _products = products;
+        _categories = categories;
+        _prices = prices;
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _fetchProductsByCategory(int? categoryId) async {
+    setState(() {
+      _isLoading = true;
+      _selectedCategoryId = categoryId;
+    });
+
+    List<Product> products;
+    if (categoryId == null) {
+      products = await _productService.getAllProducts();
+    } else {
+      products = await _productService.getProductsByCategory(categoryId);
+    }
+
+    final Map<int, double> prices = {};
+    for (var p in products) {
+      prices[p.id] = await _productService.getPriceForUser(p);
+    }
+
+    if (mounted) {
+      setState(() {
+        _products = products;
+        _prices = prices;
+        _isLoading = false;
+      });
+    }
   }
 
   void _listen() async {
@@ -110,7 +164,7 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
       if (query.length >= 2) {
         _searchProducts(query);
       } else if (query.isEmpty) {
-        _fetchInitialProducts();
+        _fetchProductsByCategory(_selectedCategoryId);
       }
     });
   }
@@ -420,7 +474,7 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                         icon: const Icon(Icons.clear),
                         onPressed: () {
                           _searchController.clear();
-                          _fetchInitialProducts();
+                          _fetchInitialData();
                         },
                       ),
                       border: OutlineInputBorder(
@@ -444,43 +498,63 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                 ),
                 if (_showExtraIcons) ...[
                   IconButton(
-                    onPressed: _scanQRCode,
-                    icon: const Icon(
-                      Icons.qr_code_scanner,
-                      color: Colors.green,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () async {
-                      final partNumber =
-                          await _ocrService.pickAndExtractPartNumber();
-                      if (partNumber != null) {
-                        _searchController.text = partNumber;
-                        _searchProducts(partNumber);
-                      }
-                    },
-                    icon: const Icon(Icons.camera_alt, color: Colors.green),
-                  ),
-                  IconButton(
-                    onPressed: _listen,
                     icon: Icon(
                       _isListening ? Icons.mic : Icons.mic_none,
                       color: _isListening ? Colors.red : Colors.green,
                     ),
+                    onPressed: _listen,
                   ),
                   IconButton(
-                    onPressed: _voiceAddToCart,
+                    icon: const Icon(Icons.qr_code_scanner, color: Colors.blue),
+                    onPressed: _scanQRCode,
+                  ),
+                  IconButton(
                     icon: const Icon(Icons.add_shopping_cart,
-                        color: Colors.green),
+                        color: Colors.orange),
+                    onPressed: _voiceAddToCart,
                   ),
                   IconButton(
+                    icon: const Icon(Icons.help_outline, color: Colors.purple),
                     onPressed: _showRequestDialog,
-                    icon: const Icon(Icons.assignment_add, color: Colors.blue),
                   ),
                 ],
               ],
             ),
           ),
+          if (_categories.isNotEmpty)
+            SizedBox(
+              height: 45,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: _categories.length + 1,
+                itemBuilder: (ctx, i) {
+                  if (i == 0) {
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilterChip(
+                        label: const Text('All Products'),
+                        selected: _selectedCategoryId == null,
+                        onSelected: (_) => _fetchProductsByCategory(null),
+                        selectedColor: Colors.blue.shade100,
+                        checkmarkColor: Colors.blue,
+                      ),
+                    );
+                  }
+                  final cat = _categories[i - 1];
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: FilterChip(
+                      label: Text(cat['name']),
+                      selected: _selectedCategoryId == cat['id'],
+                      onSelected: (_) => _fetchProductsByCategory(cat['id']),
+                      selectedColor: Colors.blue.shade100,
+                      checkmarkColor: Colors.blue,
+                    ),
+                  );
+                },
+              ),
+            ),
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -585,6 +659,33 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                                   fontSize: 16,
                                 ),
                               ),
+                              const SizedBox(height: 4),
+                              if (!isOutOfStock)
+                                ElevatedButton.icon(
+                                  onPressed: () {
+                                    cart.addItem(product, price);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          '${product.name} added to cart',
+                                        ),
+                                        duration: const Duration(seconds: 1),
+                                        backgroundColor: Colors.blue,
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.add_shopping_cart,
+                                      size: 14),
+                                  label: const Text('Add',
+                                      style: TextStyle(fontSize: 12)),
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 0),
+                                    minimumSize: const Size(60, 30),
+                                    backgroundColor: Colors.blue,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                ),
                             ],
                           ),
                           onTap: () {

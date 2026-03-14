@@ -7,6 +7,7 @@ import 'profile_screen.dart';
 import 'notification_screen.dart';
 import '../widgets/ai_chatbot_widget.dart';
 import '../services/settings_service.dart';
+import '../widgets/cart_badge.dart';
 
 class WholesalerDashboard extends StatefulWidget {
   const WholesalerDashboard({super.key});
@@ -42,6 +43,7 @@ class _WholesalerDashboardState extends State<WholesalerDashboard> {
         backgroundColor: Colors.purple,
         foregroundColor: Colors.white,
         actions: [
+          const CartBadge(),
           IconButton(
             icon: const Icon(Icons.notifications),
             onPressed: () => Navigator.push(context,
