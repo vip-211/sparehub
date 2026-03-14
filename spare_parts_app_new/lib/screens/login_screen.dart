@@ -91,6 +91,13 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
+    // Basic email validation
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(email)) {
+      _showFeedback('Please enter a valid email address.', isError: true);
+      return;
+    }
+
     if (_isOtpLogin) {
       if (_otpController.text.trim().isEmpty) {
         _showFeedback('Please enter the OTP.', isError: true);
@@ -99,6 +106,10 @@ class _LoginScreenState extends State<LoginScreen> {
     } else {
       if (_passwordController.text.isEmpty) {
         _showFeedback('Please enter your password.', isError: true);
+        return;
+      }
+      if (_passwordController.text.length < 6) {
+        _showFeedback('Password must be at least 6 characters.', isError: true);
         return;
       }
     }

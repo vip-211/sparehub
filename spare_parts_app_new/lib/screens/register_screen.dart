@@ -115,6 +115,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(email)) {
+      _showFeedback('Please enter a valid email address.', isError: true);
+      return;
+    }
+
+    if (password.length < 6) {
+      _showFeedback('Password must be at least 6 characters.', isError: true);
+      return;
+    }
+
     if (!Constants.useRemote && (_latitude == null || _longitude == null)) {
       _showFeedback('Please capture your location to register.', isError: true);
       return;

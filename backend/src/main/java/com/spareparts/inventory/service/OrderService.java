@@ -1,12 +1,11 @@
 
 package com.spareparts.inventory.service;
 
-import com.spareparts.inventory.dto.AdminOrderRequest;
-import com.spareparts.inventory.dto.OrderDto;
-import com.spareparts.inventory.dto.OrderItemDto;
+import com.spareparts.inventory.dto.*;
 import com.spareparts.inventory.dto.OrderRequest;
 import com.spareparts.inventory.entity.*;
 import com.spareparts.inventory.repository.OrderRepository;
+import com.spareparts.inventory.repository.OrderRequestRepository;
 import com.spareparts.inventory.repository.ProductRepository;
 import com.spareparts.inventory.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +29,62 @@ public class OrderService {
 
     @Autowired
     private ProductRepository productRepository;
+
+    @Autowired
+    private OrderRequestRepository orderRequestRepository;
+
+    @Transactional
+    public CustomOrderRequestDto createCustomOrderRequest(String text, String photoPath, Long customerId) {
+        User customer = userRepository.findById(customerId)
+                .orElseThrow(() -> new RuntimeException("Customer not found: " + customerId));
+
+        CustomOrderRequest request = new CustomOrderRequest();
+        request.setCustomer(customer);
+        request.setText(text);
+        request.setPhotoPath(photoPath);
+        request.setStatus(CustomOrderRequest.RequestStatus.NEW);
+        request.setCreatedAt(LocalDateTime.now());
+
+        request = orderRequestRepository.save(request);
+        return convertToCustomRequestDto(request);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CustomOrderRequestDto> getAllCustomOrderRequests() {
+        return orderRequestRepository.findAllByOrderByCreatedAtDesc().stream()
+                .map(this::convertToCustomRequestDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public CustomOrderRequestDto updateCustomOrderRequestStatus(Long requestId, String status, Long staffId) {
+        CustomOrderRequest request = orderRequestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Order Request not found"));
+
+        request.setStatus(CustomOrderRequest.RequestStatus.valueOf(status));
+        if (staffId != null) {
+            userRepository.findById(staffId).ifPresent(request::setAssignedStaff);
+        }
+
+        request = orderRequestRepository.save(request);
+        return convertToCustomRequestDto(request);
+    }
+
+    private CustomOrderRequestDto convertToCustomRequestDto(CustomOrderRequest request) {
+        CustomOrderRequestDto dto = new CustomOrderRequestDto();
+        dto.setId(request.getId());
+        dto.setCustomerId(request.getCustomer().getId());
+        dto.setCustomerName(request.getCustomer().getName());
+        dto.setText(request.getText());
+        dto.setPhotoPath(request.getPhotoPath());
+        dto.setStatus(request.getStatus().name());
+        dto.setCreatedAt(request.getCreatedAt());
+        if (request.getAssignedStaff() != null) {
+            dto.setAssignedStaffId(request.getAssignedStaff().getId());
+            dto.setAssignedStaffName(request.getAssignedStaff().getName());
+        }
+        return dto;
+    }
 
     @Transactional
     public OrderDto createOrder(OrderRequest orderRequest, Long customerId) {
@@ -141,7 +196,7 @@ public class OrderService {
     public List<OrderDto> getCustomerOrders(Long customerId) {
         User customer = userRepository.findById(customerId)
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
-        return orderRepository.findByCustomer(customer).stream()
+        return orderRepository.findByCustomerAndDeletedFalse(customer).stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
@@ -150,14 +205,21 @@ public class OrderService {
     public List<OrderDto> getSellerOrders(Long sellerId) {
         User seller = userRepository.findById(sellerId)
                 .orElseThrow(() -> new RuntimeException("Seller not found"));
-        return orderRepository.findBySeller(seller).stream()
+        return orderRepository.findBySellerAndDeletedFalse(seller).stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<OrderDto> getAllOrders() {
-        return orderRepository.findAll().stream()
+        return orderRepository.findByDeletedFalse().stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<OrderDto> getDeletedOrders() {
+        return orderRepository.findByDeletedTrue().stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
@@ -212,16 +274,18 @@ public class OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
         
-        // Restore stock if not already cancelled
-        if (order.getStatus() != Order.OrderStatus.CANCELLED) {
-            for (OrderItem item : order.getItems()) {
-                Product product = item.getProduct();
-                product.setStock(product.getStock() + item.getQuantity());
-                productRepository.save(product);
-            }
-        }
+        // Soft delete
+        order.setDeleted(true);
+        orderRepository.save(order);
+    }
+
+    @Transactional
+    public void restoreOrder(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
         
-        orderRepository.delete(order);
+        order.setDeleted(false);
+        orderRepository.save(order);
     }
 
     @Transactional

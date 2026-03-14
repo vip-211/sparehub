@@ -66,7 +66,7 @@ public class CategoryController {
 
     @GetMapping("/{id}/products")
     public ResponseEntity<List<ProductDto>> productsByCategory(@PathVariable Long id) {
-        List<Product> products = productRepository.findByCategory_Id(id);
+        List<Product> products = productRepository.findByCategory_IdAndDeletedFalse(id);
         List<ProductDto> dtos = products.stream().map(p -> {
             ProductDto dto = new ProductDto();
             dto.setId(p.getId());

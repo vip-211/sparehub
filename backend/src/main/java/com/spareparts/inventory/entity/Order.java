@@ -53,6 +53,9 @@ public class Order {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "deleted", nullable = false)
+    private boolean deleted = false;
+
     public enum OrderStatus {
         PENDING, APPROVED, PACKED, OUT_FOR_DELIVERY, DELIVERED, CANCELLED
     }

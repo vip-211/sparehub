@@ -609,7 +609,8 @@ class AuthService {
       }).toList();
     }
     final db = await _dbService.database;
-    final List<Map<String, dynamic>> maps = await db.query("users");
+    final List<Map<String, dynamic>> maps =
+        await db.query("users", where: "deleted = 0");
     return List.generate(maps.length, (i) {
       return User(
         id: maps[i]["id"] as int,
@@ -633,8 +634,8 @@ class AuthService {
       return true;
     }
     final db = await _dbService.database;
-    final count =
-        await db.delete('users', where: 'id = ?', whereArgs: [userId]);
+    final count = await db.update("users", {"deleted": 1},
+        where: "id = ?", whereArgs: [userId]);
     return count > 0;
   }
 
@@ -647,9 +648,37 @@ class AuthService {
     final db = await _dbService.database;
     final batch = db.batch();
     for (final id in ids) {
-      batch.delete('users', where: 'id = ?', whereArgs: [id]);
+      batch.update('users', {'deleted': 1}, where: 'id = ?', whereArgs: [id]);
     }
     await batch.commit(noResult: true);
+  }
+
+  Future<List<Map<String, dynamic>>> getDeletedUsers() async {
+    if (Constants.useRemote) {
+      final list = await _remote.getList('/admin/recycle-bin/users');
+      return list.map((e) {
+        final m = e as Map<String, dynamic>;
+        return {
+          'id': (m['id'] as num).toInt(),
+          'email': m['email'] ?? '',
+          'name': m['name'],
+          'role': m['role'] is Map ? m['role']['name'] : m['role'],
+        };
+      }).toList();
+    }
+    final db = await _dbService.database;
+    return db.query('users', where: 'deleted = 1');
+  }
+
+  Future<bool> restoreUser(int userId) async {
+    if (Constants.useRemote) {
+      await _remote.postJson('/admin/recycle-bin/users/$userId/restore', {});
+      return true;
+    }
+    final db = await _dbService.database;
+    final count = await db.update('users', {'deleted': 0},
+        where: 'id = ?', whereArgs: [userId]);
+    return count > 0;
   }
 
   // Future<void> logout() async {

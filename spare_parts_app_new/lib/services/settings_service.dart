@@ -1,6 +1,9 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'remote_client.dart';
+import '../utils/constants.dart';
 
 class SettingsService {
+  static final _remote = RemoteClient();
   static const _voiceTrainingKey = 'voice_training_enabled';
   static const _aiChatbotKey = 'ai_chatbot_enabled';
   static const _websocketKey = 'websocket_enabled';
@@ -12,7 +15,7 @@ class SettingsService {
   static Future<bool> isVoiceTrainingEnabled() async {
     final p = await _prefs();
     return p.getBool(_voiceTrainingKey) ?? true;
-    }
+  }
 
   static Future<void> setVoiceTrainingEnabled(bool v) async {
     final p = await _prefs();
@@ -47,5 +50,30 @@ class SettingsService {
   static Future<void> setForceLocalOtp(bool v) async {
     final p = await _prefs();
     await p.setBool(_forceLocalOtpKey, v);
+  }
+
+  static Future<Map<String, String>> getRemoteSettings() async {
+    if (!Constants.useRemote) return {};
+    try {
+      final list = await _remote.getList('/admin/settings');
+      final Map<String, String> res = {};
+      for (var item in list) {
+        final m = item as Map<String, dynamic>;
+        res[m['settingKey']] = m['settingValue'];
+      }
+      return res;
+    } catch (_) {
+      return {};
+    }
+  }
+
+  static Future<void> saveRemoteSetting(String key, String value) async {
+    if (!Constants.useRemote) return;
+    try {
+      await _remote.postJson('/admin/settings', {
+        'settingKey': key,
+        'settingValue': value,
+      });
+    } catch (_) {}
   }
 }

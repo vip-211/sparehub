@@ -87,50 +87,35 @@ class OrderService {
   // CREATE ORDER REQUEST
   // ===============================
 
-  Future<int?> createOrderRequest(String text, {String? photoPath}) async {
+  Future<bool> createOrderRequest(String text, {String? photoPath}) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final userStr = prefs.getString('user');
-
-      if (userStr == null) return null;
-
-      final currentUser = User.fromJson(jsonDecode(userStr));
-
       if (Constants.useRemote) {
-        final res = await _remote.postJson('/order-requests', {
-          'customerId': currentUser.id,
+        await _remote.postJson('/orders/custom-request', {
           'text': text,
           'photoPath': photoPath,
         });
-
-        return (res['id'] as num?)?.toInt();
+        return true;
       }
-
       final db = await _dbService.database;
+      final prefs = await SharedPreferences.getInstance();
+      final userStr = prefs.getString('user');
+      if (userStr == null) return false;
+      final user = jsonDecode(userStr);
+      final customerId = user['id'];
+      final customerName = user['name'] ?? 'Unknown';
 
-      final customerMaps = await db.query(
-        'users',
-        where: 'id = ?',
-        whereArgs: [currentUser.id],
-      );
-
-      final customerName = customerMaps.isNotEmpty
-          ? (customerMaps.first['name'] as String? ?? 'Unknown')
-          : 'Unknown';
-
-      final id = await db.insert('order_requests', {
-        'customerId': currentUser.id,
+      await db.insert('order_requests', {
+        'customerId': customerId,
         'customerName': customerName,
         'text': text,
         'photoPath': photoPath,
         'status': 'NEW',
         'createdAt': DateTime.now().toIso8601String(),
       });
-
-      return id;
+      return true;
     } catch (e) {
       debugPrint('Create order request error: $e');
-      return null;
+      return false;
     }
   }
 
@@ -140,30 +125,12 @@ class OrderService {
 
   Future<List<Map<String, dynamic>>> getOrderRequests() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final userStr = prefs.getString('user');
-
-      if (userStr == null) return [];
-
-      final currentUser = User.fromJson(jsonDecode(userStr));
-
       if (Constants.useRemote) {
-        // Backend has no order_requests; return empty. Orders are in getMyOrders.
-        return [];
+        final list = await _remote.getList('/orders/custom-requests');
+        return list.map((e) => e as Map<String, dynamic>).toList();
       }
-
       final db = await _dbService.database;
-
-      if (currentUser.roles.contains(Constants.roleAdmin)) {
-        return db.query('order_requests', orderBy: 'id DESC');
-      }
-
-      return db.query(
-        'order_requests',
-        where: 'customerId = ?',
-        whereArgs: [currentUser.id],
-        orderBy: 'id DESC',
-      );
+      return await db.query('order_requests', orderBy: 'id DESC');
     } catch (e) {
       debugPrint('Get order requests error: $e');
       return [];
@@ -257,7 +224,7 @@ class OrderService {
       final db = await _dbService.database;
       final maps = await db.query(
         'orders',
-        where: 'customerId = ? OR sellerId = ?',
+        where: '(customerId = ? OR sellerId = ?) AND deleted = 0',
         whereArgs: [currentUser.id, currentUser.id],
         orderBy: 'id DESC',
       );
@@ -289,7 +256,8 @@ class OrderService {
             .toList();
       }
       final db = await _dbService.database;
-      final maps = await db.query('orders', orderBy: 'id DESC');
+      final maps =
+          await db.query('orders', where: 'deleted = 0', orderBy: 'id DESC');
       List<Order> orders = [];
       for (var map in maps) {
         final items = await db.query(
@@ -390,13 +358,8 @@ class OrderService {
 
       final db = await _dbService.database;
 
-      await db.delete('orders', where: 'id = ?', whereArgs: [orderId]);
-
-      await db.delete(
-        'order_items',
-        where: 'orderId = ?',
-        whereArgs: [orderId],
-      );
+      await db.update('orders', {'deleted': 1},
+          where: 'id = ?', whereArgs: [orderId]);
 
       return true;
     } catch (e) {
@@ -579,6 +542,52 @@ class OrderService {
       return true;
     } catch (e) {
       debugPrint('Update order items error: $e');
+      return false;
+    }
+  }
+
+  Future<List<Order>> getDeletedOrders() async {
+    try {
+      if (Constants.useRemote) {
+        final list = await _remote.getList('/admin/recycle-bin/orders');
+        return list
+            .map((e) => Order.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      final db = await _dbService.database;
+      final maps =
+          await db.query('orders', where: 'deleted = 1', orderBy: 'id DESC');
+      List<Order> orders = [];
+      for (var map in maps) {
+        final items = await db.query(
+          'order_items',
+          where: 'orderId = ?',
+          whereArgs: [map['id']],
+        );
+        final orderData = Map<String, dynamic>.from(map);
+        orderData['items'] = items;
+        orders.add(Order.fromJson(orderData));
+      }
+      return orders;
+    } catch (e) {
+      debugPrint('Get deleted orders error: $e');
+      return [];
+    }
+  }
+
+  Future<bool> restoreOrder(int orderId) async {
+    try {
+      if (Constants.useRemote) {
+        await _remote
+            .postJson('/admin/recycle-bin/orders/$orderId/restore', {});
+        return true;
+      }
+      final db = await _dbService.database;
+      await db.update('orders', {'deleted': 0},
+          where: 'id = ?', whereArgs: [orderId]);
+      return true;
+    } catch (e) {
+      debugPrint('Restore order error: $e');
       return false;
     }
   }

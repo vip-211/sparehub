@@ -25,10 +25,13 @@ class _EditProductScreenState extends State<EditProductScreen> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.product.name);
-    _partNumberController = TextEditingController(text: widget.product.partNumber);
-    _stockController = TextEditingController(text: widget.product.stock.toString());
+    _partNumberController =
+        TextEditingController(text: widget.product.partNumber);
+    _stockController =
+        TextEditingController(text: widget.product.stock.toString());
     _mrpController = TextEditingController(text: widget.product.mrp.toString());
-    _sellingPriceController = TextEditingController(text: widget.product.sellingPrice.toString());
+    _sellingPriceController =
+        TextEditingController(text: widget.product.sellingPrice.toString());
   }
 
   bool _isLoading = false;
@@ -81,15 +84,18 @@ class _EditProductScreenState extends State<EditProductScreen> {
                               partNumber: _partNumberController.text,
                               stock: int.parse(_stockController.text),
                               mrp: double.parse(_mrpController.text),
-                              sellingPrice: double.parse(_sellingPriceController.text),
+                              sellingPrice:
+                                  double.parse(_sellingPriceController.text),
                             );
                             final productService = ProductService();
-                            final success = await productService.addProduct(updatedProduct);
-                            if (success && mounted) {
+                            final success =
+                                await productService.addProduct(updatedProduct);
+                            if (success != null && mounted) {
                               Navigator.of(context).pop();
                             } else if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Failed to save product')),
+                                const SnackBar(
+                                    content: Text('Failed to save product')),
                               );
                             }
                           } catch (e) {

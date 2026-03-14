@@ -51,6 +51,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     const SalesReportsScreen(),
     const InvoicingScreen(),
     const AllUsersScreen(),
+    const RecycleBinScreen(),
     const VoiceTrainingScreen(),
     const ProfileScreen(),
   ];
@@ -232,12 +233,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   Navigator.pop(context);
                 },
               ),
+              ListTile(
+                leading: const Icon(Icons.restore_from_trash),
+                title: const Text('Recycle Bin'),
+                onTap: () {
+                  setState(() => _selectedIndex = 6);
+                  Navigator.pop(context);
+                },
+              ),
               if (_voiceEnabled)
                 ListTile(
                   leading: const Icon(Icons.record_voice_over),
                   title: const Text('Voice Training'),
                   onTap: () {
-                    setState(() => _selectedIndex = 6);
+                    setState(() => _selectedIndex = 7);
                     Navigator.pop(context);
                   },
                 ),
@@ -245,7 +254,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 leading: const Icon(Icons.person),
                 title: const Text('Profile'),
                 onTap: () {
-                  setState(() => _selectedIndex = 7);
+                  setState(() => _selectedIndex = 8);
                   Navigator.pop(context);
                 },
               ),
@@ -314,6 +323,9 @@ class _OrderRequestsScreenState extends State<OrderRequestsScreen> {
 
   Future<void> _fetch() async {
     final reqs = await _orderService.getOrderRequests();
+    // Sort requests by ID descending (newest first)
+    reqs.sort((a, b) => (b['id'] as int).compareTo(a['id'] as int));
+
     final staff = await (await _dbService.database).query(
       'users',
       where: 'role = ?',
@@ -338,9 +350,38 @@ class _OrderRequestsScreenState extends State<OrderRequestsScreen> {
     _fetch();
   }
 
+  Widget _buildSkeleton() {
+    return ListView.builder(
+      itemCount: 6,
+      itemBuilder: (context, index) => Card(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: ListTile(
+          leading: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              shape: BoxShape.circle,
+            ),
+          ),
+          title: Container(
+            width: 150,
+            height: 12,
+            color: Colors.grey[300],
+          ),
+          subtitle: Container(
+            width: 100,
+            height: 10,
+            color: Colors.grey[300],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    if (_isLoading) return _buildSkeleton();
     return RefreshIndicator(
       onRefresh: _fetch,
       child: ListView.builder(
@@ -435,6 +476,9 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
 
   Future<void> _fetchOrders() async {
     final orders = await _orderService.getAllOrders();
+    // Sort orders by ID descending (newest first)
+    orders.sort((a, b) => b.id.compareTo(a.id));
+
     if (mounted) {
       setState(() {
         _orders = orders;
@@ -706,15 +750,46 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
     );
   }
 
+  Widget _buildSkeleton() {
+    return ListView.builder(
+      itemCount: 6,
+      itemBuilder: (context, index) => Card(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: ListTile(
+          title: Container(
+            width: 150,
+            height: 12,
+            color: Colors.grey[300],
+          ),
+          subtitle: Container(
+            width: 100,
+            height: 10,
+            color: Colors.grey[300],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    if (_isLoading) return _buildSkeleton();
     final visible = _orders.where((o) {
       if (_orderQuery.isEmpty) return true;
       final q = _orderQuery.toLowerCase();
       return (o.customerName.toLowerCase().contains(q) ||
           o.sellerName.toLowerCase().contains(q));
     }).toList();
+
+    // Group orders by customer name
+    final Map<String, List<Order>> grouped = {};
+    for (var o in visible) {
+      final name = o.customerName;
+      if (!grouped.containsKey(name)) grouped[name] = [];
+      grouped[name]!.add(o);
+    }
+    final customerNames = grouped.keys.toList()..sort();
+
     if (visible.isEmpty) return const Center(child: Text('No orders found.'));
     return RefreshIndicator(
       onRefresh: _fetchOrders,
@@ -734,145 +809,182 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
           ),
           Expanded(
             child: ListView.builder(
-              itemCount: visible.length,
-              itemBuilder: (ctx, i) {
-                final order = visible[i];
-                final deliveredAt = order.deliveredAt != null
-                    ? DateFormat(
-                        'dd MMM, hh:mm a',
-                      ).format(DateTime.parse(order.deliveredAt!))
-                    : null;
-                return Card(
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: ExpansionTile(
-                    title: Text('Order #${order.id} - ${order.status}'),
-                    subtitle: Text(
-                      'From: ${order.customerName} to ${order.sellerName}',
+              itemCount: customerNames.length,
+              itemBuilder: (ctx, index) {
+                final customerName = customerNames[index];
+                final customerOrders = grouped[customerName]!;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.person, color: Colors.redAccent),
+                          const SizedBox(width: 8),
+                          Text(
+                            customerName,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const Spacer(),
+                          Chip(
+                            label: Text(
+                              '${customerOrders.length} Orders',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            backgroundColor: Colors.red.shade50,
+                          ),
+                        ],
+                      ),
                     ),
-                    children: [
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                    ...customerOrders.map((order) {
+                      final deliveredAt = order.deliveredAt != null
+                          ? DateFormat('dd MMM, hh:mm a')
+                              .format(DateTime.parse(order.deliveredAt!))
+                          : null;
+                      return Card(
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 4),
+                        child: ExpansionTile(
+                          title: Text('Order #${order.id} - ${order.status}'),
+                          subtitle: Text('Date: ${order.createdAt}'),
                           children: [
-                            IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (ctx) => AlertDialog(
-                                    title: const Text('Delete Order'),
-                                    content: Text(
-                                      'Are you sure you want to delete order #${order.id}?',
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(ctx),
-                                        child: const Text('Cancel'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () async {
-                                          Navigator.pop(ctx);
-                                          final ok = await _orderService
-                                              .deleteOrder(order.id);
-                                          if (mounted && ok) _fetchOrders();
-                                        },
-                                        child: const Text(
-                                          'Delete',
-                                          style: TextStyle(color: Colors.red),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.delete,
+                                        color: Colors.red),
+                                    onPressed: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          title: const Text('Delete Order'),
+                                          content: Text(
+                                            'Are you sure you want to delete order #${order.id}?',
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(ctx),
+                                              child: const Text('Cancel'),
+                                            ),
+                                            TextButton(
+                                              onPressed: () async {
+                                                Navigator.pop(ctx);
+                                                final ok = await _orderService
+                                                    .deleteOrder(order.id);
+                                                if (mounted && ok)
+                                                  _fetchOrders();
+                                              },
+                                              child: const Text(
+                                                'Delete',
+                                                style: TextStyle(
+                                                    color: Colors.red),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  TextButton.icon(
+                                    onPressed: _showRequests,
+                                    icon: const Icon(Icons.assignment),
+                                    label: const Text('View Requests'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            ...order.items.map(
+                              (item) => ListTile(
+                                title: Text(item.productName),
+                                subtitle: Text(
+                                    'Qty: ${item.quantity} | ${item.price}'),
+                              ),
+                            ),
+                            if (order.status != 'DELIVERED' &&
+                                order.status != 'CANCELLED')
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 16),
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _editOrder(order),
+                                  icon: const Icon(Icons.edit_note),
+                                  label: const Text('Edit Items / Bill'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.orange,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            if (order.status == 'DELIVERED')
+                              Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Delivery Info:',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.green,
                                         ),
                                       ),
+                                      Text(
+                                          'Delivered By: ${order.deliveredBy ?? "N/A"}'),
+                                      Text('Delivered At: $deliveredAt'),
                                     ],
                                   ),
-                                );
-                              },
-                            ),
-                            TextButton.icon(
-                              onPressed: _showRequests,
-                              icon: const Icon(Icons.assignment),
-                              label: const Text('View Requests'),
-                            ),
+                                ),
+                              ),
+                            if (order.status == 'PENDING')
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    ElevatedButton(
+                                      onPressed: () =>
+                                          _updateStatus(order.id, 'APPROVED'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                      child: const Text('Approve'),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () =>
+                                          _updateStatus(order.id, 'CANCELLED'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.red,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                      child: const Text('Cancel'),
+                                    ),
+                                  ],
+                                ),
+                              ),
                           ],
                         ),
-                      ),
-                      ...order.items.map(
-                        (item) => ListTile(
-                          title: Text(item.productName),
-                          subtitle:
-                              Text('Qty: ${item.quantity} | ${item.price}'),
-                        ),
-                      ),
-                      if (order.status != 'DELIVERED' &&
-                          order.status != 'CANCELLED')
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: ElevatedButton.icon(
-                            onPressed: () => _editOrder(order),
-                            icon: const Icon(Icons.edit_note),
-                            label: const Text('Edit Items / Bill'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange,
-                              foregroundColor: Colors.white,
-                            ),
-                          ),
-                        ),
-                      if (order.status == 'DELIVERED')
-                        Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.green.shade50,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Delivery Info:',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.green,
-                                  ),
-                                ),
-                                Text(
-                                    'Delivered By: ${order.deliveredBy ?? "N/A"}'),
-                                Text('Delivered At: $deliveredAt'),
-                              ],
-                            ),
-                          ),
-                        ),
-                      if (order.status == 'PENDING')
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              ElevatedButton(
-                                onPressed: () =>
-                                    _updateStatus(order.id, 'APPROVED'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
-                                  foregroundColor: Colors.white,
-                                ),
-                                child: const Text('Approve'),
-                              ),
-                              ElevatedButton(
-                                onPressed: () =>
-                                    _updateStatus(order.id, 'CANCELLED'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red,
-                                  foregroundColor: Colors.white,
-                                ),
-                                child: const Text('Cancel'),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
+                      );
+                    }).toList(),
+                  ],
                 );
               },
             ),
@@ -952,6 +1064,9 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
     final products = (query != null && query.isNotEmpty)
         ? await _productService.searchProducts(query)
         : await _productService.getAllProducts();
+    // Sort products by ID descending (newest first)
+    products.sort((a, b) => b.id.compareTo(a.id));
+
     if (mounted) {
       setState(() {
         _products = products;
@@ -1340,6 +1455,31 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                   decoration: const InputDecoration(labelText: 'Wholesaler ID'),
                   keyboardType: TextInputType.number,
                 ),
+                if (product != null && product.categoryName != null) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.category,
+                            size: 16, color: Colors.blue),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Category: ${product.categoryName}',
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.blue),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -1388,9 +1528,19 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                     return;
                   }
                 }
-                final success = await _productService.addProduct(newProduct);
-                if (success && mounted) {
+                final savedProduct =
+                    await _productService.addProduct(newProduct);
+                if (savedProduct != null && mounted) {
                   Navigator.pop(ctx);
+                  if (product == null && savedProduct.categoryName != null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                            'Added & Auto-categorized as: ${savedProduct.categoryName}'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
                   _fetchProducts();
                 }
               },
@@ -1472,6 +1622,35 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
             child: const Text('Add Bulk'),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSkeleton() {
+    return ListView.builder(
+      itemCount: 6,
+      itemBuilder: (context, index) => Card(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: ListTile(
+          leading: Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          title: Container(
+            width: 150,
+            height: 12,
+            color: Colors.grey[300],
+          ),
+          subtitle: Container(
+            width: 100,
+            height: 10,
+            color: Colors.grey[300],
+          ),
+        ),
       ),
     );
   }
@@ -1592,8 +1771,8 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
             ),
           ),
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+            child: _isLoading && _products.isEmpty
+                ? _buildSkeleton()
                 : ListView.builder(
                     itemCount: _products.length,
                     itemBuilder: (ctx, i) {
@@ -2614,9 +2793,38 @@ class _SalesReportsScreenState extends State<SalesReportsScreen> {
     );
   }
 
+  Widget _buildSkeleton() {
+    return ListView.builder(
+      itemCount: 6,
+      itemBuilder: (context, index) => Card(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: ListTile(
+          leading: Container(
+            width: 40,
+            height: 40,
+            decoration: const BoxDecoration(
+              color: Color(0xFFE0E0E0),
+              shape: BoxShape.circle,
+            ),
+          ),
+          title: Container(
+            width: 150,
+            height: 12,
+            color: const Color(0xFFE0E0E0),
+          ),
+          subtitle: Container(
+            width: 100,
+            height: 10,
+            color: const Color(0xFFE0E0E0),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    if (_isLoading) return _buildSkeleton();
     return RefreshIndicator(
       onRefresh: _fetchReports,
       child: ListView(
@@ -2667,6 +2875,9 @@ class _AllUsersScreenState extends State<AllUsersScreen> {
 
   Future<void> _fetchUsers() async {
     final users = await _authService.getAllUsers();
+    // Sort users by ID descending (newest first)
+    users.sort((a, b) => b.id.compareTo(a.id));
+
     if (mounted) {
       setState(() {
         _users = users
@@ -3152,5 +3363,188 @@ class _AllUsersScreenState extends State<AllUsersScreen> {
         );
       }
     }
+  }
+}
+
+class RecycleBinScreen extends StatefulWidget {
+  const RecycleBinScreen({super.key});
+  @override
+  State<RecycleBinScreen> createState() => _RecycleBinScreenState();
+}
+
+class _RecycleBinScreenState extends State<RecycleBinScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  final ProductService _productService = ProductService();
+  final OrderService _orderService = OrderService();
+  final AuthService _authService = AuthService();
+
+  List<Product> _deletedProducts = [];
+  List<Order> _deletedOrders = [];
+  List<Map<String, dynamic>> _deletedUsers = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+    _fetchDeletedItems();
+  }
+
+  Future<void> _fetchDeletedItems() async {
+    setState(() => _isLoading = true);
+    try {
+      final products = await _productService.getDeletedProducts();
+      final orders = await _orderService.getDeletedOrders();
+      final users = await _authService.getDeletedUsers();
+      if (mounted) {
+        setState(() {
+          _deletedProducts = products;
+          _deletedOrders = orders;
+          _deletedUsers = users;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _restoreProduct(int id) async {
+    final ok = await _productService.restoreProduct(id);
+    if (ok) {
+      _fetchDeletedItems();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Product restored')),
+      );
+    }
+  }
+
+  Future<void> _restoreOrder(int id) async {
+    final ok = await _orderService.restoreOrder(id);
+    if (ok) {
+      _fetchDeletedItems();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Order restored')),
+      );
+    }
+  }
+
+  Future<void> _restoreUser(int id) async {
+    final ok = await _authService.restoreUser(id);
+    if (ok) {
+      _fetchDeletedItems();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User restored')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) return const Center(child: CircularProgressIndicator());
+
+    return Scaffold(
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: Container(
+          color: Colors.white,
+          child: TabBar(
+            controller: _tabController,
+            labelColor: Colors.redAccent,
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: Colors.redAccent,
+            tabs: const [
+              Tab(icon: Icon(Icons.inventory), text: 'Products'),
+              Tab(icon: Icon(Icons.shopping_bag), text: 'Orders'),
+              Tab(icon: Icon(Icons.people), text: 'Users'),
+            ],
+          ),
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildDeletedProductsList(),
+          _buildDeletedOrdersList(),
+          _buildDeletedUsersList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDeletedProductsList() {
+    if (_deletedProducts.isEmpty) {
+      return const Center(child: Text('No deleted products found.'));
+    }
+    return ListView.builder(
+      itemCount: _deletedProducts.length,
+      itemBuilder: (ctx, i) {
+        final p = _deletedProducts[i];
+        return ListTile(
+          title: Text(p.name),
+          subtitle: Text('Part: ${p.partNumber}'),
+          trailing: ElevatedButton.icon(
+            onPressed: () => _restoreProduct(p.id),
+            icon: const Icon(Icons.restore),
+            label: const Text('Restore'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDeletedOrdersList() {
+    if (_deletedOrders.isEmpty) {
+      return const Center(child: Text('No deleted orders found.'));
+    }
+    return ListView.builder(
+      itemCount: _deletedOrders.length,
+      itemBuilder: (ctx, i) {
+        final o = _deletedOrders[i];
+        return ListTile(
+          title: Text('Order #${o.id}'),
+          subtitle: Text('Customer: ${o.customerName}'),
+          trailing: ElevatedButton.icon(
+            onPressed: () => _restoreOrder(o.id),
+            icon: const Icon(Icons.restore),
+            label: const Text('Restore'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDeletedUsersList() {
+    if (_deletedUsers.isEmpty) {
+      return const Center(child: Text('No deleted users found.'));
+    }
+    return ListView.builder(
+      itemCount: _deletedUsers.length,
+      itemBuilder: (ctx, i) {
+        final u = _deletedUsers[i];
+        return ListTile(
+          title: Text(u['name'] ?? 'No Name'),
+          subtitle: Text(u['email'] ?? ''),
+          trailing: ElevatedButton.icon(
+            onPressed: () => _restoreUser(u['id'] as int),
+            icon: const Icon(Icons.restore),
+            label: const Text('Restore'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        );
+      },
+    );
   }
 }

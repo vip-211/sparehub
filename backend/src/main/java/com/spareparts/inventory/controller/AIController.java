@@ -54,6 +54,23 @@ public class AIController {
         return ResponseEntity.ok(Map.of("response", response));
     }
 
+    @PostMapping("/feedback")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> feedback(@RequestBody Map<String, Object> request) {
+        // In a real production app, we would save this to a database table 'ai_feedback'
+        // For now, we log it to console/server logs as requested for "training"
+        System.out.println("AI Feedback Received: " + request);
+        return ResponseEntity.ok(Map.of("message", "Feedback recorded"));
+    }
+
+    @PostMapping("/train")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> train(@RequestBody Map<String, Object> request) {
+        // Similar to feedback, record corrections for manual model fine-tuning
+        System.out.println("AI Training Correction Received: " + request);
+        return ResponseEntity.ok(Map.of("message", "Correction recorded for training"));
+    }
+
     @PostMapping("/order")
     @PreAuthorize("hasRole('RETAILER') or hasRole('MECHANIC') or hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
     public ResponseEntity<Map<String, Object>> order(@RequestBody Map<String, Object> request, Authentication authentication) {

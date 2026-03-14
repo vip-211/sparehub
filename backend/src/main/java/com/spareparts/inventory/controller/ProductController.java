@@ -47,13 +47,10 @@ public class ProductController {
 
     @GetMapping
     public ResponseEntity<List<ProductDto>> getAllProducts(@RequestParam(value = "categoryId", required = false) Long categoryId) {
-        if (categoryId == null) {
-            return ResponseEntity.ok(productService.getAllProducts());
+        if (categoryId != null) {
+            return ResponseEntity.ok(productService.getProductsByCategory(categoryId));
         }
-        List<ProductDto> list = productService.getAllProducts().stream()
-                .filter(p -> p.getCategoryId() != null && p.getCategoryId().equals(categoryId))
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(list);
+        return ResponseEntity.ok(productService.getAllProducts());
     }
 
     @GetMapping("/search")

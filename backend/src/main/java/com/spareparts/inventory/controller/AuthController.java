@@ -267,20 +267,12 @@ public class AuthController {
         
         java.util.Optional<User> userOptional = userRepository.findByEmail(email);
         
+        User user;
         if (userOptional.isPresent()) {
-            User u = userOptional.get();
-            // Note: In a real app, you'd use a custom authentication provider for SSO
-            String jwt = jwtUtils.generateJwtTokenFromUsername(u.getEmail());
-            
-            String roleName = "ROLE_MECHANIC";
-            if (u.getRole() != null && u.getRole().getName() != null) {
-                roleName = u.getRole().getName().name();
-            }
-            List<String> roles = List.of(roleName);
-            return ResponseEntity.ok(new JwtResponse(jwt, u.getId(), u.getName(), u.getEmail(), roles));
+            user = userOptional.get();
         } else {
             // Create new user if not exists
-            User user = new User();
+            user = new User();
             user.setEmail(email);
             user.setName(name);
             user.setPassword(encoder.encode("sso_google_password"));
@@ -294,11 +286,22 @@ public class AuthController {
             
             user.setRole(defaultRole);
             user.setStatus(User.UserStatus.ACTIVE);
-            userRepository.save(user);
-            
-            String jwt = jwtUtils.generateJwtTokenFromUsername(user.getEmail());
-            List<String> roles = List.of(user.getRole().getName().name());
-            return ResponseEntity.ok(new JwtResponse(jwt, user.getId(), user.getName(), user.getEmail(), roles));
+            user = userRepository.save(user);
         }
+
+        // Generate token
+        String jwt = jwtUtils.generateJwtTokenFromUsername(user.getEmail());
+        
+        String roleName = "ROLE_MECHANIC";
+        if (user.getRole() != null && user.getRole().getName() != null) {
+            roleName = user.getRole().getName().name();
+        }
+        List<String> roles = List.of(roleName);
+
+        return ResponseEntity.ok(new JwtResponse(jwt,
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                roles));
     }
 }

@@ -199,7 +199,8 @@ class ProductService {
         return enabledOnly;
       }
       final db = await _dbService.database;
-      final List<Map<String, dynamic>> maps = await db.query('products');
+      final List<Map<String, dynamic>> maps =
+          await db.query('products', where: 'deleted = 0');
       final products = maps.map((p) => Product.fromJson(p)).toList();
       final prefs = await SharedPreferences.getInstance();
       final userStr = prefs.getString('user');
@@ -382,15 +383,17 @@ class ProductService {
     }
   }
 
-  Future<bool> addProduct(Product product) async {
+  Future<Product?> addProduct(Product product) async {
     try {
       if (Constants.useRemote) {
+        final Map<String, dynamic> res;
         if (product.id != 0) {
-          await _remote.putJson('/products/${product.id}', product.toJson());
+          res = await _remote.putJson(
+              '/products/${product.id}', product.toJson());
         } else {
-          await _remote.postJson('/products', product.toJson());
+          res = await _remote.postJson('/products', product.toJson());
         }
-        return true;
+        return Product.fromJson(res);
       }
       final db = await _dbService.database;
       if (product.id == 0) {
@@ -401,7 +404,7 @@ class ProductService {
           limit: 1,
         );
         if (existing.isNotEmpty) {
-          return false;
+          return null;
         }
       }
       if (product.id != 0) {
@@ -420,16 +423,18 @@ class ProductService {
             'stock': product.stock,
             'wholesalerId': product.wholesalerId,
             'imagePath': product.imagePath,
+            'description': product.description,
             'enabled': product.enabled ? 1 : 0,
+            'deleted': 0,
           },
           where: 'id = ?',
           whereArgs: [product.id],
         );
-        return true;
+        return product;
       }
 
       // Insert new
-      await db.insert('products', {
+      final id = await db.insert('products', {
         'name': product.name,
         'partNumber': product.partNumber,
         'rackNumber': product.rackNumber,
@@ -442,11 +447,12 @@ class ProductService {
         'wholesalerId': product.wholesalerId,
         'imagePath': product.imagePath,
         'enabled': product.enabled ? 1 : 0,
+        'deleted': 0,
       });
-      return true;
+      return product.copyWith(id: id);
     } catch (e) {
       debugPrint('Add/update product error: $e');
-      return false;
+      return null;
     }
   }
 
@@ -527,6 +533,7 @@ class ProductService {
               'stock': product.stock,
               'wholesalerId': product.wholesalerId,
               'imagePath': product.imagePath,
+              'deleted': 0,
             },
             conflictAlgorithm: ConflictAlgorithm.ignore,
           );
@@ -547,7 +554,8 @@ class ProductService {
         return true;
       }
       final db = await _dbService.database;
-      await db.delete('products', where: 'id = ?', whereArgs: [id]);
+      await db.update('products', {'deleted': 1},
+          where: 'id = ?', whereArgs: [id]);
       return true;
     } catch (e) {
       debugPrint('Delete product error: $e');
@@ -565,12 +573,47 @@ class ProductService {
       final db = await _dbService.database;
       final batch = db.batch();
       for (final id in ids) {
-        batch.delete('products', where: 'id = ?', whereArgs: [id]);
+        batch.update('products', {'deleted': 1},
+            where: 'id = ?', whereArgs: [id]);
       }
       await batch.commit(noResult: true);
       return true;
     } catch (e) {
       debugPrint('Bulk delete products error: $e');
+      return false;
+    }
+  }
+
+  Future<List<Product>> getDeletedProducts() async {
+    try {
+      if (Constants.useRemote) {
+        final list = await _remote.getList('/admin/recycle-bin/products');
+        return list
+            .map((e) => Product.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      final db = await _dbService.database;
+      final List<Map<String, dynamic>> maps =
+          await db.query('products', where: 'deleted = 1');
+      return maps.map((p) => Product.fromJson(p)).toList();
+    } catch (e) {
+      debugPrint('Get deleted products error: $e');
+      return [];
+    }
+  }
+
+  Future<bool> restoreProduct(int id) async {
+    try {
+      if (Constants.useRemote) {
+        await _remote.postJson('/admin/recycle-bin/products/$id/restore', {});
+        return true;
+      }
+      final db = await _dbService.database;
+      await db.update('products', {'deleted': 0},
+          where: 'id = ?', whereArgs: [id]);
+      return true;
+    } catch (e) {
+      debugPrint('Restore product error: $e');
       return false;
     }
   }

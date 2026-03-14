@@ -58,6 +58,9 @@ public class Product {
     @Size(max = 500)
     private String imagePath;
 
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;
@@ -69,4 +72,7 @@ public class Product {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "deleted", nullable = false)
+    private boolean deleted = false;
 }

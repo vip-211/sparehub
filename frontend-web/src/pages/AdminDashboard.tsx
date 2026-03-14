@@ -3,14 +3,15 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
-import { Users, ShoppingBag, BarChart2, CheckCircle, XCircle, Plus, Package, UserPlus, Upload, Truck } from 'lucide-react';
+import { Users, ShoppingBag, BarChart2, CheckCircle, XCircle, Plus, Package, UserPlus, Upload, Truck, Trash2, RotateCcw, Settings, Bell, MessageSquare } from 'lucide-react';
 import { ROLE_SUPER_MANAGER, ROLE_ADMIN, ROLE_MECHANIC, ROLE_RETAILER, ROLE_WHOLESALER, ROLE_STAFF } from '../services/constants';
 import AuthService from '../services/auth.service';
+import Skeleton from '../components/Skeleton';
 
 const AdminDashboard = () => {
   const { tp } = useLanguage();
   const currentUser = AuthService.getCurrentUser();
-  const isSuperManager = currentUser?.roles.includes(ROLE_SUPER_MANAGER);
+  const isSuperManager = currentUser?.roles?.includes(ROLE_SUPER_MANAGER);
 
   const [users, setUsers] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
@@ -25,18 +26,26 @@ const AdminDashboard = () => {
   const [newProduct, setNewProduct] = useState({
     name: '',
     partNumber: '',
-    mrp: 0,
-    sellingPrice: 0,
-    wholesalerPrice: 0,
-    retailerPrice: 0,
-    mechanicPrice: 0,
-    stock: 0,
+    mrp: '',
+    sellingPrice: '',
+    wholesalerPrice: '',
+    retailerPrice: '',
+    mechanicPrice: '',
+    stock: '',
     wholesalerId: '',
     imagePath: '',
+    description: '',
     categoryId: ''
   });
   const [uploading, setUploading] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
+
+  const [deletedUsers, setDeletedUsers] = useState<any[]>([]);
+  const [deletedOrders, setDeletedOrders] = useState<any[]>([]);
+  const [deletedProducts, setDeletedProducts] = useState<any[]>([]);
+
+  const [settings, setSettings] = useState<any[]>([]);
+  const [savingSettings, setSavingSettings] = useState(false);
 
   const [showAddUser, setShowAddUser] = useState(false);
   const [newUser, setNewUser] = useState({
@@ -52,11 +61,98 @@ const AdminDashboard = () => {
   const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
 
   useEffect(() => { 
-    fetchUsers();
-    fetchOrders();
-    fetchProducts();
-    fetchCategories();
+    const init = async () => {
+      setLoading(true);
+      try {
+        await Promise.all([
+          fetchUsers(),
+          fetchOrders(),
+          fetchProducts(),
+          fetchCategories(),
+          fetchDeletedItems(),
+          fetchSettings()
+        ]);
+      } catch (err) {
+        console.error("Initial fetch failed:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    init();
   }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const res = await api.get('/admin/settings');
+      setSettings(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const updateSetting = async (key: string, value: string) => {
+    try {
+      setSavingSettings(true);
+      await api.post('/admin/settings', { settingKey: key, settingValue: value });
+      fetchSettings();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update setting');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const getSetting = (key: string, defaultValue: string = 'false') => {
+    const s = settings.find(s => s.settingKey === key);
+    return s ? s.settingValue : defaultValue;
+  };
+
+  const fetchDeletedItems = async () => {
+    try {
+      const usersRes = await api.get('/admin/recycle-bin/users');
+      setDeletedUsers(usersRes.data);
+      const ordersRes = await api.get('/admin/recycle-bin/orders');
+      setDeletedOrders(ordersRes.data);
+      const productsRes = await api.get('/admin/recycle-bin/products');
+      setDeletedProducts(productsRes.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const restoreUser = async (userId: number) => {
+    try {
+      await api.post(`/admin/recycle-bin/users/${userId}/restore`);
+      fetchUsers();
+      fetchDeletedItems();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to restore user');
+    }
+  };
+
+  const restoreOrder = async (orderId: number) => {
+    try {
+      await api.post(`/admin/recycle-bin/orders/${orderId}/restore`);
+      fetchOrders();
+      fetchDeletedItems();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to restore order');
+    }
+  };
+
+  const restoreProduct = async (productId: number) => {
+    try {
+      await api.post(`/admin/recycle-bin/products/${productId}/restore`);
+      fetchProducts();
+      fetchDeletedItems();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to restore product');
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -64,14 +160,12 @@ const AdminDashboard = () => {
       setUsers(res.data);
     } catch (err) {
       console.error(err);
-    } finally {
-      setLoading(false);
     }
   };
 
   const fetchOrders = async () => {
     try {
-      const res = await api.get(isSuperManager ? '/admin/orders' : '/admin/orders');
+      const res = await api.get('/admin/orders');
       setOrders(res.data);
     } catch (err) {
       console.error(err);
@@ -135,10 +229,23 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleEditOrder = async (orderId, items) => {
+  const getGroupedOrders = () => {
+    const grouped = orders.reduce((acc: any, order) => {
+      const name = order.customerName || 'Unknown User';
+      if (!acc[name]) acc[name] = [];
+      acc[name].push(order);
+      return acc;
+    }, {});
+    return grouped;
+  };
+
+  const groupedOrders = getGroupedOrders();
+
+  const handleEditOrder = async (orderId: number, items: any[]) => {
     try {
-      await api.post(`/orders/${orderId}/items`, { items });
+      await api.put(`/admin/orders/${orderId}/items`, items);
       setShowEditOrder(false);
+      setEditingOrder(null);
       fetchOrders();
     } catch (err) {
       console.error(err);
@@ -169,16 +276,23 @@ const AdminDashboard = () => {
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/products', {
+      const res = await api.post('/products', {
         ...newProduct,
-        mrp: parseFloat(newProduct.mrp),
-        sellingPrice: parseFloat(newProduct.sellingPrice),
-        stock: parseInt(newProduct.stock),
+        mrp: parseFloat(String(newProduct.mrp)),
+        sellingPrice: parseFloat(String(newProduct.sellingPrice)),
+        wholesalerPrice: newProduct.wholesalerPrice ? parseFloat(String(newProduct.wholesalerPrice)) : undefined,
+        retailerPrice: newProduct.retailerPrice ? parseFloat(String(newProduct.retailerPrice)) : undefined,
+        mechanicPrice: newProduct.mechanicPrice ? parseFloat(String(newProduct.mechanicPrice)) : undefined,
+        stock: parseInt(String(newProduct.stock)),
         wholesalerId: newProduct.wholesalerId ? parseInt(newProduct.wholesalerId as any) : undefined,
         categoryId: newProduct.categoryId ? parseInt(newProduct.categoryId as any) : undefined
       });
       setShowAddProduct(false);
-      setNewProduct({ name: '', partNumber: '', mrp: '', sellingPrice: '', stock: '', imagePath: '', wholesalerId: '', categoryId: '' });
+      const savedProduct = res.data;
+      if (!newProduct.categoryId && savedProduct.categoryName) {
+        alert(`Product auto-categorized as: ${savedProduct.categoryName}`);
+      }
+      setNewProduct({ name: '', partNumber: '', mrp: '', sellingPrice: '', wholesalerPrice: '', retailerPrice: '', mechanicPrice: '', stock: '', imagePath: '', description: '', wholesalerId: '', categoryId: '' });
       fetchProducts();
     } catch (err) {
       console.error(err);
@@ -191,9 +305,9 @@ const AdminDashboard = () => {
     try {
       await api.put(`/products/${editingProduct.id}`, {
         ...editingProduct,
-        mrp: parseFloat(editingProduct.mrp),
-        sellingPrice: parseFloat(editingProduct.sellingPrice),
-        stock: parseInt(editingProduct.stock),
+        mrp: parseFloat(String(editingProduct.mrp)),
+        sellingPrice: parseFloat(String(editingProduct.sellingPrice)),
+        stock: parseInt(String(editingProduct.stock)),
         categoryId: editingProduct.categoryId ? parseInt(editingProduct.categoryId as any) : undefined
       });
       setShowEditProduct(false);
@@ -227,7 +341,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const updateOrderStatus = async (orderId, status) => {
+  const updateOrderStatus = async (orderId: number, status: string) => {
     try {
       await api.put(`/orders/${orderId}/status?status=${status}`);
       fetchOrders();
@@ -237,7 +351,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const updateUserStatus = async (userId, status) => {
+  const updateUserStatus = async (userId: number, status: string) => {
     try {
       await api.put(`/admin/users/${userId}/status?status=${status}`);
       fetchUsers();
@@ -246,7 +360,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const updateUserRole = async (userId, role) => {
+  const updateUserRole = async (userId: number, role: string) => {
     try {
       await api.put(`/admin/users/${userId}/role?roleName=${role}`);
       fetchUsers();
@@ -256,10 +370,51 @@ const AdminDashboard = () => {
     }
   };
 
+  const renderStatsSkeletons = () => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-10">
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+          <Skeleton className="w-14 h-14 rounded-xl" />
+          <div className="flex-1">
+            <Skeleton className="w-20 h-3 mb-2" />
+            <Skeleton className="w-24 h-6" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderTableSkeletons = (cols: number) => (
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-gray-50/50 px-6 py-4 border-b border-gray-100 flex gap-4">
+        {[...Array(cols)].map((_, i) => (
+          <Skeleton key={i} className="h-4 flex-1" />
+        ))}
+      </div>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div key={i} className="px-6 py-5 border-b border-gray-100 flex gap-4 items-center">
+          {[...Array(cols)].map((_, j) => (
+            <Skeleton key={j} className="h-5 flex-1" />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+
   if (loading) return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh]">
-      <div className="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mb-4" />
-      <p className="text-gray-500 font-medium">Loading Dashboard...</p>
+    <div className="container mx-auto p-4 md:p-6">
+      <div className="flex justify-between items-center mb-8">
+        <Skeleton className="w-64 h-10 rounded-xl" />
+        <div className="flex gap-3">
+          <Skeleton className="w-24 h-10 rounded-xl" />
+          <Skeleton className="w-24 h-10 rounded-xl" />
+        </div>
+      </div>
+      {renderStatsSkeletons()}
+      <div className="flex gap-8 border-b border-gray-100 mb-8 pb-1">
+        {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="w-24 h-8 rounded-t-lg" />)}
+      </div>
+      {renderTableSkeletons(4)}
     </div>
   );
 
@@ -344,6 +499,8 @@ const AdminDashboard = () => {
           { id: 'orders', label: 'Transactions', icon: ShoppingBag },
           { id: 'products', label: 'Inventory', icon: Package },
           { id: 'deliveries', label: 'Deliveries', icon: Truck },
+          { id: 'recycle', label: 'Recycle Bin', icon: Trash2 },
+          { id: 'settings', label: 'Settings', icon: Settings },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -429,71 +586,83 @@ const AdminDashboard = () => {
       )}
 
       {activeTab === 'orders' && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-100">
-            <thead className="bg-gray-50/50">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Order Info</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Customer</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Amount</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-100">
-              {orders.map((order) => (
-                <tr key={order.id} className="hover:bg-gray-50/50 transition">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-xs font-black text-primary-700 bg-primary-50 px-2 py-1 rounded-md">#{order.id}</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-bold text-gray-900">{order.customerName}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-black text-gray-900">₹{order.totalAmount.toLocaleString()}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-3 py-1 text-[10px] font-black tracking-widest uppercase rounded-lg ${
-                      order.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' : 
-                      order.status === 'APPROVED' ? 'bg-blue-100 text-blue-700' : 
-                      order.status === 'DELIVERED' ? 'bg-green-100 text-green-700' : 
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {order.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <button 
-                        onClick={() => { setEditingOrder(order); setShowEditOrder(true); }}
-                        className="px-3 py-1.5 bg-gray-50 text-primary-600 rounded-lg text-xs font-bold hover:bg-primary-50 transition"
-                      >
-                        Edit
-                      </button>
-                      {order.status === 'PENDING' && (
-                        <>
-                          <button
-                            onClick={() => updateOrderStatus(order.id, 'APPROVED')}
-                            className="p-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition"
-                            title="Approve Order"
-                          >
-                            <CheckCircle size={18} />
-                          </button>
-                          <button
-                            onClick={() => updateOrderStatus(order.id, 'CANCELLED')}
-                            className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition"
-                            title="Cancel Order"
-                          >
-                            <XCircle size={18} />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-8">
+          {Object.keys(groupedOrders).map((userName) => (
+            <div key={userName} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+                <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                  <Users size={20} className="text-primary-600" />
+                  Orders for {userName}
+                </h3>
+                <span className="text-xs font-bold text-gray-500 bg-white px-3 py-1 rounded-full border border-gray-100">
+                  {groupedOrders[userName].length} Orders
+                </span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-100">
+                  <thead className="bg-gray-50/30">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Order Info</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Amount</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-100">
+                    {groupedOrders[userName].map((order: any) => (
+                      <tr key={order.id} className="hover:bg-gray-50/50 transition">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-xs font-black text-primary-700 bg-primary-50 px-2 py-1 rounded-md">#{order.id}</span>
+                          <div className="text-[10px] text-gray-400 mt-1 font-bold">{new Date(order.createdAt).toLocaleDateString()}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-black text-gray-900">₹{order.totalAmount.toLocaleString()}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-3 py-1 text-[10px] font-black tracking-widest uppercase rounded-lg ${
+                            order.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' : 
+                            order.status === 'APPROVED' ? 'bg-blue-100 text-blue-700' : 
+                            order.status === 'DELIVERED' ? 'bg-green-100 text-green-700' : 
+                            'bg-gray-100 text-gray-700'
+                          }`}>
+                            {order.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button 
+                              onClick={() => { setEditingOrder(order); setShowEditOrder(true); }}
+                              className="px-3 py-1.5 bg-gray-50 text-primary-600 rounded-lg text-xs font-bold hover:bg-primary-50 transition"
+                            >
+                              Edit
+                            </button>
+                            <select 
+                              value={order.status}
+                              onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                              className="bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 text-[10px] font-black text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 transition uppercase"
+                            >
+                              <option value="PENDING">PENDING</option>
+                              <option value="APPROVED">APPROVED</option>
+                              <option value="PACKED">PACKED</option>
+                              <option value="OUT_FOR_DELIVERY">OUT_FOR_DELIVERY</option>
+                              <option value="DELIVERED">DELIVERED</option>
+                              <option value="CANCELLED">CANCELLED</option>
+                            </select>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+          {orders.length === 0 && (
+            <div className="bg-white rounded-2xl p-10 text-center border border-dashed border-gray-200">
+              <ShoppingBag size={48} className="mx-auto text-gray-200 mb-4" />
+              <p className="text-gray-400 font-bold">No orders found</p>
+            </div>
+          )}
         </div>
       )}
 
@@ -527,7 +696,7 @@ const AdminDashboard = () => {
                 <button
                   onClick={async () => {
                     if (selectedProductIds.length === 0) return;
-                    if (!confirm(`Delete ${selectedProductIds.length} selected products?`)) return;
+                    if (!window.confirm(`Delete ${selectedProductIds.length} selected products?`)) return;
                     try {
                       await api.post('/products/delete-bulk', selectedProductIds);
                       setSelectedProductIds([]);
@@ -598,7 +767,14 @@ const AdminDashboard = () => {
                           <Package size={20} className="text-gray-300" />
                         </div>
                       )}
-                      <div className="text-sm font-bold text-gray-900">{tp(product.name)}</div>
+                      <div>
+                        <div className="text-sm font-bold text-gray-900">{tp(product.name)}</div>
+                        {product.categoryName && (
+                          <div className="text-[10px] font-bold text-primary-600 bg-primary-50 px-1.5 py-0.5 rounded inline-block mt-1 uppercase tracking-wider">
+                            {product.categoryName}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-gray-400 uppercase tracking-widest">{product.partNumber}</td>
@@ -671,12 +847,220 @@ const AdminDashboard = () => {
                 </tr>
               ))}
               {orders.filter(o => o.status === 'OUT_FOR_DELIVERY' || o.status === 'DELIVERED').length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-6 py-10 text-center text-gray-500">No active or completed deliveries found.</td>
-                </tr>
-              )}
+                    <tr>
+                      <td colSpan={6} className="px-6 py-10 text-center text-gray-500">No active or completed deliveries found.</td>
+                    </tr>
+                  )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {activeTab === 'recycle' && (
+        <div className="space-y-8">
+          {/* Deleted Users */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+              <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                <Users size={20} className="text-primary-600" />
+                Deleted Users
+              </h3>
+            </div>
+            <table className="min-w-full divide-y divide-gray-100">
+              <thead className="bg-gray-50/30">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">User</th>
+                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Role</th>
+                  <th className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {deletedUsers.length > 0 ? deletedUsers.map((user) => (
+                  <tr key={user.id} className="hover:bg-gray-50/50 transition">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="font-bold text-gray-900">{user.name}</div>
+                      <div className="text-xs text-gray-500">{user.email}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-xs font-bold text-gray-600">{user.role?.name || user.role}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <button
+                        onClick={() => restoreUser(user.id)}
+                        className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition flex items-center gap-2 mx-auto text-xs font-bold"
+                      >
+                        <RotateCcw size={16} />
+                        Restore
+                      </button>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={3} className="px-6 py-10 text-center text-gray-400 text-sm font-medium">No deleted users found</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Deleted Products */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+              <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                <Package size={20} className="text-primary-600" />
+                Deleted Products
+              </h3>
+            </div>
+            <table className="min-w-full divide-y divide-gray-100">
+              <thead className="bg-gray-50/30">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Product</th>
+                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Part Number</th>
+                  <th className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {deletedProducts.length > 0 ? deletedProducts.map((product) => (
+                  <tr key={product.id} className="hover:bg-gray-50/50 transition">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="font-bold text-gray-900">{product.name}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{product.partNumber}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <button
+                        onClick={() => restoreProduct(product.id)}
+                        className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition flex items-center gap-2 mx-auto text-xs font-bold"
+                      >
+                        <RotateCcw size={16} />
+                        Restore
+                      </button>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={3} className="px-6 py-10 text-center text-gray-400 text-sm font-medium">No deleted products found</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Deleted Orders */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+              <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                <ShoppingBag size={20} className="text-primary-600" />
+                Deleted Orders
+              </h3>
+            </div>
+            <table className="min-w-full divide-y divide-gray-100">
+              <thead className="bg-gray-50/30">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Order ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Customer</th>
+                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Amount</th>
+                  <th className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {deletedOrders.length > 0 ? deletedOrders.map((order) => (
+                  <tr key={order.id} className="hover:bg-gray-50/50 transition">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-xs font-black text-primary-700 bg-primary-50 px-2 py-1 rounded-md">#{order.id}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-bold text-gray-900">{order.customerName}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-black text-gray-900">₹{order.totalAmount.toLocaleString()}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <button
+                        onClick={() => restoreOrder(order.id)}
+                        className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition flex items-center gap-2 mx-auto text-xs font-bold"
+                      >
+                        <RotateCcw size={16} />
+                        Restore
+                      </button>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-10 text-center text-gray-400 text-sm font-medium">No deleted orders found</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'settings' && (
+        <div className="max-w-4xl mx-auto space-y-8">
+          <div className="bg-white rounded-3xl shadow-xl shadow-gray-100/50 border border-gray-100 overflow-hidden">
+            <div className="px-8 py-6 border-b border-gray-100 bg-gray-50/50">
+              <h2 className="text-xl font-black text-gray-900 flex items-center gap-3">
+                <Bell size={24} className="text-primary-600" />
+                Notification Preferences
+              </h2>
+              <p className="text-gray-500 text-sm mt-1 font-medium">Choose how users get notified about new products.</p>
+            </div>
+            
+            <div className="p-8 space-y-6">
+              <div className="flex items-center justify-between p-6 bg-gray-50 rounded-2xl border border-gray-100 group hover:border-primary-200 transition-all">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-white rounded-xl shadow-sm text-primary-600 group-hover:scale-110 transition-transform">
+                    <Bell size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900">In-App Notifications</h3>
+                    <p className="text-sm text-gray-500 font-medium">Show real-time alerts in the notification bar.</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    className="sr-only peer" 
+                    checked={getSetting('NOTIF_IN_APP_ENABLED', 'true') === 'true'}
+                    onChange={(e) => updateSetting('NOTIF_IN_APP_ENABLED', e.target.checked ? 'true' : 'false')}
+                  />
+                  <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-between p-6 bg-gray-50 rounded-2xl border border-gray-100 group hover:border-green-200 transition-all">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-white rounded-xl shadow-sm text-green-600 group-hover:scale-110 transition-transform">
+                    <MessageSquare size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900">WhatsApp Alerts</h3>
+                    <p className="text-sm text-gray-500 font-medium">Send automatic WhatsApp messages to registered users.</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    className="sr-only peer" 
+                    checked={getSetting('NOTIF_WHATSAPP_ENABLED', 'false') === 'true'}
+                    onChange={(e) => updateSetting('NOTIF_WHATSAPP_ENABLED', e.target.checked ? 'true' : 'false')}
+                  />
+                  <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                </label>
+              </div>
+            </div>
+            
+            <div className="px-8 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                {savingSettings ? 'Saving changes...' : 'All changes saved automatically'}
+              </span>
+              {savingSettings && (
+                <div className="w-4 h-4 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -793,7 +1177,7 @@ const AdminDashboard = () => {
                   type="number"
                   className="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
                   value={newProduct.stock}
-                  onChange={e => setNewProduct({...newProduct, stock: parseInt(e.target.value)})}
+                  onChange={e => setNewProduct({...newProduct, stock: e.target.value})}
                   required
                 />
               </div>
@@ -810,6 +1194,16 @@ const AdminDashboard = () => {
                   {uploading && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>}
                 </div>
                 {newProduct.imagePath && <p className="text-xs text-green-600 mt-1">Image uploaded!</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Description</label>
+                <textarea
+                  className="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                  rows={3}
+                  value={newProduct.description}
+                  onChange={e => setNewProduct({...newProduct, description: e.target.value})}
+                  placeholder="Enter product description..."
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Category</label>
@@ -901,6 +1295,16 @@ const AdminDashboard = () => {
                 />
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700">Description</label>
+                <textarea
+                  className="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                  rows={3}
+                  value={editingProduct.description || ''}
+                  onChange={e => setEditingProduct({...editingProduct, description: e.target.value})}
+                  placeholder="Enter product description..."
+                />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700">Category</label>
                 <select
                   className="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
@@ -950,7 +1354,7 @@ const AdminDashboard = () => {
                                 setEditingOrder({ ...editingOrder, items: newItems });
                               }
                             }}
-                            className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center"
+                            className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center font-bold hover:bg-gray-200 transition"
                           >-</button>
                           <span>{item.quantity}</span>
                           <button 
@@ -959,7 +1363,7 @@ const AdminDashboard = () => {
                               newItems[idx].quantity++;
                               setEditingOrder({ ...editingOrder, items: newItems });
                             }}
-                            className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center"
+                            className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center font-bold hover:bg-gray-200 transition"
                           >+</button>
                         </div>
                       </td>
@@ -984,12 +1388,12 @@ const AdminDashboard = () => {
               </p>
               <div className="flex space-x-3">
                 <button 
-                  onClick={() => setShowEditOrder(false)}
-                  className="px-4 py-2 bg-gray-100 rounded-lg"
+                  onClick={() => { setShowEditOrder(false); setEditingOrder(null); }}
+                  className="px-4 py-2 bg-gray-100 rounded-lg transition hover:bg-gray-200 font-bold"
                 >Cancel</button>
                 <button 
                   onClick={() => handleEditOrder(editingOrder.id, editingOrder.items)}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg"
+                  className="px-4 py-2 bg-primary-600 text-white rounded-lg transition hover:bg-primary-700 font-bold shadow-lg shadow-primary-100"
                 >Save Changes</button>
               </div>
             </div>

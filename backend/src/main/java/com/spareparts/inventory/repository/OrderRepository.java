@@ -12,10 +12,13 @@ import java.util.List;
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
     @EntityGraph(attributePaths = {"customer", "seller", "items", "items.product"})
-    List<Order> findByCustomer(User customer);
+    List<Order> findByCustomerAndDeletedFalse(User customer);
 
     @EntityGraph(attributePaths = {"customer", "seller", "items", "items.product"})
-    List<Order> findBySeller(User seller);
+    List<Order> findBySellerAndDeletedFalse(User seller);
 
-    List<Order> findByStatus(Order.OrderStatus status);
+    List<Order> findByStatusAndDeletedFalse(Order.OrderStatus status);
+    
+    List<Order> findByDeletedFalse();
+    List<Order> findByDeletedTrue();
 }

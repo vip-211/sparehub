@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
+import '../services/ai_training_service.dart';
 
 class AIChatbotWidget extends StatefulWidget {
   const AIChatbotWidget({super.key});
@@ -28,6 +29,7 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
   bool _isLoading = false;
   final RemoteClient _remoteClient = RemoteClient();
   final ProductService _productService = ProductService();
+  final AITrainingService _trainingService = AITrainingService();
   final ImagePicker _picker = ImagePicker();
   List<Product> _matches = [];
 
@@ -61,7 +63,11 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
         headers: {'X-AI-Provider': 'local'},
       );
       setState(() {
-        _messages.add({'text': res['response'], 'isBot': true});
+        _messages.add({
+          'text': res['response'],
+          'isBot': true,
+          'prompt': text, // Save the prompt that triggered this response
+        });
       });
     } catch (e) {
       try {
@@ -77,14 +83,19 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
                 "- ${p.name} (${p.partNumber ?? 'N/A'}) • ₹${p.sellingPrice}");
           }
           setState(() {
-            _messages.add({'text': response.toString(), 'isBot': true});
+            _messages.add({
+              'text': response.toString(),
+              'isBot': true,
+              'prompt': text,
+            });
           });
         } else {
           setState(() {
             _messages.add({
               'text':
                   "AI service is currently unavailable and I couldn't find matching parts.",
-              'isBot': true
+              'isBot': true,
+              'prompt': text,
             });
           });
         }
@@ -93,7 +104,8 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
           _messages.add({
             'text':
                 "AI service is currently unavailable. Please try again later.",
-            'isBot': true
+            'isBot': true,
+            'prompt': text,
           });
         });
       }
@@ -122,8 +134,11 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
         bytes: bytes,
       );
       setState(() {
-        _messages
-            .add({'text': res['response'] ?? 'No response', 'isBot': true});
+        _messages.add({
+          'text': res['response'] ?? 'No response',
+          'isBot': true,
+          'prompt': 'Search by photo: ${img.name}'
+        });
       });
       final products = await _productService
           .searchProducts((res['response'] ?? '') as String);
@@ -132,7 +147,11 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
       });
     } catch (e) {
       setState(() {
-        _messages.add({'text': 'Failed to analyze image.', 'isBot': true});
+        _messages.add({
+          'text': 'Failed to analyze image.',
+          'isBot': true,
+          'prompt': 'Search by photo'
+        });
       });
     } finally {
       setState(() {
@@ -160,8 +179,11 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
         bytes: file.bytes!,
       );
       setState(() {
-        _messages
-            .add({'text': res['response'] ?? 'No response', 'isBot': true});
+        _messages.add({
+          'text': res['response'] ?? 'No response',
+          'isBot': true,
+          'prompt': 'Search by voice: ${file.name}'
+        });
       });
       final products = await _productService
           .searchProducts((res['response'] ?? '') as String);
@@ -170,7 +192,11 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
       });
     } catch (e) {
       setState(() {
-        _messages.add({'text': 'Failed to process audio.', 'isBot': true});
+        _messages.add({
+          'text': 'Failed to process audio.',
+          'isBot': true,
+          'prompt': 'Search by voice'
+        });
       });
     } finally {
       setState(() {
@@ -178,6 +204,85 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
       });
       _scrollToBottom();
     }
+  }
+
+  Future<void> _handleFeedback(
+      String prompt, String response, bool isPositive) async {
+    try {
+      await _trainingService.submitFeedback(
+        prompt: prompt,
+        response: response,
+        isPositive: isPositive,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isPositive
+                ? 'Thank you for your feedback!'
+                : 'Feedback received. We will use this to improve.'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      // Silently fail or log
+    }
+  }
+
+  Future<void> _showCorrectionDialog(
+      String prompt, String originalResponse) async {
+    final TextEditingController correctionController =
+        TextEditingController(text: originalResponse);
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Train AI'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Help us improve! What should have been the correct response?',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: correctionController,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: 'Enter correct response...',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final corrected = correctionController.text.trim();
+              if (corrected.isNotEmpty && corrected != originalResponse) {
+                await _trainingService.submitCorrection(
+                  prompt: prompt,
+                  originalResponse: originalResponse,
+                  correctedResponse: corrected,
+                );
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Thank you! AI trained.')),
+                  );
+                }
+              }
+            },
+            child: const Text('Submit'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -278,42 +383,111 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
                               alignment: isBot
                                   ? Alignment.centerLeft
                                   : Alignment.centerRight,
-                              child: Container(
-                                margin: const EdgeInsets.only(bottom: 16),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 12),
-                                decoration: BoxDecoration(
-                                  color: isBot
-                                      ? Colors.white
-                                      : const Color(0xFF2563EB),
-                                  borderRadius: BorderRadius.only(
-                                    topLeft: const Radius.circular(16),
-                                    topRight: const Radius.circular(16),
-                                    bottomLeft: isBot
-                                        ? Radius.zero
-                                        : const Radius.circular(16),
-                                    bottomRight: isBot
-                                        ? const Radius.circular(16)
-                                        : Radius.zero,
+                              child: Column(
+                                crossAxisAlignment: isBot
+                                    ? CrossAxisAlignment.start
+                                    : CrossAxisAlignment.end,
+                                children: [
+                                  Container(
+                                    margin: const EdgeInsets.only(bottom: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: isBot
+                                          ? Colors.white
+                                          : const Color(0xFF2563EB),
+                                      borderRadius: BorderRadius.only(
+                                        topLeft: const Radius.circular(16),
+                                        topRight: const Radius.circular(16),
+                                        bottomLeft: isBot
+                                            ? Radius.zero
+                                            : const Radius.circular(16),
+                                        bottomRight: isBot
+                                            ? const Radius.circular(16)
+                                            : Radius.zero,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.04),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        )
+                                      ],
+                                    ),
+                                    child: Text(
+                                      msg['text'] as String,
+                                      style: TextStyle(
+                                        color: isBot
+                                            ? const Color(0xFF1E293B)
+                                            : Colors.white,
+                                        fontSize: 14,
+                                        height: 1.4,
+                                      ),
+                                    ),
                                   ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.04),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
-                                    )
-                                  ],
-                                ),
-                                child: Text(
-                                  msg['text'] as String,
-                                  style: TextStyle(
-                                    color: isBot
-                                        ? const Color(0xFF1E293B)
-                                        : Colors.white,
-                                    fontSize: 14,
-                                    height: 1.4,
-                                  ),
-                                ),
+                                  if (isBot &&
+                                      index >
+                                          0) // Don't show for first hello msg
+                                    Padding(
+                                      padding:
+                                          const EdgeInsets.only(bottom: 12),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          IconButton(
+                                            icon: const Icon(
+                                                Icons.thumb_up_outlined,
+                                                size: 16,
+                                                color: Colors.grey),
+                                            onPressed: () => _handleFeedback(
+                                                msg['prompt'] ?? 'N/A',
+                                                msg['text'] as String,
+                                                true),
+                                            constraints: const BoxConstraints(),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 4),
+                                            tooltip: 'Helpful',
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(
+                                                Icons.thumb_down_outlined,
+                                                size: 16,
+                                                color: Colors.grey),
+                                            onPressed: () => _handleFeedback(
+                                                msg['prompt'] ?? 'N/A',
+                                                msg['text'] as String,
+                                                false),
+                                            constraints: const BoxConstraints(),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 4),
+                                            tooltip: 'Not helpful',
+                                          ),
+                                          const SizedBox(width: 8),
+                                          TextButton.icon(
+                                            onPressed: () =>
+                                                _showCorrectionDialog(
+                                                    msg['prompt'] ?? 'N/A',
+                                                    msg['text'] as String),
+                                            icon: const Icon(Icons.edit_note,
+                                                size: 16),
+                                            label: const Text('Train AI',
+                                                style: TextStyle(fontSize: 12)),
+                                            style: TextButton.styleFrom(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 8),
+                                              minimumSize: Size.zero,
+                                              tapTargetSize:
+                                                  MaterialTapTargetSize
+                                                      .shrinkWrap,
+                                              foregroundColor: Colors.grey,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  if (!isBot) const SizedBox(height: 12),
+                                ],
                               ),
                             );
                           },
@@ -385,31 +559,39 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
                                           cart.addItem(p, displayPrice);
                                         },
                                         child: const Text('ADD'),
+                                      );
+                                    }),
                                     const SizedBox(width: 8),
                                     TextButton(
                                       onPressed: () async {
                                         try {
-                                          final res = await _remoteClient.postJson(
+                                          final res =
+                                              await _remoteClient.postJson(
                                             '/ai/order',
                                             {'productId': p.id, 'quantity': 1},
                                           );
-                                          final msg = 'Order placed: #${res['orderId']} • ₹${res['total']}';
+                                          final msg =
+                                              'Order placed: #${res['orderId']} • ₹${res['total']}';
                                           setState(() {
-                                            _messages.add({'text': msg, 'isBot': true});
+                                            _messages.add(
+                                                {'text': msg, 'isBot': true});
                                           });
                                         } catch (e) {
                                           setState(() {
-                                            _messages.add({'text': 'Failed to place order.', 'isBot': true});
+                                            _messages.add({
+                                              'text': 'Failed to place order.',
+                                              'isBot': true
+                                            });
                                           });
                                         }
                                       },
                                       child: const Text('ORDER'),
                                     ),
-                                      );
-                                    }),
                                   ],
                                 ),
                               );
+                            }).toList(),
+                          ],
                         ),
                       ),
                     if (_isLoading)

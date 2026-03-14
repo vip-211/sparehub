@@ -19,7 +19,7 @@ class DatabaseService {
     String path = join(await getDatabasesPath(), 'spare_parts.db');
     final db = await openDatabase(
       path,
-      version: 13,
+      version: 15,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -152,6 +152,25 @@ class DatabaseService {
             'ALTER TABLE products ADD COLUMN enabled INTEGER DEFAULT 1');
       } catch (_) {}
     }
+    if (oldVersion < 14) {
+      try {
+        await db
+            .execute('ALTER TABLE users ADD COLUMN deleted INTEGER DEFAULT 0');
+      } catch (_) {}
+      try {
+        await db.execute(
+            'ALTER TABLE products ADD COLUMN deleted INTEGER DEFAULT 0');
+      } catch (_) {}
+      try {
+        await db
+            .execute('ALTER TABLE orders ADD COLUMN deleted INTEGER DEFAULT 0');
+      } catch (_) {}
+    }
+    if (oldVersion < 15) {
+      try {
+        await db.execute('ALTER TABLE products ADD COLUMN description TEXT');
+      } catch (_) {}
+    }
   }
 
   Future<void> _enforceProductUniqueness(Database db) async {
@@ -246,7 +265,8 @@ class DatabaseService {
         role TEXT,
         status TEXT DEFAULT "PENDING",
         latitude REAL,
-        longitude REAL
+        longitude REAL,
+        deleted INTEGER DEFAULT 0
       )
     ''');
 
@@ -263,7 +283,10 @@ class DatabaseService {
         mechanicPrice REAL,
         stock INTEGER,
         wholesalerId INTEGER,
-        enabled INTEGER DEFAULT 1
+        imagePath TEXT,
+        description TEXT,
+        enabled INTEGER DEFAULT 1,
+        deleted INTEGER DEFAULT 0
       )
     ''');
     await db.execute(
@@ -282,7 +305,8 @@ class DatabaseService {
         latitude REAL,
         longitude REAL,
         deliveredBy TEXT,
-        deliveredAt TEXT
+        deliveredAt TEXT,
+        deleted INTEGER DEFAULT 0
       )
     ''');
 
@@ -350,7 +374,8 @@ class DatabaseService {
       'retailerPrice': 900.0,
       'mechanicPrice': 950.0,
       'stock': 50,
-      'wholesalerId': 1
+      'wholesalerId': 1,
+      'deleted': 0
     });
 
     await db.insert('products', {
@@ -362,7 +387,8 @@ class DatabaseService {
       'retailerPrice': 300.0,
       'mechanicPrice': 320.0,
       'stock': 0,
-      'wholesalerId': 1
+      'wholesalerId': 1,
+      'deleted': 0
     });
   }
 }

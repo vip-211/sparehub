@@ -484,19 +484,37 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                           vertical: 8,
                         ),
                         child: ListTile(
-                          leading: Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[200],
-                              borderRadius: BorderRadius.circular(4),
-                              image: DecorationImage(
-                                image: _getImageProvider(product.imagePath),
-                                fit: BoxFit.cover,
-                                onError: (exception, stackTrace) =>
-                                    const Icon(Icons.image, color: Colors.grey),
+                          leading: Stack(
+                            children: [
+                              Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[200],
+                                  borderRadius: BorderRadius.circular(4),
+                                  image: DecorationImage(
+                                    image: _getImageProvider(product.imagePath),
+                                    fit: BoxFit.cover,
+                                    onError: (exception, stackTrace) =>
+                                        const Icon(Icons.image, color: Colors.grey),
+                                  ),
+                                ),
                               ),
-                            ),
+                              if (product.stock > 0 && product.stock <= 5)
+                                Positioned(
+                                  top: 0,
+                                  right: 0,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.orange,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.warning_amber,
+                                        size: 10, color: Colors.white),
+                                  ),
+                                ),
+                            ],
                           ),
                           title: Text(
                             product.name,
@@ -507,6 +525,14 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                             children: [
                               Text(
                                 'Part: ${product.partNumber} | Stock: ${isOutOfStock ? "Out of Stock" : product.stock}',
+                                style: TextStyle(
+                                  color: (product.stock > 0 && product.stock <= 5)
+                                      ? Colors.orange.shade700
+                                      : null,
+                                  fontWeight: (product.stock > 0 && product.stock <= 5)
+                                      ? FontWeight.bold
+                                      : null,
+                                ),
                               ),
                               if (discountPercent > 0)
                                 Text(

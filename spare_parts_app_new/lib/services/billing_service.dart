@@ -3,9 +3,31 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/order.dart';
 
 class BillingService {
+  static Future<void> shareOnWhatsApp(Order order) async {
+    final text = 'Hello, here is the invoice for Order #${order.id}.\n'
+        'Total: Rs. ${order.totalAmount}\n'
+        'Status: ${order.status}\n'
+        'Items:\n' +
+        order.items
+            .map((item) => '- ${item.productName} x ${item.quantity}: Rs. ${item.price * item.quantity}')
+            .join('\n');
+    
+    final encodedText = Uri.encodeComponent(text);
+    final url = Uri.parse('whatsapp://send?text=$encodedText');
+    
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
+    } else {
+      // Fallback to web link if app not installed
+      final webUrl = Uri.parse('https://wa.me/?text=$encodedText');
+      await launchUrl(webUrl);
+    }
+  }
+
   static Future<void> generateInvoice(Order order) async {
     final pdf = pw.Document();
 

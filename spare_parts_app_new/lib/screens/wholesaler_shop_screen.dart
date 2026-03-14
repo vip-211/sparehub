@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:translator/translator.dart';
@@ -30,6 +32,7 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
   final stt.SpeechToText _speech = stt.SpeechToText();
   final _searchController = TextEditingController();
   List<Product> _products = [];
+  List<Product> _filteredProducts = [];
   Map<int, double> _prices = {};
   bool _isLoading = true;
   bool _isListening = false;
@@ -40,6 +43,20 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
   void initState() {
     super.initState();
     _fetchProducts();
+  }
+
+  void _onSearchChanged(String val) {
+    final q = val.toLowerCase().trim();
+    setState(() {
+      if (q.isEmpty) {
+        _filteredProducts = List.from(_products);
+      } else {
+        _filteredProducts = _products.where((p) {
+          return p.name.toLowerCase().contains(q) ||
+              p.partNumber.toLowerCase().contains(q);
+        }).toList();
+      }
+    });
   }
 
   Future<void> _voiceAddToCart() async {
@@ -78,7 +95,9 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
         spoken = t.text;
       } catch (_) {}
       final lower = spoken.toLowerCase();
-      final qtyMatch = RegExp(r'(\d+)\s*(pcs|pieces|qty|quantity|nos|no)?').allMatches(lower).toList();
+      final qtyMatch = RegExp(r'(\d+)\s*(pcs|pieces|qty|quantity|nos|no)?')
+          .allMatches(lower)
+          .toList();
       int qty = 1;
       if (qtyMatch.isNotEmpty) {
         qty = int.tryParse(qtyMatch.last.group(1)!) ?? 1;
@@ -99,7 +118,10 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
         query = query.replaceAll(stop, ' ');
       }
       // Try to extract part number-like tokens first
-      final pnMatch = RegExp(r'[a-z0-9\-_/\.]+', caseSensitive: false).allMatches(query).map((m) => m.group(0)!).toList();
+      final pnMatch = RegExp(r'[a-z0-9\-_/\.]+', caseSensitive: false)
+          .allMatches(query)
+          .map((m) => m.group(0)!)
+          .toList();
       String finalQuery = query.trim();
       if (pnMatch.isNotEmpty) {
         finalQuery = pnMatch.join(' ').trim();
@@ -155,9 +177,7 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
             } catch (_) {}
             setState(() {
               _searchController.text = text;
-              if (text.isNotEmpty) {
-                _fetchProducts(query: text);
-              }
+              _onSearchChanged(text);
             });
           },
         );
@@ -279,13 +299,14 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
     super.dispose();
   }
 
-  Future<void> _fetchProducts({String? query}) async {
+  Future<void> _fetchProducts() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
     try {
-      final products = query != null && query.isNotEmpty
-          ? await _productService.searchProducts(query)
-          : await _productService.getAllProducts();
+      final products = await _productService.getAllProducts();
+      // Sort products by ID descending (newest first)
+      products.sort((a, b) => b.id.compareTo(a.id));
+
       final Map<int, double> prices = {};
       for (var p in products) {
         prices[p.id] = await _productService.getPriceForUser(p);
@@ -294,9 +315,14 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
       if (mounted) {
         setState(() {
           _products = products;
+          _filteredProducts = List.from(products);
           _prices = prices;
           _isLoading = false;
         });
+        // Apply filter if there is text in search controller
+        if (_searchController.text.isNotEmpty) {
+          _onSearchChanged(_searchController.text);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -326,7 +352,7 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
 
     if (result != null) {
       _searchController.text = result;
-      _fetchProducts(query: result);
+      _onSearchChanged(result);
     }
   }
 
@@ -365,214 +391,318 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
     return FileImage(File(path));
   }
 
+  Widget _buildSkeleton() {
+    return ListView.builder(
+      itemCount: 6,
+      itemBuilder: (context, index) => Card(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 150,
+                      height: 14,
+                      color: Colors.grey[300],
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: 100,
+                      height: 10,
+                      color: Colors.grey[300],
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: 60,
+                height: 20,
+                color: Colors.grey[300],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cart = Provider.of<CartProvider>(context);
+    final userStr =
+        SharedPreferences.getInstance().then((p) => p.getString('user'));
 
-    return Scaffold(
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
+    return FutureBuilder<String?>(
+        future: userStr,
+        builder: (context, snapshot) {
+          bool isMechanic = false;
+          if (snapshot.hasData && snapshot.data != null) {
+            final user = jsonDecode(snapshot.data!);
+            final roles = user['roles'] as List<dynamic>?;
+            if (roles != null && roles.contains(Constants.roleMechanic)) {
+              isMechanic = true;
+            }
+          }
+
+          return Scaffold(
+            body: Column(
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Search product or part #',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: InputDecoration(
+                            hintText: 'Search product or part #',
+                            prefixIcon: const Icon(Icons.search),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onChanged: _onSearchChanged,
+                        ),
                       ),
-                    ),
-                    onChanged: (val) => _fetchProducts(query: val),
+                      const SizedBox(width: 10),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 10),
+                Expanded(
+                  child: _isLoading && _products.isEmpty
+                      ? _buildSkeleton()
+                      : RefreshIndicator(
+                          onRefresh: _fetchProducts,
+                          child: ListView.builder(
+                            itemCount: _filteredProducts.length,
+                            itemBuilder: (ctx, i) {
+                              final product = _filteredProducts[i];
+                              final price =
+                                  _prices[product.id] ?? product.sellingPrice;
+                              final bool isOutOfStock = product.stock <= 0;
+                              final double discountPercent = product.mrp > 0
+                                  ? ((1 - (price / product.mrp)) * 100)
+                                  : 0;
+
+                              return Card(
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                child: ListTile(
+                                  leading: Stack(
+                                    children: [
+                                      Container(
+                                        width: 50,
+                                        height: 50,
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[200],
+                                          borderRadius:
+                                              BorderRadius.circular(4),
+                                          image: DecorationImage(
+                                            image: _getImageProvider(
+                                                product.imagePath),
+                                            fit: BoxFit.cover,
+                                            onError: (exception, stackTrace) =>
+                                                const Icon(Icons.image,
+                                                    color: Colors.grey),
+                                          ),
+                                        ),
+                                      ),
+                                      if (product.stock > 0 &&
+                                          product.stock <= 5)
+                                        Positioned(
+                                          top: 0,
+                                          right: 0,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(2),
+                                            decoration: const BoxDecoration(
+                                              color: Colors.orange,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(
+                                                Icons.warning_amber,
+                                                size: 10,
+                                                color: Colors.white),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                  title: Text(
+                                    product.name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  subtitle: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Part: ${product.partNumber} | Stock: ${isOutOfStock ? "Out of Stock" : product.stock}',
+                                        style: TextStyle(
+                                          color: (product.stock > 0 &&
+                                                  product.stock <= 5)
+                                              ? Colors.orange.shade700
+                                              : null,
+                                          fontWeight: (product.stock > 0 &&
+                                                  product.stock <= 5)
+                                              ? FontWeight.bold
+                                              : null,
+                                        ),
+                                      ),
+                                      if (discountPercent > 0)
+                                        Text(
+                                          '${discountPercent.toStringAsFixed(0)}% OFF',
+                                          style: const TextStyle(
+                                            color: Colors.green,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                  trailing: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      if (product.mrp > price)
+                                        Text(
+                                          '₹${product.mrp.toStringAsFixed(0)}',
+                                          style: const TextStyle(
+                                            decoration:
+                                                TextDecoration.lineThrough,
+                                            color: Colors.grey,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      Text(
+                                        '₹$price',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.green,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  onTap: (isOutOfStock || isMechanic)
+                                      ? null
+                                      : () {
+                                          cart.addItem(product, price);
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                '${product.name} added to cart',
+                                              ),
+                                              duration:
+                                                  const Duration(seconds: 1),
+                                              backgroundColor: Colors.green,
+                                            ),
+                                          );
+                                        },
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                ),
               ],
             ),
-          ),
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : RefreshIndicator(
-                    onRefresh: () =>
-                        _fetchProducts(query: _searchController.text),
-                    child: ListView.builder(
-                      itemCount: _products.length,
-                      itemBuilder: (ctx, i) {
-                        final product = _products[i];
-                        final price =
-                            _prices[product.id] ?? product.sellingPrice;
-                        final bool isOutOfStock = product.stock <= 0;
-                        final double discountPercent = product.mrp > 0
-                            ? ((1 - (price / product.mrp)) * 100)
-                            : 0;
-
-                        return Card(
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
+            floatingActionButton: FloatingActionButton(
+              onPressed: () async {
+                final voiceEnabled =
+                    await SettingsService.isVoiceTrainingEnabled();
+                showModalBottomSheet(
+                  context: context,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(16)),
+                  ),
+                  builder: (ctx) => SafeArea(
+                    child: Wrap(
+                      children: [
+                        if (cart.items.isNotEmpty)
+                          ListTile(
+                            leading: const Icon(Icons.shopping_cart_checkout),
+                            title: Text('Checkout (₹${cart.totalAmount})'),
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              _placeOrder();
+                            },
                           ),
-                          child: ListTile(
-                            leading: Container(
-                              width: 50,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: Colors.grey[200],
-                                borderRadius: BorderRadius.circular(4),
-                                image: DecorationImage(
-                                  image: _getImageProvider(product.imagePath),
-                                  fit: BoxFit.cover,
-                                  onError: (exception, stackTrace) =>
-                                      const Icon(Icons.image,
-                                          color: Colors.grey),
-                                ),
-                              ),
-                            ),
-                            title: Text(
-                              product.name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Part: ${product.partNumber} | Stock: ${isOutOfStock ? "Out of Stock" : product.stock}',
-                                ),
-                                if (discountPercent > 0)
-                                  Text(
-                                    '${discountPercent.toStringAsFixed(0)}% OFF',
-                                    style: const TextStyle(
-                                      color: Colors.green,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            trailing: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                if (product.mrp > price)
-                                  Text(
-                                    '₹${product.mrp.toStringAsFixed(0)}',
-                                    style: const TextStyle(
-                                      decoration: TextDecoration.lineThrough,
-                                      color: Colors.grey,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                Text(
-                                  '₹$price',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.green,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            onTap: isOutOfStock
-                                ? null
-                                : () {
-                                    cart.addItem(product, price);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          '${product.name} added to cart',
-                                        ),
-                                        duration: const Duration(seconds: 1),
-                                        backgroundColor: Colors.green,
-                                      ),
-                                    );
-                                  },
+                        if (!isMechanic)
+                          ListTile(
+                            leading: const Icon(Icons.add_shopping_cart),
+                            title: const Text('Voice Add to Cart'),
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              _voiceAddToCart();
+                            },
                           ),
-                        );
-                      },
+                        ListTile(
+                          leading: const Icon(Icons.qr_code_scanner),
+                          title: const Text('Scan QR'),
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            _scanQRCode();
+                          },
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.camera_alt),
+                          title: const Text('Scan by Camera (OCR)'),
+                          onTap: () async {
+                            Navigator.pop(ctx);
+                            final partNumber =
+                                await _ocrService.pickAndExtractPartNumber();
+                            if (partNumber != null) {
+                              _searchController.text = partNumber;
+                              _onSearchChanged(partNumber);
+                            }
+                          },
+                        ),
+                        if (voiceEnabled)
+                          ListTile(
+                            leading:
+                                Icon(_isListening ? Icons.mic : Icons.mic_none),
+                            title: const Text('Voice Search'),
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              _listen();
+                            },
+                          ),
+                        ListTile(
+                          leading: const Icon(Icons.assignment_add,
+                              color: Colors.blue),
+                          title: const Text('Request Custom Order'),
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            _showRequestDialog();
+                          },
+                        ),
+                      ],
                     ),
                   ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final voiceEnabled = await SettingsService.isVoiceTrainingEnabled();
-          showModalBottomSheet(
-            context: context,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-            ),
-            builder: (ctx) => SafeArea(
-              child: Wrap(
-                children: [
-                  if (cart.items.isNotEmpty)
-                    ListTile(
-                      leading: const Icon(Icons.shopping_cart_checkout),
-                      title: Text('Checkout (₹${cart.totalAmount})'),
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        _placeOrder();
-                      },
-                    ),
-                  ListTile(
-                    leading: const Icon(Icons.add_shopping_cart),
-                    title: const Text('Voice Add to Cart'),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _voiceAddToCart();
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.qr_code_scanner),
-                    title: const Text('Scan QR'),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _scanQRCode();
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.camera_alt),
-                    title: const Text('Scan by Camera (OCR)'),
-                    onTap: () async {
-                      Navigator.pop(ctx);
-                      final partNumber =
-                          await _ocrService.pickAndExtractPartNumber();
-                      if (partNumber != null) {
-                        _searchController.text = partNumber;
-                        _fetchProducts(query: partNumber);
-                      }
-                    },
-                  ),
-                  if (voiceEnabled)
-                    ListTile(
-                      leading: Icon(_isListening ? Icons.mic : Icons.mic_none),
-                      title: const Text('Voice Search'),
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        _listen();
-                      },
-                    ),
-                  ListTile(
-                    leading: const Icon(Icons.assignment_add, color: Colors.blue),
-                    title: const Text('Request Custom Order'),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _showRequestDialog();
-                    },
-                  ),
-                ],
-              ),
+                );
+              },
+              backgroundColor: Colors.green,
+              child: const Icon(Icons.add),
             ),
           );
-        },
-        backgroundColor: Colors.green,
-        child: const Icon(Icons.add),
-      ),
-    );
+        });
   }
 }

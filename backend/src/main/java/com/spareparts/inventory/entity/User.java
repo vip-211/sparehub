@@ -58,6 +58,9 @@ public class User {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "deleted", nullable = false)
+    private boolean deleted = false;
+
     public enum UserStatus {
         PENDING, ACTIVE, REJECTED
     }

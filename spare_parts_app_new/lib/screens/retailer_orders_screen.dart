@@ -29,6 +29,8 @@ class _RetailerOrdersScreenState extends State<RetailerOrdersScreen> {
 
   Future<void> _fetchOrders() async {
     final orders = await _orderService.getMyOrders();
+    // Sort orders by ID descending (newest first)
+    orders.sort((a, b) => b.id.compareTo(a.id));
 
     if (!mounted) return;
 
@@ -72,10 +74,22 @@ class _RetailerOrdersScreenState extends State<RetailerOrdersScreen> {
                       subtitle: Text(
                         'Status: ${order.status} | Seller: ${order.sellerName}',
                       ),
-                      trailing: IconButton(
-                        icon:
-                            const Icon(Icons.picture_as_pdf, color: Colors.red),
-                        onPressed: () => _generateBill(order),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.share, color: Colors.green),
+                            onPressed: () =>
+                                BillingService.shareOnWhatsApp(order),
+                            tooltip: 'Share via WhatsApp',
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.picture_as_pdf,
+                                color: Colors.red),
+                            onPressed: () => _generateBill(order),
+                            tooltip: 'View Invoice',
+                          ),
+                        ],
                       ),
                       children: [
                         ...order.items.map(

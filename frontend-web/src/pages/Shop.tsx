@@ -6,6 +6,7 @@ import AuthService from '../services/auth.service';
 import { ROLE_MECHANIC, ROLE_RETAILER, ROLE_WHOLESALER } from '../services/constants';
 import { Search, ShoppingCart, Package, Info, CheckCircle2 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
+import Skeleton from '../components/Skeleton';
 
 const Shop: React.FC = () => {
   const { t, tp } = useLanguage();
@@ -29,45 +30,41 @@ const Shop: React.FC = () => {
 
   useEffect(() => {
     const run = async () => {
+      setLoading(true);
       try {
-        // load categories in parallel
-        try {
-          const cats = await api.get('/categories');
-          setCategories(cats.data || []);
-        } catch {}
+        // load categories if not already loaded or once
+        if (categories.length === 0) {
+          try {
+            const cats = await api.get('/categories');
+            setCategories(cats.data || []);
+          } catch (err) {
+            console.warn('Categories load failed', err);
+          }
+        }
+
         let res;
         const isWholesaler = currentUser?.roles?.includes(ROLE_WHOLESALER);
         
         if (isWholesaler) {
           res = await api.get('/products/wholesaler');
         } else {
-          if (categoryId) {
-            res = await api.get('/products', { params: { categoryId }});
-          } else {
-            res = await api.get('/products');
-          }
+          const params: any = {};
+          if (categoryId) params.categoryId = categoryId;
+          res = await api.get('/products', { params });
         }
 
         const data = res.data || [];
         setProducts(data);
+        setError('');
       } catch (e: any) {
         console.error('Shop fetch error:', e);
-        if (e?.response?.status === 403 || e?.response?.status === 400) {
-          try {
-            const res2 = await api.get('/products');
-            setProducts(res2.data || []);
-          } catch {
-            setError(t('common.error'));
-          }
-        } else {
-          setError(t('common.error'));
-        }
+        setError(t('common.error'));
       } finally {
         setLoading(false);
       }
     };
     run();
-  }, [currentUser, t, categoryId]);
+  }, [currentUser, categoryId]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -95,11 +92,35 @@ const Shop: React.FC = () => {
     p.partNumber.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (loading) {
+  const isMechanic = currentUser?.roles?.includes(ROLE_MECHANIC);
+
+  const renderSkeletons = () => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+        <div key={i} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+          <Skeleton className="w-full aspect-square rounded-xl mb-4" />
+          <Skeleton className="w-3/4 h-4 mb-2" />
+          <Skeleton className="w-1/2 h-3 mb-4" />
+          <div className="flex justify-between items-center">
+            <Skeleton className="w-20 h-6" />
+            <Skeleton className="w-10 h-10 rounded-full" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  if (loading && products.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <div className="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mb-4" />
-        <p className="text-gray-500 font-medium">{t('common.loading')}</p>
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col md:flex-row gap-4 mb-8">
+          <Skeleton className="flex-1 h-12 rounded-xl" />
+          <Skeleton className="w-full md:w-48 h-12 rounded-xl" />
+        </div>
+        <div className="flex gap-2 overflow-x-auto pb-4 mb-8">
+          {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="min-w-[100px] h-10 rounded-full" />)}
+        </div>
+        {renderSkeletons()}
       </div>
     );
   }
@@ -209,35 +230,37 @@ const Shop: React.FC = () => {
                     <span className="text-xs font-bold text-gray-600">{t('shop.stock')}: {p.stock}</span>
                   </div>
 
-                  <button
-                    onClick={() =>
-                      addItem(
-                        {
-                          productId: p.id,
-                          name: p.name,
-                          partNumber: p.partNumber,
-                          price: displayPrice,
-                          wholesalerId: p.wholesalerId,
-                        },
-                        1,
-                      )
-                    }
-                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all shadow-lg ${
-                      inStock 
-                        ? 'bg-primary-600 text-white hover:bg-primary-700 shadow-primary-100' 
-                        : 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
-                    }`}
-                    disabled={!inStock}
-                  >
-                    {inStock ? (
-                      <>
-                        <ShoppingCart className="w-4 h-4" />
-                        {t('shop.addToCart')}
-                      </>
-                    ) : (
-                      t('shop.outOfStock')
-                    )}
-                  </button>
+                  {!isMechanic && (
+                    <button
+                      onClick={() =>
+                        addItem(
+                          {
+                            productId: p.id,
+                            name: p.name,
+                            partNumber: p.partNumber,
+                            price: displayPrice,
+                            wholesalerId: p.wholesalerId,
+                          },
+                          1,
+                        )
+                      }
+                      className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all shadow-lg ${
+                        inStock 
+                          ? 'bg-primary-600 text-white hover:bg-primary-700 shadow-primary-100' 
+                          : 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
+                      }`}
+                      disabled={!inStock}
+                    >
+                      {inStock ? (
+                        <>
+                          <ShoppingCart className="w-4 h-4" />
+                          {t('shop.addToCart')}
+                        </>
+                      ) : (
+                        t('shop.outOfStock')
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             );
