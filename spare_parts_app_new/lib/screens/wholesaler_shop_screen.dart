@@ -14,6 +14,8 @@ import '../services/ocr_service.dart';
 import '../models/product.dart';
 import '../providers/cart_provider.dart';
 import '../services/order_service.dart';
+import '../models/order.dart';
+import '../utils/image_utils.dart';
 import 'order_confirmation_screen.dart';
 import 'cart_screen.dart';
 import '../utils/constants.dart';
@@ -392,19 +394,6 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
     }
   }
 
-  ImageProvider _getImageProvider(String? path) {
-    if (path == null || path.isEmpty) {
-      return const AssetImage('assets/images/logo.png');
-    }
-    if (path.startsWith('http')) {
-      return NetworkImage(path);
-    }
-    if (path.startsWith('/api/files/display/')) {
-      return NetworkImage('${Constants.serverUrl}$path');
-    }
-    return FileImage(File(path));
-  }
-
   Widget _buildSkeleton() {
     return ListView.builder(
       itemCount: 6,
@@ -527,7 +516,7 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                                           borderRadius:
                                               BorderRadius.circular(4),
                                           image: DecorationImage(
-                                            image: _getImageProvider(
+                                            image: getImageProvider(
                                                 product.imagePath),
                                             fit: BoxFit.cover,
                                             onError: (e, _) =>

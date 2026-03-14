@@ -28,6 +28,7 @@ import '../services/ocr_service.dart';
 import '../models/order.dart';
 import '../models/product.dart';
 import '../utils/constants.dart';
+import '../utils/image_utils.dart';
 import 'profile_screen.dart';
 import 'package:translator/translator.dart';
 import 'package:open_file/open_file.dart';
@@ -1040,25 +1041,6 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
     _fetchProducts();
   }
 
-  ImageProvider _getImageProvider(String? path) {
-    if (path == null || path.isEmpty) {
-      return const AssetImage('assets/images/logo.png');
-    }
-    if (path.startsWith('http') || path.startsWith('blob:')) {
-      return NetworkImage(path);
-    }
-    if (path.startsWith('/api/files/display/')) {
-      return NetworkImage('${Constants.serverUrl}$path');
-    }
-    if (!kIsWeb) {
-      final file = File(path);
-      if (file.existsSync()) {
-        return FileImage(file);
-      }
-    }
-    return const AssetImage('assets/images/logo.png');
-  }
-
   void _listen() async {
     if (!_isListening) {
       bool available = await _speech.initialize(
@@ -1374,7 +1356,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                     borderRadius: BorderRadius.circular(8),
                     image: imagePath != null
                         ? DecorationImage(
-                            image: _getImageProvider(imagePath),
+                            image: getImageProvider(imagePath),
                             fit: BoxFit.cover,
                           )
                         : null,
@@ -1936,7 +1918,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                     border:
                                         Border.all(color: Colors.grey[300]!),
                                     image: DecorationImage(
-                                      image: _getImageProvider(p.imagePath),
+                                      image: getImageProvider(p.imagePath),
                                       fit: BoxFit.cover,
                                       onError: (exception, stackTrace) =>
                                           debugPrint(
@@ -2330,7 +2312,7 @@ class _InvoicingScreenState extends State<InvoicingScreen> {
                             borderRadius: BorderRadius.circular(4),
                             image: p.imagePath != null
                                 ? DecorationImage(
-                                    image: _getImageProvider(p.imagePath),
+                                    image: getImageProvider(p.imagePath),
                                     fit: BoxFit.cover,
                                   )
                                 : null,
@@ -3380,8 +3362,7 @@ class _AllUsersScreenState extends State<AllUsersScreen> {
                         backgroundColor:
                             isPending ? Colors.orange : Colors.blueGrey,
                         backgroundImage: user['shopImagePath'] != null
-                            ? _getImageProvider(
-                                user['shopImagePath'] as String?)
+                            ? getImageProvider(user['shopImagePath'] as String?)
                             : null,
                         child: user['shopImagePath'] == null
                             ? const Icon(Icons.person, color: Colors.white)
@@ -3534,7 +3515,7 @@ class _AllUsersScreenState extends State<AllUsersScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Image(image: _getImageProvider(path)),
+            Image(image: getImageProvider(path)),
             TextButton(
               onPressed: () => Navigator.pop(ctx),
               child: const Text('Close'),
@@ -3806,7 +3787,7 @@ class _RecycleBinScreenState extends State<RecycleBinScreen>
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(4),
               image: DecorationImage(
-                image: _getImageProvider(p.imagePath),
+                image: getImageProvider(p.imagePath),
                 fit: BoxFit.cover,
                 onError: (_, __) => debugPrint('Image error'),
               ),
@@ -3832,25 +3813,6 @@ class _RecycleBinScreenState extends State<RecycleBinScreen>
         );
       },
     );
-  }
-
-  ImageProvider _getImageProvider(String? path) {
-    if (path == null || path.isEmpty) {
-      return const AssetImage('assets/images/logo.png');
-    }
-    if (path.startsWith('http') || path.startsWith('blob:')) {
-      return NetworkImage(path);
-    }
-    if (path.startsWith('/api/files/display/')) {
-      return NetworkImage('${Constants.serverUrl}$path');
-    }
-    if (!kIsWeb) {
-      final file = File(path);
-      if (file.existsSync()) {
-        return FileImage(file);
-      }
-    }
-    return const AssetImage('assets/images/logo.png');
   }
 
   Widget _buildDeletedOrdersList() {

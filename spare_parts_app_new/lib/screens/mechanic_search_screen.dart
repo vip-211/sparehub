@@ -13,6 +13,7 @@ import '../models/product.dart';
 import '../providers/cart_provider.dart';
 import '../services/order_service.dart';
 import 'order_confirmation_screen.dart';
+import '../utils/image_utils.dart';
 import '../utils/constants.dart';
 
 import 'package:spare_parts_app/providers/auth_provider.dart';
@@ -440,19 +441,6 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
     }
   }
 
-  ImageProvider _getImageProvider(String? path) {
-    if (path == null || path.isEmpty) {
-      return const AssetImage('assets/images/logo.png');
-    }
-    if (path.startsWith('http')) {
-      return NetworkImage(path);
-    }
-    if (path.startsWith('/api/files/display/')) {
-      return NetworkImage('${Constants.serverUrl}$path');
-    }
-    return FileImage(File(path));
-  }
-
   @override
   Widget build(BuildContext context) {
     final cart = Provider.of<CartProvider>(context);
@@ -583,7 +571,7 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                                   color: Colors.grey[200],
                                   borderRadius: BorderRadius.circular(4),
                                   image: DecorationImage(
-                                    image: _getImageProvider(product.imagePath),
+                                    image: getImageProvider(product.imagePath),
                                     fit: BoxFit.cover,
                                     onError: (exception, stackTrace) =>
                                         const Icon(Icons.image,
