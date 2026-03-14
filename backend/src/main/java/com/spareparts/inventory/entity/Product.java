@@ -41,24 +41,31 @@ public class Product {
     private String rackNumber;
 
     @NotNull
-    private BigDecimal mrp;
+    @Column(columnDefinition = "numeric(38,2) default 0.0")
+    private BigDecimal mrp = BigDecimal.ZERO;
 
     @NotNull
-    private BigDecimal sellingPrice;
+    @Column(columnDefinition = "numeric(38,2) default 0.0")
+    private BigDecimal sellingPrice = BigDecimal.ZERO;
 
     @NotNull
+    @Column(columnDefinition = "numeric(38,2) default 0.0")
     private BigDecimal wholesalerPrice = BigDecimal.ZERO;
 
     @NotNull
+    @Column(columnDefinition = "numeric(38,2) default 0.0")
     private BigDecimal retailerPrice = BigDecimal.ZERO;
 
     @NotNull
+    @Column(columnDefinition = "numeric(38,2) default 0.0")
     private BigDecimal mechanicPrice = BigDecimal.ZERO;
 
     @NotNull
+    @Column(columnDefinition = "integer default 0")
     private Integer stock = 0;
 
     @NotNull
+    @Column(columnDefinition = "boolean default true")
     private boolean enabled = true;
 
     @Size(max = 500)

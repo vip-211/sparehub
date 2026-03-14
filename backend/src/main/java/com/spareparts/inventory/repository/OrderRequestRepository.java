@@ -7,6 +7,6 @@ import java.util.List;
 
 @Repository
 public interface OrderRequestRepository extends JpaRepository<CustomOrderRequest, Long> {
-    List<CustomOrderRequest> findByCustomerId(Long customerId);
-    List<CustomOrderRequest> findAllByOrderByCreatedAtDesc();
+    List<CustomOrderRequest> findByCustomerIdAndDeletedFalse(Long customerId);
+    List<CustomOrderRequest> findAllByDeletedFalseOrderByCreatedAtDesc();
 }

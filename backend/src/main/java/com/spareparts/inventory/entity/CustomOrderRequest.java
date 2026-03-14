@@ -34,6 +34,9 @@ public class CustomOrderRequest {
     @JoinColumn(name = "assigned_staff_id")
     private User assignedStaff;
 
+    @Column(name = "deleted", nullable = false, columnDefinition = "boolean default false")
+    private boolean deleted = false;
+
     public enum RequestStatus {
         NEW, PROCESSING, COMPLETED, CANCELLED
     }

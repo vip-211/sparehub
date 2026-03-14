@@ -25,6 +25,20 @@ public class InventoryApplication {
     @Bean
     CommandLineRunner init(RoleRepository roleRepository, UserRepository userRepository, ProductRepository productRepository, PasswordEncoder passwordEncoder) {
         return args -> {
+            // Fix existing null deleted flags
+            userRepository.findAll().forEach(u -> {
+                if (!u.isDeleted()) {
+                    u.setDeleted(false);
+                    userRepository.save(u);
+                }
+            });
+            productRepository.findAll().forEach(p -> {
+                if (!p.isDeleted()) {
+                    p.setDeleted(false);
+                    productRepository.save(p);
+                }
+            });
+
             // Check and create roles if they don't exist
             java.util.Map<RoleName, Role> roles = new java.util.HashMap<>();
             for (RoleName roleName : RoleName.values()) {

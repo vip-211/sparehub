@@ -51,7 +51,7 @@ public class OrderService {
 
     @Transactional(readOnly = true)
     public List<CustomOrderRequestDto> getAllCustomOrderRequests() {
-        return orderRequestRepository.findAllByOrderByCreatedAtDesc().stream()
+        return orderRequestRepository.findAllByDeletedFalseOrderByCreatedAtDesc().stream()
                 .map(this::convertToCustomRequestDto)
                 .collect(Collectors.toList());
     }
