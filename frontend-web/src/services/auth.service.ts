@@ -98,6 +98,11 @@ const googleLogin = async (email, name) => {
   return response.data;
 };
 
+const getRoles = () => {
+  const user = getCurrentUser();
+  return user ? user.roles : [];
+};
+
 const getCurrentUser = () => {
   try {
     const raw = localStorage.getItem('user');
@@ -114,7 +119,8 @@ const AuthService = {
   loginWithOtp,
   logout,
   googleLogin,
-  getCurrentUser,
+  getRoles,
+  getCurrentUser
 };
 
 export default AuthService;

@@ -53,6 +53,8 @@ public class AuthController {
     private JavaMailSender mailSender;
 
     private static final Map<String, String> OTP_STORAGE = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Map<String, Long> RATE_LIMIT_STORAGE = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final long RATE_LIMIT_MS = 60000; // 1 minute between OTP requests
 
     @Value("${spring.mail.username}")
     private String mailFrom;
@@ -67,6 +69,13 @@ public class AuthController {
         if (email == null || !email.contains("@")) {
             return ResponseEntity.badRequest().body(new MessageResponse("Invalid email address."));
         }
+
+        // Simple Rate Limiting
+        long now = System.currentTimeMillis();
+        if (RATE_LIMIT_STORAGE.containsKey(email) && (now - RATE_LIMIT_STORAGE.get(email)) < RATE_LIMIT_MS) {
+            return ResponseEntity.status(429).body(new MessageResponse("Too many requests. Please wait a minute."));
+        }
+        RATE_LIMIT_STORAGE.put(email, now);
         
         // Generate a 6-digit OTP
         String otp = isDemoMode ? "123456" : String.format("%06d", new java.util.Random().nextInt(999999));
@@ -93,11 +102,10 @@ public class AuthController {
             return ResponseEntity.ok(new MessageResponse("OTP sent successfully to " + email));
         } catch (Exception e) {
             System.err.println("FAILED to send email to " + email + ": " + e.getMessage());
-            // Fallback: Still store the OTP and allow the user to use it if they check the logs or response
+            // Store the OTP anyway so the user can still use it if it shows up in backend logs
             OTP_STORAGE.put(email, otp);
-            System.out.println("FALLBACK: OTP for " + email + " is " + otp);
             
-            return ResponseEntity.ok(new MessageResponse("Mail server connection failed, but you can use this OTP for testing: " + otp));
+            return ResponseEntity.status(500).body(new MessageResponse("Failed to send email. Please check your internet or contact support."));
         }
     }
 

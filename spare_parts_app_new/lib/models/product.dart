@@ -59,7 +59,9 @@ class Product {
       enabled: json['enabled'] is bool
           ? json['enabled']
           : (json['enabled'] ?? 1) == 1,
-      categoryId: json['categoryId'],
+      categoryId: json['categoryId'] is int
+          ? json['categoryId']
+          : (json['categoryId'] as num?)?.toInt(),
       categoryName: json['categoryName'],
     );
   }

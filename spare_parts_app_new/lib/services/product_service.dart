@@ -59,7 +59,22 @@ class ProductService {
     return null;
   }
 
-  Future<int> importProductsFromExcel(Uint8List bytes) async {
+  Future<void> uploadExcel(Uint8List bytes, {int? categoryId}) async {
+    final uri = Uri.parse('${Constants.baseUrl}/excel/upload').replace(
+      queryParameters:
+          categoryId != null ? {'categoryId': categoryId.toString()} : null,
+    );
+    var request = http.MultipartRequest('POST', uri);
+    request.files.add(
+        http.MultipartFile.fromBytes('file', bytes, filename: 'products.xlsx'));
+    final res = await request.send();
+    if (res.statusCode != 200) {
+      throw Exception('Upload failed');
+    }
+  }
+
+  Future<int> importProductsFromExcel(Uint8List bytes,
+      {int? categoryId}) async {
     var excel = Excel.decodeBytes(bytes);
     int count = 0;
     List<Product> productsToInsert = [];
@@ -86,7 +101,9 @@ class ProductService {
         try {
           String getVal(int index) {
             if (index >= row.length || row[index] == null) return '';
-            return row[index]?.value?.toString() ?? '';
+            final val = row[index]?.value;
+            if (val == null) return '';
+            return val.toString();
           }
 
           String name = getVal(0);
@@ -128,6 +145,7 @@ class ProductService {
               mechanicPrice: mechanicPrice,
               stock: stock,
               wholesalerId: 1,
+              categoryId: categoryId,
             ),
           );
         } catch (e) {
@@ -247,7 +265,7 @@ class ProductService {
   Future<List<Product>> getProductsByCategory(int categoryId) async {
     try {
       if (Constants.useRemote) {
-        final list = await _remote.getList('/products/category/$categoryId');
+        final list = await _remote.getList('/products?categoryId=$categoryId');
         final products = list
             .map((e) => Product.fromJson(e as Map<String, dynamic>))
             .toList();

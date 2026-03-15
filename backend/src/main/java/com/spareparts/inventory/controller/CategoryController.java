@@ -41,6 +41,7 @@ public class CategoryController {
         Category c = new Category();
         c.setName(name);
         c.setDescription(description);
+        c.setImagePath(req.getOrDefault("imagePath", ""));
         return ResponseEntity.ok(categoryRepository.save(c));
     }
 
@@ -51,8 +52,10 @@ public class CategoryController {
         if (c == null) return ResponseEntity.notFound().build();
         String name = req.getOrDefault("name", c.getName());
         String description = req.getOrDefault("description", c.getDescription());
+        String imagePath = req.getOrDefault("imagePath", c.getImagePath());
         c.setName(name);
         c.setDescription(description);
+        c.setImagePath(imagePath);
         return ResponseEntity.ok(categoryRepository.save(c));
     }
 
@@ -64,25 +67,11 @@ public class CategoryController {
         return ResponseEntity.ok().build();
     }
 
+    @Autowired
+    private com.spareparts.inventory.service.ProductService productService;
+
     @GetMapping("/{id}/products")
     public ResponseEntity<List<ProductDto>> productsByCategory(@PathVariable Long id) {
-        List<Product> products = productRepository.findByCategory_IdAndDeletedFalse(id);
-        List<ProductDto> dtos = products.stream().map(p -> {
-            ProductDto dto = new ProductDto();
-            dto.setId(p.getId());
-            dto.setName(p.getName());
-            dto.setPartNumber(p.getPartNumber());
-            dto.setMrp(p.getMrp());
-            dto.setSellingPrice(p.getSellingPrice());
-            dto.setWholesalerPrice(p.getWholesalerPrice());
-            dto.setRetailerPrice(p.getRetailerPrice());
-            dto.setMechanicPrice(p.getMechanicPrice());
-            dto.setStock(p.getStock());
-            dto.setImagePath(p.getImagePath());
-            dto.setWholesalerId(p.getWholesaler().getId());
-            if (p.getCategory() != null) dto.setCategoryId(p.getCategory().getId());
-            return dto;
-        }).collect(Collectors.toList());
-        return ResponseEntity.ok(dtos);
+        return ResponseEntity.ok(productService.getProductsByCategory(id));
     }
 }

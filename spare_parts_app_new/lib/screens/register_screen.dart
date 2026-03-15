@@ -196,8 +196,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (data != null) {
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
         final user = await authProvider.signInWithGoogle(
-          data['email']!,
-          data['name']!,
+          data['email'] ?? '',
+          data['name'] ?? '',
         );
         if (user != null) {
           _showFeedback('Google Sign-In successful!');

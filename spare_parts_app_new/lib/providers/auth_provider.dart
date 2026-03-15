@@ -109,12 +109,14 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<void> changePassword(String currentPassword, String newPassword) async {
+  Future<void> changePassword(
+      String currentPassword, String newPassword) async {
     if (_user != null) {
       _isLoading = true;
       notifyListeners();
       try {
-        await _authService.changePassword(_user!.id, currentPassword, newPassword);
+        await _authService.changePassword(
+            _user!.id, currentPassword, newPassword);
       } finally {
         _isLoading = false;
         notifyListeners();

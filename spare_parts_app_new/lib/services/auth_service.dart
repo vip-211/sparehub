@@ -556,14 +556,20 @@ class AuthService {
           id: id,
           email: emailVal,
           name: userName,
-          phone: null,
+          phone: json['phone'],
           token: token.toString(),
           roles: roles,
-          address: null,
-          shopImagePath: null,
-          status: json['status'],
-          latitude: null,
-          longitude: null,
+          address: json['address'],
+          shopImagePath: json['shopImagePath'],
+          status: (json['status'] ?? 'ACTIVE').toString(),
+          phoneVerified:
+              json['phoneVerified'] == true || json['phone_verified'] == 1,
+          latitude: json['latitude'] != null
+              ? (json['latitude'] as num).toDouble()
+              : null,
+          longitude: json['longitude'] != null
+              ? (json['longitude'] as num).toDouble()
+              : null,
         );
         final prefs = await _prefs();
         await prefs.setString('user', jsonEncode(user.toJson()));

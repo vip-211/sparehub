@@ -12,6 +12,8 @@ const WholesalerDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('products');
   const [file, setFile] = useState<File | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
+  const [categories, setCategories] = useState<any[]>([]);
   const [uploadStatus, setUploadStatus] = useState('');
   const [orderModalOpen, setOrderModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
@@ -22,7 +24,17 @@ const WholesalerDashboard = () => {
   useEffect(() => {
     fetchProducts();
     fetchOrders();
+    fetchCategories();
   }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await api.get('/categories');
+      setCategories(res.data || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const fetchProducts = async () => {
     try {
@@ -83,6 +95,9 @@ const WholesalerDashboard = () => {
 
     const formData = new FormData();
     formData.append('file', file);
+    if (selectedCategoryId) {
+      formData.append('categoryId', selectedCategoryId);
+    }
 
     try {
       setUploadStatus('Uploading...');
@@ -296,6 +311,19 @@ const WholesalerDashboard = () => {
           <h3 className="text-lg font-bold mb-4">Bulk Product Upload</h3>
           <p className="text-gray-500 text-sm mb-6">Upload an Excel file with columns: Name, Part Number, MRP, Selling Price, Stock.</p>
           <form onSubmit={handleFileUpload} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Assign to Category (Optional)</label>
+              <select
+                className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-primary-500 outline-none"
+                value={selectedCategoryId}
+                onChange={e => setSelectedCategoryId(e.target.value)}
+              >
+                <option value="">Auto-categorize (by AI)</option>
+                {categories.map((c: any) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
             <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:border-primary-500 transition cursor-pointer">
               <Upload className="mx-auto text-gray-400 mb-2" size={32} />
               <input

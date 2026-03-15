@@ -305,8 +305,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 if (otp.length != 6) {
                                   if (mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
+                                      SnackBar(
+                                        content: const Text(
                                             'Please enter a valid 6-digit OTP'),
                                       ),
                                     );
@@ -326,8 +326,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                     if (mounted) {
                                       ScaffoldMessenger.of(context)
                                           .showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
+                                        SnackBar(
+                                          content: const Text(
                                               'Invalid OTP. Please try again.'),
                                         ),
                                       );
@@ -377,8 +377,8 @@ class _LoginScreenState extends State<LoginScreen> {
       if (data != null) {
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
         final user = await authProvider.signInWithGoogle(
-          data['email']!,
-          data['name']!,
+          data['email'] ?? '',
+          data['name'] ?? '',
         );
         if (user != null) {
           final userName = user.name;

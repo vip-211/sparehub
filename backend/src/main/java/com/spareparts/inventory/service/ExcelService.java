@@ -21,12 +21,25 @@ public class ExcelService {
     @Autowired
     private UserRepository userRepository;
 
-    public void save(MultipartFile file, Long wholesalerId) {
+    @Autowired
+    private com.spareparts.inventory.repository.CategoryRepository categoryRepository;
+
+    public void save(MultipartFile file, Long wholesalerId, Long categoryId) {
         try {
             User wholesaler = userRepository.findById(wholesalerId)
                     .orElseThrow(() -> new RuntimeException("Wholesaler not found"));
 
+            com.spareparts.inventory.entity.Category category = null;
+            if (categoryId != null) {
+                category = categoryRepository.findById(categoryId).orElse(null);
+            }
+
             List<Product> products = ExcelHelper.excelToProducts(file.getInputStream(), wholesaler);
+            if (category != null) {
+                for (Product p : products) {
+                    p.setCategory(category);
+                }
+            }
             productRepository.saveAll(products);
         } catch (IOException e) {
             throw new RuntimeException("fail to store excel data: " + e.getMessage());

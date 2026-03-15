@@ -46,6 +46,9 @@ const AdminDashboard = () => {
   });
   const [uploading, setUploading] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCategory, setNewCategory] = useState({ name: '', description: '', imagePath: '' });
+  const [selectedExcelCategory, setSelectedExcelCategory] = useState<string>('');
 
   const [deletedUsers, setDeletedUsers] = useState<any[]>([]);
   const [deletedOrders, setDeletedOrders] = useState<any[]>([]);
@@ -227,6 +230,9 @@ const AdminDashboard = () => {
 
     const formData = new FormData();
     formData.append('file', file);
+    if (selectedExcelCategory) {
+      formData.append('categoryId', selectedExcelCategory);
+    }
 
     try {
       await api.post('/excel/upload', formData, {
@@ -433,6 +439,39 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleAddCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await api.post('/categories', newCategory);
+      setShowAddCategory(false);
+      setNewCategory({ name: '', description: '', imagePath: '' });
+      fetchCategories();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to add category');
+    }
+  };
+
+  const handleCategoryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await api.post('/files/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setNewCategory({ ...newCategory, imagePath: res.data.url });
+    } catch (err) {
+      alert('Failed to upload category image');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const renderStatsSkeletons = () => (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-10">
       {[1, 2, 3, 4].map((i) => (
@@ -514,6 +553,31 @@ const AdminDashboard = () => {
             <Plus size={18} />
             <span>Add Product</span>
           </button>
+          <div className="relative group">
+            <button className="flex items-center gap-2 bg-green-600 text-white px-4 py-2.5 rounded-xl hover:bg-green-700 transition shadow-lg shadow-green-100 font-bold text-sm">
+              <Upload size={18} />
+              <span>Bulk Import</span>
+            </button>
+            <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 p-4 hidden group-hover:block z-50">
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Target Category</label>
+              <select
+                className="w-full border border-gray-200 rounded-lg p-2 text-sm mb-3 outline-none focus:ring-2 focus:ring-green-500"
+                value={selectedExcelCategory}
+                onChange={e => setSelectedExcelCategory(e.target.value)}
+              >
+                <option value="">Auto-categorize</option>
+                {categories.map((c: any) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+              <input
+                type="file"
+                accept=".xlsx, .xls"
+                onChange={handleExcelUpload}
+                className="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -563,6 +627,7 @@ const AdminDashboard = () => {
           { id: 'products', label: 'Inventory', icon: Package },
           { id: 'deliveries', label: 'Deliveries', icon: Truck },
           { id: 'recycle', label: 'Recycle Bin', icon: Trash2 },
+          { id: 'categories', label: 'Categories', icon: Plus },
           { id: 'settings', label: 'Settings', icon: Settings },
         ].map((tab) => (
           <button
@@ -1105,6 +1170,44 @@ const AdminDashboard = () => {
         </div>
       )}
 
+      {activeTab === 'categories' && (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-black text-gray-900">Manage Categories</h3>
+            <button
+              onClick={() => setShowAddCategory(true)}
+              className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 font-bold text-sm transition"
+            >
+              Add Category
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {categories.map((category: any) => (
+              <div key={category.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden group">
+                <div className="h-40 bg-gray-50 relative overflow-hidden">
+                  {category.imagePath ? (
+                    <img src={getImageUrl(category.imagePath)} alt={category.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-300">
+                      <Package size={48} />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center">
+                    <button className="bg-white text-gray-900 px-4 py-2 rounded-lg font-bold text-xs opacity-0 group-hover:opacity-100 transition-all transform translate-y-4 group-hover:translate-y-0">
+                      Edit Category
+                    </button>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <h4 className="font-black text-gray-900 text-lg">{category.name}</h4>
+                  <p className="text-gray-500 text-sm font-medium mt-1 line-clamp-2">{category.description || 'No description provided'}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {activeTab === 'settings' && (
         <div className="max-w-4xl mx-auto space-y-8">
           <div className="bg-white rounded-3xl shadow-xl shadow-gray-100/50 border border-gray-100 overflow-hidden">
@@ -1531,7 +1634,7 @@ const AdminDashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {editingOrder.items.map((item, idx) => (
+                  {editingOrder.items.map((item: any, idx: number) => (
                     <tr key={idx}>
                       <td className="py-2">{tp(item.productName)}</td>
                       <td className="py-2 text-center">
@@ -1561,7 +1664,7 @@ const AdminDashboard = () => {
                       <td className="py-2 text-right">
                         <button 
                           onClick={() => {
-                            const newItems = editingOrder.items.filter((_, i) => i !== idx);
+                            const newItems = editingOrder.items.filter((_: any, i: number) => i !== idx);
                             setEditingOrder({ ...editingOrder, items: newItems });
                           }}
                           className="text-red-600"
@@ -1574,7 +1677,7 @@ const AdminDashboard = () => {
             </div>
             <div className="flex justify-between items-center border-t pt-4">
               <p className="text-lg font-bold">
-                Total: ₹{editingOrder.items.reduce((acc, item) => acc + (item.price * item.quantity), 0).toFixed(2)}
+                Total: ₹{editingOrder.items.reduce((acc: any, item: any) => acc + (item.price * item.quantity), 0).toFixed(2)}
               </p>
               <div className="flex space-x-3">
                 <button 
@@ -1587,6 +1690,67 @@ const AdminDashboard = () => {
                 >Save Changes</button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showAddCategory && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl">
+            <h3 className="text-2xl font-black text-gray-900 mb-6">Create New Category</h3>
+            <form onSubmit={handleAddCategory} className="space-y-6">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Category Name</label>
+                <input
+                  type="text"
+                  className="w-full border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-primary-500 outline-none transition"
+                  value={newCategory.name}
+                  onChange={e => setNewCategory({...newCategory, name: e.target.value})}
+                  required
+                  placeholder="e.g. Engine Parts"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Description</label>
+                <textarea
+                  className="w-full border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-primary-500 outline-none transition"
+                  rows={3}
+                  value={newCategory.description}
+                  onChange={e => setNewCategory({...newCategory, description: e.target.value})}
+                  placeholder="What kind of parts are in this category?"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Category Image</label>
+                <div className="mt-2 flex flex-col items-center p-6 border-2 border-dashed border-gray-200 rounded-2xl hover:border-primary-500 transition cursor-pointer relative group">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleCategoryImageUpload}
+                    className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                    disabled={uploading}
+                  />
+                  {newCategory.imagePath ? (
+                    <img src={getImageUrl(newCategory.imagePath)} alt="Preview" className="w-full h-32 object-cover rounded-xl" />
+                  ) : (
+                    <>
+                      <Upload className="text-gray-400 mb-2 group-hover:text-primary-500 transition" size={32} />
+                      <span className="text-sm text-gray-500 font-medium">Click to upload category image</span>
+                    </>
+                  )}
+                  {uploading && (
+                    <div className="absolute inset-0 bg-white/80 flex items-center justify-center rounded-2xl z-20">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                    </div>
+                  )}
+                </div>
+                <p className="text-[10px] text-gray-400 mt-2 text-center font-bold uppercase tracking-widest">This image will be used for all products in this category</p>
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <button type="button" onClick={() => setShowAddCategory(false)} className="px-6 py-2 text-gray-500 hover:text-gray-700 font-bold transition">Cancel</button>
+                <button type="submit" className="bg-primary-600 text-white px-8 py-2 rounded-xl hover:bg-primary-700 font-black shadow-lg shadow-primary-100 transition">Create Category</button>
+              </div>
+            </form>
           </div>
         </div>
       )}

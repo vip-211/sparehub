@@ -26,13 +26,16 @@ public class ExcelController {
 
     @PostMapping("/upload")
     @PreAuthorize("hasRole('WHOLESALER') or hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
-    public ResponseEntity<MessageResponse> uploadFile(@RequestParam("file") MultipartFile file, Authentication authentication) {
+    public ResponseEntity<MessageResponse> uploadFile(
+            @RequestParam("file") MultipartFile file, 
+            @RequestParam(value = "categoryId", required = false) Long categoryId,
+            Authentication authentication) {
         String message = "";
 
         if (ExcelHelper.hasExcelFormat(file)) {
             try {
                 UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-                fileService.save(file, userDetails.getId());
+                fileService.save(file, userDetails.getId(), categoryId);
 
                 message = "Uploaded the file successfully: " + file.getOriginalFilename();
                 return ResponseEntity.status(HttpStatus.OK).body(new MessageResponse(message));

@@ -1359,6 +1359,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
   final _searchController = TextEditingController();
   Timer? _debounce;
   List<Product> _products = [];
+  List<Map<String, dynamic>> _categories = [];
   bool _isLoading = true;
   bool _isListening = false;
   bool _showExtraIcons = false;
@@ -1375,7 +1376,29 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchProducts();
+    _fetchInitialData();
+  }
+
+  Future<void> _fetchInitialData() async {
+    setState(() => _isLoading = true);
+    try {
+      final results = await Future.wait([
+        _productService.getAllProducts(),
+        _productService.getCategories(),
+      ]);
+      final products = results[0] as List<Product>;
+      final categories = results[1] as List<Map<String, dynamic>>;
+      products.sort((a, b) => b.id.compareTo(a.id));
+      if (mounted) {
+        setState(() {
+          _products = products;
+          _categories = categories;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   void _listen() async {
@@ -1476,6 +1499,59 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
         withData: true,
       );
       if (result != null) {
+        final categories = await _productService.getCategories();
+        int? selectedCategoryId;
+
+        if (mounted) {
+          selectedCategoryId = await showDialog<int>(
+            context: context,
+            builder: (ctx) => StatefulBuilder(
+              builder: (context, setDialogState) => AlertDialog(
+                title: const Text('Target Category'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                        'Select a category to assign all imported products to:'),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<int>(
+                      value: selectedCategoryId,
+                      decoration: const InputDecoration(
+                        labelText: 'Category (Optional)',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        const DropdownMenuItem<int>(
+                          value: null,
+                          child: Text('Auto-categorize (AI)'),
+                        ),
+                        ...categories.map((c) => DropdownMenuItem<int>(
+                              value: c['id'] as int?,
+                              child: Text(c['name'] ?? ''),
+                            )),
+                      ],
+                      onChanged: (val) =>
+                          setDialogState(() => selectedCategoryId = val),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, -1), // Cancel
+                    child: const Text('Cancel'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx, selectedCategoryId),
+                    child: const Text('Start Import'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        if (selectedCategoryId == -1) return;
+
         setState(() => _isLoading = true);
         Uint8List? bytes = result.files.first.bytes;
         if (bytes == null && !kIsWeb && result.files.first.path != null) {
@@ -1486,12 +1562,24 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
           throw Exception('Could not read file data');
         }
 
-        final count = await _productService.importProductsFromExcel(bytes);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Imported $count products successfully!')),
-          );
-          _fetchProducts();
+        if (Constants.useRemote) {
+          await _productService.uploadExcel(bytes,
+              categoryId: selectedCategoryId);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Imported successfully!')),
+            );
+            _fetchProducts();
+          }
+        } else {
+          final count = await _productService.importProductsFromExcel(bytes,
+              categoryId: selectedCategoryId);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Imported $count products locally!')),
+            );
+            _fetchProducts();
+          }
         }
       }
     } catch (e) {
@@ -2088,332 +2176,337 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Search product or part #',
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                _searchController.clear();
-                                _onSearchChanged('');
-                              },
-                            )
-                          : null,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+  Widget _buildProductList(List<Product> products) {
+    if (_isLoading && products.isEmpty) {
+      return _buildSkeleton();
+    }
+    if (products.isEmpty) {
+      return const Center(child: Text('No products found'));
+    }
+    return ListView.builder(
+      itemCount: products.length,
+      itemBuilder: (ctx, i) {
+        final p = products[i];
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          elevation: 2,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: InkWell(
+            onTap: () => _showAddProductDialog(product: p),
+            onLongPress: () {
+              setState(() {
+                _selectionMode = true;
+                _selectedIds.add(p.id);
+              });
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (_selectionMode)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: Checkbox(
+                        value: _selectedIds.contains(p.id),
+                        onChanged: (val) {
+                          setState(() {
+                            if (val == true) {
+                              _selectedIds.add(p.id);
+                            } else {
+                              _selectedIds.remove(p.id);
+                            }
+                          });
+                        },
                       ),
                     ),
-                    onChanged: _onSearchChanged,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Chip(
-                  label: Text('Total: ${_products.length}'),
-                  backgroundColor: Colors.grey.shade200,
-                ),
-                const SizedBox(width: 10),
-                if (_selectionMode) ...[
-                  IconButton(
-                    tooltip: 'Select All',
-                    onPressed: () {
-                      setState(() {
-                        _selectedIds
-                          ..clear()
-                          ..addAll(_products.map((e) => e.id));
-                      });
-                    },
-                    icon: const Icon(Icons.select_all, color: Colors.redAccent),
-                  ),
-                  IconButton(
-                    tooltip: 'Delete Selected',
-                    onPressed: _selectedIds.isEmpty ? null : _deleteSelected,
-                    icon: const Icon(Icons.delete_forever, color: Colors.red),
-                  ),
-                  IconButton(
-                    tooltip: 'Exit Selection',
-                    onPressed: () {
-                      setState(() {
-                        _selectionMode = false;
-                        _selectedIds.clear();
-                      });
-                    },
-                    icon: const Icon(Icons.close, color: Colors.grey),
-                  ),
-                ] else ...[
-                  IconButton(
-                    tooltip: 'Select Multiple',
-                    onPressed: () {
-                      setState(() {
-                        _selectionMode = true;
-                      });
-                    },
-                    icon: const Icon(Icons.check_box, color: Colors.redAccent),
-                  ),
-                ],
-                const SizedBox(width: 4),
-                IconButton(
-                  onPressed: () =>
-                      setState(() => _showExtraIcons = !_showExtraIcons),
-                  icon: Icon(
-                    _showExtraIcons
-                        ? Icons.remove_circle_outlined
-                        : Icons.add_circle_outlined,
-                    color: Colors.redAccent,
-                  ),
-                ),
-                if (_showExtraIcons) ...[
-                  IconButton(
-                    onPressed: _scanQRCode,
-                    icon: const Icon(Icons.qr_code_scanner),
-                    color: Colors.redAccent,
-                  ),
-                  IconButton(
-                    onPressed: () async {
-                      final partNumber =
-                          await _ocrService.pickAndExtractPartNumber();
-                      if (partNumber != null) {
-                        _searchController.text = partNumber;
-                        _onSearchChanged(partNumber);
-                      }
-                    },
-                    icon: const Icon(Icons.camera_alt),
-                    color: Colors.redAccent,
-                  ),
-                  IconButton(
-                    onPressed: _listen,
-                    icon: Icon(
-                      _isListening ? Icons.mic : Icons.mic_none,
-                      color: _isListening ? Colors.red : Colors.redAccent,
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[300]!),
+                      image: DecorationImage(
+                        image: getImageProvider(p.imagePath),
+                        fit: BoxFit.cover,
+                        onError: (exception, stackTrace) =>
+                            debugPrint('Image load error: $exception'),
+                      ),
                     ),
+                    child: p.imagePath == null
+                        ? Icon(Icons.image_not_supported,
+                            color: Colors.grey[400], size: 32)
+                        : null,
                   ),
-                ],
-              ],
-            ),
-          ),
-          Expanded(
-            child: _isLoading && _products.isEmpty
-                ? _buildSkeleton()
-                : ListView.builder(
-                    itemCount: _products.length,
-                    itemBuilder: (ctx, i) {
-                      final p = _products[i];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        child: InkWell(
-                          onTap: () => _showAddProductDialog(product: p),
-                          onLongPress: () {
-                            setState(() {
-                              _selectionMode = true;
-                              _selectedIds.add(p.id);
-                            });
-                          },
-                          borderRadius: BorderRadius.circular(12),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12.0),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (_selectionMode)
-                                  Padding(
-                                    padding: const EdgeInsets.only(right: 8.0),
-                                    child: Checkbox(
-                                      value: _selectedIds.contains(p.id),
-                                      onChanged: (val) {
-                                        setState(() {
-                                          if (val == true) {
-                                            _selectedIds.add(p.id);
-                                          } else {
-                                            _selectedIds.remove(p.id);
-                                          }
-                                        });
-                                      },
-                                    ),
-                                  ),
-                                Container(
-                                  width: 80,
-                                  height: 80,
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[100],
-                                    borderRadius: BorderRadius.circular(12),
-                                    border:
-                                        Border.all(color: Colors.grey[300]!),
-                                    image: DecorationImage(
-                                      image: getImageProvider(p.imagePath),
-                                      fit: BoxFit.cover,
-                                      onError: (exception, stackTrace) =>
-                                          debugPrint(
-                                              'Image load error: $exception'),
-                                    ),
-                                  ),
-                                  child: p.imagePath == null
-                                      ? Icon(Icons.image_not_supported,
-                                          color: Colors.grey[400], size: 32)
-                                      : null,
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        p.name,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                        ),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Part: ${p.partNumber}',
-                                        style: TextStyle(
-                                            color: Colors.grey[600],
-                                            fontSize: 13),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Row(
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: Colors.blue.shade50,
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                            ),
-                                            child: Text(
-                                              'Rack: ${p.rackNumber ?? "-"}',
-                                              style: TextStyle(
-                                                  color: Colors.blue.shade700,
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.bold),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            'Stock: ${p.stock}',
-                                            style: TextStyle(
-                                              color: p.stock > 0
-                                                  ? Colors.green.shade700
-                                                  : Colors.red.shade700,
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'Rs. ${p.sellingPrice.toStringAsFixed(2)}',
-                                        style: const TextStyle(
-                                          color: Colors.redAccent,
-                                          fontWeight: FontWeight.w900,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Column(
-                                  children: [
-                                    Switch(
-                                      value: p.enabled,
-                                      activeColor: Colors.redAccent,
-                                      onChanged: (val) async {
-                                        final updated =
-                                            p.copyWith(enabled: val);
-                                        await _productService
-                                            .addProduct(updated);
-                                        setState(() {
-                                          _products[i] = updated;
-                                        });
-                                      },
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete_outline,
-                                          color: Colors.red),
-                                      onPressed: () => _deleteProduct(p.id),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          p.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Part: ${p.partNumber}',
+                          style:
+                              TextStyle(color: Colors.grey[600], fontSize: 13),
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'Rack: ${p.rackNumber ?? "-"}',
+                                style: TextStyle(
+                                    color: Colors.blue.shade700,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold),
+                              ),
                             ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Stock: ${p.stock}',
+                              style: TextStyle(
+                                color: p.stock > 0
+                                    ? Colors.green.shade700
+                                    : Colors.red.shade700,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Rs. ${p.sellingPrice.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            color: Colors.redAccent,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 16,
                           ),
                         ),
-                      );
-                    },
+                      ],
+                    ),
                   ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          showModalBottomSheet(
-            context: context,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-            ),
-            builder: (ctx) => SafeArea(
-              child: Wrap(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.add),
-                    title: const Text('Add Product'),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _showAddProductDialog();
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.library_add),
-                    title: const Text('Bulk Add (JSON)'),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _showBulkAddDialog();
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.table_view),
-                    title: const Text('Import from Excel'),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _importExcel();
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.download),
-                    title: const Text('Export to Excel'),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _exportExcel();
-                    },
+                  Column(
+                    children: [
+                      Switch(
+                        value: p.enabled,
+                        activeColor: Colors.redAccent,
+                        onChanged: (val) async {
+                          final updated = p.copyWith(enabled: val);
+                          await _productService.addProduct(updated);
+                          setState(() {
+                            final idx =
+                                _products.indexWhere((x) => x.id == p.id);
+                            if (idx != -1) _products[idx] = updated;
+                          });
+                        },
+                      ),
+                      IconButton(
+                        icon:
+                            const Icon(Icons.delete_outline, color: Colors.red),
+                        onPressed: () => _deleteProduct(p.id),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-          );
-        },
-        backgroundColor: Colors.redAccent,
-        child: const Icon(Icons.add),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: _categories.length + 1,
+      child: Scaffold(
+        appBar: AppBar(
+          toolbarHeight: 0,
+          bottom: TabBar(
+            isScrollable: true,
+            labelColor: Colors.redAccent,
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: Colors.redAccent,
+            tabs: [
+              const Tab(text: 'All Products'),
+              ..._categories.map((c) => Tab(text: c['name'])),
+            ],
+          ),
+        ),
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Search product or part #',
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  _onSearchChanged('');
+                                },
+                              )
+                            : null,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onChanged: _onSearchChanged,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Chip(
+                    label: Text('Total: ${_products.length}'),
+                    backgroundColor: Colors.grey.shade200,
+                  ),
+                  const SizedBox(width: 10),
+                  if (_selectionMode) ...[
+                    IconButton(
+                      tooltip: 'Select All',
+                      onPressed: () {
+                        setState(() {
+                          _selectedIds
+                            ..clear()
+                            ..addAll(_products.map((e) => e.id));
+                        });
+                      },
+                      icon:
+                          const Icon(Icons.select_all, color: Colors.redAccent),
+                    ),
+                    IconButton(
+                      tooltip: 'Delete Selected',
+                      onPressed: _selectedIds.isEmpty ? null : _deleteSelected,
+                      icon: const Icon(Icons.delete_forever, color: Colors.red),
+                    ),
+                    IconButton(
+                      tooltip: 'Exit Selection',
+                      onPressed: () {
+                        setState(() {
+                          _selectionMode = false;
+                          _selectedIds.clear();
+                        });
+                      },
+                      icon: const Icon(Icons.close, color: Colors.grey),
+                    ),
+                  ] else ...[
+                    IconButton(
+                      tooltip: 'Select Multiple',
+                      onPressed: () {
+                        setState(() {
+                          _selectionMode = true;
+                        });
+                      },
+                      icon:
+                          const Icon(Icons.check_box, color: Colors.redAccent),
+                    ),
+                  ],
+                  const SizedBox(width: 4),
+                  IconButton(
+                    onPressed: () =>
+                        setState(() => _showExtraIcons = !_showExtraIcons),
+                    icon: Icon(
+                      _showExtraIcons
+                          ? Icons.remove_circle_outlined
+                          : Icons.add_circle_outlined,
+                      color: Colors.redAccent,
+                    ),
+                  ),
+                  if (_showExtraIcons) ...[
+                    IconButton(
+                      onPressed: _scanQRCode,
+                      icon: const Icon(Icons.qr_code_scanner),
+                      color: Colors.redAccent,
+                    ),
+                    IconButton(
+                      onPressed: () async {
+                        final partNumber =
+                            await _ocrService.pickAndExtractPartNumber();
+                        if (partNumber != null) {
+                          _searchController.text = partNumber;
+                          _onSearchChanged(partNumber);
+                        }
+                      },
+                      icon: const Icon(Icons.camera_alt),
+                      color: Colors.redAccent,
+                    ),
+                    IconButton(
+                      onPressed: _listen,
+                      icon: Icon(
+                        _isListening ? Icons.mic : Icons.mic_none,
+                        color: _isListening ? Colors.red : Colors.redAccent,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  _buildProductList(_products),
+                  ..._categories.map((c) {
+                    final catProducts = _products
+                        .where((p) => p.categoryId == c['id'])
+                        .toList();
+                    return _buildProductList(catProducts);
+                  }),
+                ],
+              ),
+            ),
+          ],
+        ),
+        floatingActionButton: Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            FloatingActionButton(
+              heroTag: 'export',
+              onPressed: _exportExcel,
+              backgroundColor: Colors.green,
+              child: const Icon(Icons.file_download),
+            ),
+            const SizedBox(height: 10),
+            FloatingActionButton(
+              heroTag: 'import',
+              onPressed: _importExcel,
+              backgroundColor: Colors.blue,
+              child: const Icon(Icons.file_upload),
+            ),
+            const SizedBox(height: 10),
+            FloatingActionButton(
+              heroTag: 'add',
+              onPressed: () => _showAddProductDialog(),
+              backgroundColor: Colors.redAccent,
+              child: const Icon(Icons.add),
+            ),
+          ],
+        ),
       ),
     );
   }

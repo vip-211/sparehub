@@ -1,59 +1,29 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import AuthService from '../services/auth.service';
-import { useAuth } from '../context/AuthContext';
-import { useLanguage } from '../context/LanguageContext';
-import { ROLE_ADMIN, ROLE_SUPER_MANAGER, ROLE_WHOLESALER, ROLE_STAFF } from '../services/constants';
 
-const Login = () => {
-  const { setCurrentUser } = useAuth();
-  const { t } = useLanguage();
+const Login: React.FC = () => {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [isOtpLogin, setIsOtpLogin] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  const [message, setMessage] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
-  const redirectToDashboard = useCallback((user: any) => {
-    if (!user || !user.roles) return;
-    
-    if (user.roles.includes(ROLE_ADMIN) || user.roles.includes(ROLE_SUPER_MANAGER)) {
-      navigate('/admin');
-    } else if (user.roles.includes(ROLE_WHOLESALER)) {
-      navigate('/wholesaler');
-    } else if (user.roles.includes(ROLE_STAFF)) {
-      navigate('/staff');
-    } else {
-      // For Mechanic, Retailer, etc.
-      navigate('/shop');
-    }
-  }, [navigate]);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const user = AuthService.getCurrentUser();
     if (user) {
-      setCurrentUser(user);
-      redirectToDashboard(user);
-      return;
+      navigate('/dashboard');
     }
-
-    const savedEmail = localStorage.getItem('last_email') || '';
-    const savedPassword = localStorage.getItem('last_password') || '';
-    if (savedEmail || savedPassword) {
-      setEmail(savedEmail);
-      setPassword(savedPassword);
-    }
-  }, [redirectToDashboard, setCurrentUser]);
-
-  const saveCredentials = () => {
-    localStorage.setItem('last_email', email);
-    localStorage.setItem('last_password', password);
-  };
+  }, [navigate]);
 
   const handleSendOtp = async () => {
     if (!email || !email.includes('@')) {
@@ -82,78 +52,51 @@ const Login = () => {
       : AuthService.login(email, password);
 
     loginPromise.then(
-      (user) => {
-        if (!isOtpLogin) saveCredentials();
-        setCurrentUser(user);
-        const userName = user.name || user.email || 'User';
-        setMessage(`${t('common.success')}! Welcome ${userName}.`);
-        
-        setTimeout(() => {
-          redirectToDashboard(user);
-        }, 1000);
+      () => {
+        const from = (location.state as any)?.from?.pathname || '/dashboard';
+        navigate(from, { replace: true });
+        window.location.reload();
       },
       (error) => {
+        const resMessage =
+          (error.response &&
+            error.response.data &&
+            error.response.data.message) ||
+          error.message ||
+          error.toString();
+
         setLoading(false);
-        const apiMsg =
-          error?.response?.data?.message ||
-          error?.response?.data?.error ||
-          error?.message;
-        
-        const lowerMsg = apiMsg?.toLowerCase() || '';
-        if (lowerMsg.includes('bad credentials') || 
-            lowerMsg.includes('invalid') || 
-            lowerMsg.includes('401')) {
-          setMessage(isOtpLogin ? t('login.otp') + ' ' + t('common.error') : t('login.password') + ' ' + t('common.error'));
-        } else if (lowerMsg.includes('403') || lowerMsg.includes('pending')) {
-          setMessage(t('common.error'));
-        } else {
-          setMessage(apiMsg || t('common.error'));
-        }
+        setMessage(resMessage);
       }
     );
   };
 
   const handleGoogleLogin = () => {
-    if (!email || !email.includes('@')) {
-      setMessage(t('login.email') + ' ' + t('common.error'));
-      return;
-    }
-    
-    setLoading(true);
-    AuthService.googleLogin(email, 'Google User').then(
-      (user) => {
-        saveCredentials();
-        setCurrentUser(user);
-        const userName = user.name || 'Google User';
-        setMessage(`${t('common.success')}! Welcome ${userName}.`);
-
-        setTimeout(() => {
-          redirectToDashboard(user);
-        }, 1000);
-      },
-      (error) => {
-        setLoading(false);
-        setMessage(error.response?.data?.message || t('login.google') + ' ' + t('common.error'));
-      }
-    );
+    // This would typically involve redirecting to a backend endpoint 
+    // or using a library like react-google-login
+    window.location.href = `${process.env.REACT_APP_API_URL || 'http://localhost:8080/api'}/auth/google`;
   };
 
   return (
-    <div className="flex items-center justify-center py-6 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-6 sm:p-8">
-        <div className="text-center mb-8">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900">{t('login.welcome')}</h2>
-          <p className="mt-2 text-gray-600">{t('login.title')}</p>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            {t('login.title')}
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            {t('login.subtitle')}
+          </p>
         </div>
         
-        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
+        <form className="mt-8" onSubmit={handleLogin}>
           {message && (
             <div className={`p-4 rounded-lg text-sm border-l-4 ${message.includes(t('common.success')) ? 'bg-green-50 border-green-400 text-green-700' : 'bg-red-50 border-red-400 text-red-700'}`}>
               {message}
             </div>
           )}
           
-          <div className="mb-4">
+          <div className="mb-4 mt-4">
             <label className="block text-gray-700 font-medium mb-2">{t('login.email')}</label>
             <input
               type="email"
@@ -205,7 +148,7 @@ const Login = () => {
                   {showPassword ? (
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268-2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                     </svg>
                   ) : (
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -222,12 +165,16 @@ const Login = () => {
               type="button"
               onClick={() => {
                 setIsOtpLogin(!isOtpLogin);
-                setMessage('');
+                setOtpSent(false);
+                setOtp('');
               }}
               className="text-sm font-medium text-primary-600 hover:text-primary-500"
             >
               {isOtpLogin ? t('login.switchPass') : t('login.switchOtp')}
             </button>
+            <Link to="/forgot-password" size="sm" className="text-sm font-medium text-primary-600 hover:text-primary-500">
+              {t('login.forgotPass')}
+            </Link>
           </div>
 
           <button
@@ -245,7 +192,7 @@ const Login = () => {
               <div className="w-full border-t border-gray-300"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">Or</span>
+              <span className="px-2 bg-white text-gray-500">{t('login.or')}</span>
             </div>
           </div>
 
