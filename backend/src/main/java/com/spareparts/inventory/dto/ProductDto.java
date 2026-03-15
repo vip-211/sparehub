@@ -40,7 +40,7 @@ public class ProductDto {
     private boolean enabled;
     
     private String imagePath;
-    private String imageLink;
+b   private String imageLink;
     private String description;
     
     private Long wholesalerId;

@@ -937,8 +937,8 @@ const AdminDashboard = () => {
                   )}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                      {product.imagePath ? (
-                        <img src={getImageUrl(product.imagePath)} alt={product.name} className="w-10 h-10 rounded-lg object-cover bg-gray-50 border border-gray-100" />
+                      {product.imagePath || product.imageLink || product.categoryImageLink || product.categoryImagePath ? (
+                        <img src={getImageUrl(product.imagePath || product.imageLink || product.categoryImageLink || product.categoryImagePath)} alt={product.name} className="w-10 h-10 rounded-lg object-cover bg-gray-50 border border-gray-100" />
                       ) : (
                         <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center border border-gray-100">
                           <Package size={20} className="text-gray-300" />

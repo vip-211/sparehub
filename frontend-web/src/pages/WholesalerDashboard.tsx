@@ -216,9 +216,9 @@ const WholesalerDashboard = () => {
                   <tr key={product.id} className="hover:bg-gray-50/50 transition">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        {product.imagePath ? (
+                        {product.imagePath || product.imageLink || product.categoryImageLink || product.categoryImagePath ? (
                           <img 
-                            src={getImageUrl(product.imagePath)} 
+                            src={getImageUrl(product.imagePath || product.imageLink || product.categoryImageLink || product.categoryImagePath)} 
                             alt={product.name} 
                             className="w-10 h-10 rounded-lg object-cover bg-gray-50 border border-gray-100" 
                             onError={(e) => {

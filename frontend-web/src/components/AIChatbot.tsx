@@ -309,8 +309,8 @@ const AIChatbot: React.FC = () => {
                     return (
                       <div key={p.id} className="flex items-center gap-3 p-3 border border-gray-100 rounded-xl">
                         <div className="w-12 h-12 rounded-lg bg-gray-50 flex items-center justify-center border border-gray-100 overflow-hidden">
-                          {p.imagePath ? (
-                            <img src={getImageUrl(p.imagePath)} alt={p.name} className="w-12 h-12 object-cover" />
+                          {p.imagePath || p.imageLink || p.categoryImageLink || p.categoryImagePath ? (
+                            <img src={getImageUrl(p.imagePath || p.imageLink || p.categoryImageLink || p.categoryImagePath)} alt={p.name} className="w-12 h-12 object-cover" />
                           ) : (
                             <Bot className="w-6 h-6 text-gray-300" />
                           )}

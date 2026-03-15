@@ -639,7 +639,10 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                   fit: StackFit.expand,
                   children: [
                     Image(
-                      image: getImageProvider(p.imagePath),
+                      image: getImageProvider(p.imagePath ??
+                          p.imageLink ??
+                          p.categoryImageLink ??
+                          p.categoryImagePath),
                       fit: BoxFit.cover,
                       errorBuilder: (c, e, s) => Container(
                         color: Colors.grey[200],
