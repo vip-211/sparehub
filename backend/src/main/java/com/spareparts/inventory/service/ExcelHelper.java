@@ -108,24 +108,43 @@ public class ExcelHelper {
                             if (currentCell.getCellType() == CellType.NUMERIC) {
                                 product.setMrp(BigDecimal.valueOf(currentCell.getNumericCellValue()));
                             } else {
-                                String val = currentCell.toString();
-                                product.setMrp(new BigDecimal(val.isEmpty() || val.equals("null") ? "0" : val));
+                                String val = currentCell.toString().replaceAll("[^\\d.]", "");
+                                if (val.isEmpty() || val.equals(".") || val.equals("null")) val = "0";
+                                try {
+                                    product.setMrp(new BigDecimal(val));
+                                } catch (Exception e) {
+                                    product.setMrp(BigDecimal.ZERO);
+                                }
                             }
                             break;
                         case 3: // Selling Price
                             if (currentCell.getCellType() == CellType.NUMERIC) {
                                 product.setSellingPrice(BigDecimal.valueOf(currentCell.getNumericCellValue()));
                             } else {
-                                String val = currentCell.toString();
-                                product.setSellingPrice(new BigDecimal(val.isEmpty() || val.equals("null") ? "0" : val));
+                                String val = currentCell.toString().replaceAll("[^\\d.]", "");
+                                if (val.isEmpty() || val.equals(".") || val.equals("null")) val = "0";
+                                try {
+                                    product.setSellingPrice(new BigDecimal(val));
+                                } catch (Exception e) {
+                                    product.setSellingPrice(BigDecimal.ZERO);
+                                }
                             }
                             break;
                         case 4: // Stock
                             if (currentCell.getCellType() == CellType.NUMERIC) {
                                 product.setStock((int) currentCell.getNumericCellValue());
                             } else {
-                                String val = currentCell.toString();
-                                product.setStock(Integer.parseInt(val.isEmpty() || val.contains(".") || val.equals("null") ? "0" : val));
+                                String val = currentCell.toString().trim();
+                                if (val.contains(".")) {
+                                    val = val.substring(0, val.indexOf("."));
+                                }
+                                val = val.replaceAll("[^\\d]", "");
+                                if (val.isEmpty() || val.equals("null")) val = "0";
+                                try {
+                                    product.setStock(Integer.parseInt(val));
+                                } catch (Exception e) {
+                                    product.setStock(0);
+                                }
                             }
                             break;
                         default:

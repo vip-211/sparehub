@@ -14,6 +14,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByWholesalerAndDeletedFalse(User wholesaler);
     List<Product> findByWholesalerAndDeletedTrue(User wholesaler);
     Optional<Product> findByPartNumberAndDeletedFalse(String partNumber);
+    Optional<Product> findByPartNumberAndWholesalerAndDeletedFalse(String partNumber, User wholesaler);
     @org.springframework.data.jpa.repository.Query("SELECT p FROM Product p WHERE (LOWER(p.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.partNumber) LIKE LOWER(CONCAT('%', :query, '%'))) AND p.deleted = false")
     List<Product> searchProducts(@org.springframework.data.repository.query.Param("query") String query);
     

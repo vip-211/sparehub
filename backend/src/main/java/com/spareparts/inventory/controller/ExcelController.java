@@ -40,7 +40,7 @@ public class ExcelController {
                 message = "Uploaded the file successfully: " + file.getOriginalFilename();
                 return ResponseEntity.status(HttpStatus.OK).body(new MessageResponse(message));
             } catch (Exception e) {
-                message = "Could not upload the file: " + file.getOriginalFilename() + "!";
+                message = "Could not upload the file: " + file.getOriginalFilename() + "! Reason: " + e.getMessage();
                 return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body(new MessageResponse(message));
             }
         }

@@ -12,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class ExcelService {
@@ -35,12 +36,24 @@ public class ExcelService {
             }
 
             List<Product> products = ExcelHelper.excelToProducts(file.getInputStream(), wholesaler);
-            if (category != null) {
-                for (Product p : products) {
-                    p.setCategory(category);
-                }
+            for (Product p : products) {
+                if (category != null) {
+                      p.setCategory(category);
+                  }
+                  // Check if product already exists by partNumber for this wholesaler
+                  Optional<Product> existing = productRepository.findByPartNumberAndWholesalerAndDeletedFalse(p.getPartNumber(), wholesaler);
+                  if (existing.isPresent()) {
+                      Product e = existing.get();
+                      e.setName(p.getName());
+                      e.setMrp(p.getMrp());
+                      e.setSellingPrice(p.getSellingPrice());
+                      e.setStock(p.getStock());
+                      if (category != null) e.setCategory(category);
+                      productRepository.save(e);
+                  } else {
+                      productRepository.save(p);
+                  }
             }
-            productRepository.saveAll(products);
         } catch (IOException e) {
             throw new RuntimeException("fail to store excel data: " + e.getMessage());
         }
