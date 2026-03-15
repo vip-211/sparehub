@@ -23,6 +23,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
   void initState() {
     super.initState();
     _fetchNotifications();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<NotificationProvider>(context, listen: false).markAllAsRead();
+    });
   }
 
   Future<void> _fetchNotifications() async {
@@ -54,6 +57,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
         title: const Text('Notifications'),
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
       ),
       body: notifications.isEmpty
           ? const Center(child: Text('No notifications yet.'))

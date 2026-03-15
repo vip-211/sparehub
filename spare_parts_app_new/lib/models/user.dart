@@ -8,6 +8,7 @@ class User {
   final String? address;
   final String? shopImagePath;
   final String? status;
+  final bool phoneVerified;
   final double? latitude;
   final double? longitude;
 
@@ -21,6 +22,7 @@ class User {
     this.address,
     this.shopImagePath,
     this.status,
+    this.phoneVerified = false,
     this.latitude,
     this.longitude,
   });
@@ -36,6 +38,7 @@ class User {
       address: json['address'],
       shopImagePath: json['shopImagePath'],
       status: json['status'],
+      phoneVerified: json['phoneVerified'] == true || json['phone_verified'] == 1,
       latitude: json['latitude'] != null ? (json['latitude'] as num).toDouble() : null,
       longitude: json['longitude'] != null ? (json['longitude'] as num).toDouble() : null,
     );
@@ -52,6 +55,7 @@ class User {
       'address': address,
       'shopImagePath': shopImagePath,
       'status': status,
+      'phoneVerified': phoneVerified,
       'latitude': latitude,
       'longitude': longitude,
     };

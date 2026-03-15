@@ -19,7 +19,7 @@ class DatabaseService {
     String path = join(await getDatabasesPath(), 'spare_parts.db');
     final db = await openDatabase(
       path,
-      version: 15,
+      version: 17,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -171,6 +171,21 @@ class DatabaseService {
         await db.execute('ALTER TABLE products ADD COLUMN description TEXT');
       } catch (_) {}
     }
+    if (oldVersion < 16) {
+      try {
+        await db.execute(
+            'ALTER TABLE notifications ADD COLUMN isRead INTEGER DEFAULT 0');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE notifications ADD COLUMN imageUrl TEXT');
+      } catch (_) {}
+    }
+    if (oldVersion < 17) {
+      try {
+        await db.execute(
+            'ALTER TABLE users ADD COLUMN phone_verified INTEGER DEFAULT 0');
+      } catch (_) {}
+    }
   }
 
   Future<void> _enforceProductUniqueness(Database db) async {
@@ -266,6 +281,7 @@ class DatabaseService {
         status TEXT DEFAULT "PENDING",
         latitude REAL,
         longitude REAL,
+        phone_verified INTEGER DEFAULT 0,
         deleted INTEGER DEFAULT 0
       )
     ''');
@@ -328,6 +344,8 @@ class DatabaseService {
         title TEXT,
         message TEXT,
         targetRole TEXT,
+        imageUrl TEXT,
+        isRead INTEGER DEFAULT 0,
         createdAt TEXT
       )
     ''');

@@ -11,7 +11,10 @@ class OrderConfirmationScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Order Summary'),
-        leading: const BackButton(),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),

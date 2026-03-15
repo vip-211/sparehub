@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -9,12 +8,18 @@ import '../providers/auth_provider.dart';
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
-  Widget _buildProfileItem(BuildContext context, IconData icon, String title, String value, {bool isEditable = false, VoidCallback? onEdit}) {
+  Widget _buildProfileItem(
+      BuildContext context, IconData icon, String title, String value,
+      {bool isEditable = false, VoidCallback? onEdit, Widget? trailing}) {
     return ListTile(
       leading: Icon(icon, color: Colors.green),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
       subtitle: Text(value),
-      trailing: isEditable ? IconButton(icon: const Icon(Icons.edit, size: 18), onPressed: onEdit) : null,
+      trailing: trailing ??
+          (isEditable
+              ? IconButton(
+                  icon: const Icon(Icons.edit, size: 18), onPressed: onEdit)
+              : null),
     );
   }
 
@@ -27,10 +32,12 @@ class ProfileScreen extends StatelessWidget {
         content: TextField(
           controller: controller,
           maxLines: 3,
-          decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Enter your address'),
+          decoration: const InputDecoration(
+              border: OutlineInputBorder(), hintText: 'Enter your address'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () async {
               await authProvider.updateAddress(controller.text);
@@ -49,9 +56,65 @@ class ProfileScreen extends StatelessWidget {
     if (image != null) {
       await authProvider.updateShopImage(image.path);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Shop image updated!')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Shop image updated!')));
       }
     }
+  }
+
+  void _showVerifyPhoneDialog(BuildContext context, AuthProvider authProvider) {
+    final otpController = TextEditingController();
+    authProvider.sendVerificationOtp();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Verify Phone Number'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('A 6-digit OTP has been sent to your email.'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: otpController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Enter OTP',
+                border: OutlineInputBorder(),
+              ),
+              maxLength: 6,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                await authProvider.verifyPhoneNumber(otpController.text);
+                if (context.mounted) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Phone verified successfully!')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Verification failed: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Verify'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -81,15 +144,22 @@ class ProfileScreen extends StatelessWidget {
                       CircleAvatar(
                         radius: 60,
                         backgroundColor: Colors.white,
-                        backgroundImage: user?.shopImagePath != null ? FileImage(File(user!.shopImagePath!)) : null,
-                        child: user?.shopImagePath == null ? const Icon(Icons.store, size: 60, color: Colors.green) : null,
+                        backgroundImage: user?.shopImagePath != null
+                            ? FileImage(File(user!.shopImagePath!))
+                            : null,
+                        child: user?.shopImagePath == null
+                            ? const Icon(Icons.store,
+                                size: 60, color: Colors.green)
+                            : null,
                       ),
                       CircleAvatar(
                         radius: 18,
                         backgroundColor: Colors.white,
                         child: IconButton(
-                          icon: const Icon(Icons.camera_alt, size: 18, color: Colors.green),
-                          onPressed: () => _pickShopImage(context, authProvider),
+                          icon: const Icon(Icons.camera_alt,
+                              size: 18, color: Colors.green),
+                          onPressed: () =>
+                              _pickShopImage(context, authProvider),
                         ),
                       ),
                     ],
@@ -97,7 +167,10 @@ class ProfileScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     user?.name ?? 'User',
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -111,17 +184,40 @@ class ProfileScreen extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  const Text('Shop Details for Delivery', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const Text('Shop Details for Delivery',
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   const SizedBox(height: 10),
                   if (user?.shopImagePath != null)
                     ClipRRect(
                       borderRadius: BorderRadius.circular(10),
-                      child: Image.file(File(user!.shopImagePath!), height: 150, width: double.infinity, fit: BoxFit.cover),
+                      child: Image.file(File(user!.shopImagePath!),
+                          height: 150,
+                          width: double.infinity,
+                          fit: BoxFit.cover),
                     ),
                   const Divider(height: 30),
-                  _buildProfileItem(context, Icons.person, 'Name', user?.name ?? 'N/A'),
-                  _buildProfileItem(context, Icons.email, 'Email', user?.email ?? ''),
-                  _buildProfileItem(context, Icons.phone, 'Phone', user?.phone ?? 'N/A'),
+                  _buildProfileItem(
+                      context, Icons.person, 'Name', user?.name ?? 'N/A'),
+                  _buildProfileItem(
+                      context, Icons.email, 'Email', user?.email ?? ''),
+                  _buildProfileItem(
+                    context,
+                    Icons.phone,
+                    'Phone',
+                    user?.phone ?? 'N/A',
+                    trailing: user?.phone != null
+                        ? (user!.phoneVerified
+                            ? const Icon(Icons.verified,
+                                color: Colors.blue, size: 20)
+                            : TextButton(
+                                onPressed: () => _showVerifyPhoneDialog(
+                                    context, authProvider),
+                                child: const Text('Verify Now',
+                                    style: TextStyle(color: Colors.orange)),
+                              ))
+                        : null,
+                  ),
                   _buildProfileItem(
                     context,
                     Icons.location_on,
@@ -135,13 +231,15 @@ class ProfileScreen extends StatelessWidget {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EditProfileScreen()));
+                        Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => const EditProfileScreen()));
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
                       ),
                       child: const Text('Edit Profile'),
                     ),
@@ -157,7 +255,8 @@ class ProfileScreen extends StatelessWidget {
                         backgroundColor: Colors.red,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
                   ),

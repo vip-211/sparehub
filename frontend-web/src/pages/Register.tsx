@@ -9,6 +9,7 @@ const Register = () => {
   const { t } = useLanguage();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState(ROLE_WHOLESALER);
@@ -51,7 +52,7 @@ const Register = () => {
     setMessage('');
     setLoading(true);
 
-    AuthService.register(name, email, password, role, '', '', otp, address).then(
+    AuthService.register(name, email, password, role, phone, '', otp, address).then(
       () => {
         setMessage(`${t('common.success')}! Welcome ${name}.`);
         setLoading(false);
@@ -100,6 +101,16 @@ const Register = () => {
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="mb-4">
+            <label className="block text-gray-700 font-medium mb-2">Phone Number</label>
+            <input
+              type="tel"
+              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              required
+            />
+          </div>
           <div className="mb-4">
             <label className="block text-gray-700 font-medium mb-2">{t('reg.password')}</label>
             <div className="relative">

@@ -20,11 +20,13 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _addressController = TextEditingController();
   String _selectedRole = Constants.roleMechanic;
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _isEmailRegistration = true; // Toggle between Email and Mobile
   double? _latitude;
   double? _longitude;
 
@@ -107,18 +109,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void _handleRegister() async {
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
+    final phone = _phoneController.text.trim();
     final password = _passwordController.text;
     final address = _addressController.text.trim();
 
-    if (name.isEmpty || email.isEmpty || password.isEmpty) {
-      _showFeedback('Please fill in all required fields.', isError: true);
+    if (name.isEmpty || password.isEmpty) {
+      _showFeedback('Please fill in name and password.', isError: true);
       return;
     }
 
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if (!emailRegex.hasMatch(email)) {
-      _showFeedback('Please enter a valid email address.', isError: true);
+    if (_isEmailRegistration && email.isEmpty) {
+      _showFeedback('Please enter your email address.', isError: true);
       return;
+    }
+
+    if (!_isEmailRegistration && phone.isEmpty) {
+      _showFeedback('Please enter your mobile number.', isError: true);
+      return;
+    }
+
+    if (_isEmailRegistration) {
+      final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+      if (!emailRegex.hasMatch(email)) {
+        _showFeedback('Please enter a valid email address.', isError: true);
+        return;
+      }
+    } else {
+      if (phone.length < 10) {
+        _showFeedback('Please enter a valid mobile number.', isError: true);
+        return;
+      }
     }
 
     if (password.length < 6) {
@@ -137,23 +157,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       final registrationData = {
         'name': name,
-        'email': email,
+        'email': _isEmailRegistration ? email : '$phone@spares.hub',
         'password': password,
         'role': _selectedRole,
-        'phone': '',
+        'phone': phone,
         'address': address,
         'latitude': _latitude,
         'longitude': _longitude,
       };
 
-      await authProvider.sendOtp(email, registrationData);
+      final target = _isEmailRegistration ? email : phone;
+      await authProvider.sendOtp(target, registrationData);
 
       if (mounted) {
-        _showFeedback('OTP sent to your email.');
+        _showFeedback(
+            'OTP sent to your ${_isEmailRegistration ? "email" : "mobile"}.');
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => OtpVerificationScreen(
-              email: email,
+              email: target,
               registrationData: registrationData,
             ),
           ),
@@ -179,13 +201,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
         if (user != null) {
           _showFeedback('Google Sign-In successful!');
-          Future.delayed(const Duration(seconds: 1), () {
-            if (mounted) Navigator.of(context).pop();
-          });
         }
       }
-    } catch (error) {
-      _showFeedback('Google Sign-In failed: $error', isError: true);
+    } catch (e) {
+      String msg = e.toString();
+      if (msg.contains('Exception: '))
+        msg = msg.replaceFirst('Exception: ', '');
+      _showFeedback('Google Sign-In failed: $msg', isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -194,158 +216,263 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: const BackButton(color: Colors.black87),
-        title: const Text(
-          'Create Account',
-          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.green.shade800,
+              Colors.green.shade500,
+              Colors.blue.shade600,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 20),
+                  // Register Card
+                  Card(
+                    elevation: 8,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Column(
+                        children: [
+                          // Header Text
+                          const Text(
+                            'Create Account',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Fill in your details to get started',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                fontSize: 14, color: Colors.grey.shade600),
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Registration Toggle
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () => setState(
+                                        () => _isEmailRegistration = true),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 12),
+                                      decoration: BoxDecoration(
+                                        color: _isEmailRegistration
+                                            ? Colors.green.shade600
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          'Email',
+                                          style: TextStyle(
+                                            color: _isEmailRegistration
+                                                ? Colors.white
+                                                : Colors.grey.shade600,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () => setState(
+                                        () => _isEmailRegistration = false),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 12),
+                                      decoration: BoxDecoration(
+                                        color: !_isEmailRegistration
+                                            ? Colors.green.shade600
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          'Mobile',
+                                          style: TextStyle(
+                                            color: !_isEmailRegistration
+                                                ? Colors.white
+                                                : Colors.grey.shade600,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+
+                          _buildTextField(
+                            controller: _nameController,
+                            label: 'Full Name*',
+                            icon: Icons.person_outline,
+                          ),
+                          const SizedBox(height: 16),
+                          if (_isEmailRegistration)
+                            _buildTextField(
+                              controller: _emailController,
+                              label: 'Email Address*',
+                              icon: Icons.email_outlined,
+                              keyboardType: TextInputType.emailAddress,
+                            )
+                          else
+                            _buildTextField(
+                              controller: _phoneController,
+                              label: 'Mobile Number*',
+                              icon: Icons.phone_android_outlined,
+                              keyboardType: TextInputType.phone,
+                            ),
+                          const SizedBox(height: 16),
+                          _buildTextField(
+                            controller: _passwordController,
+                            label: 'Password*',
+                            icon: Icons.lock_outlined,
+                            obscureText: _obscurePassword,
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                                color: Colors.grey.shade600,
+                                size: 20,
+                              ),
+                              onPressed: () => setState(
+                                  () => _obscurePassword = !_obscurePassword),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Role Dropdown
+                          _buildDropdown(),
+                          const SizedBox(height: 16),
+
+                          _buildTextField(
+                            controller: _addressController,
+                            label: 'Shop Address (Optional)',
+                            icon: Icons.location_on_outlined,
+                            maxLines: 2,
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Location Capture Button
+                          _buildLocationButton(),
+                          const SizedBox(height: 32),
+
+                          // Register Button
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _isLoading ? null : _handleRegister,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green.shade600,
+                                foregroundColor: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 4,
+                              ),
+                              child: _isLoading
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Text(
+                                      'Send OTP & Register',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Login Link
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'Already have an account? ',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text(
+                          'Login',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Join Spares Hub',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Fill in your details to get started',
-              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
-            ),
-            const SizedBox(height: 32),
+    );
+  }
 
-            _buildTextField(
-              controller: _nameController,
-              label: 'Full Name*',
-              icon: Icons.person_outlined,
-            ),
-            const SizedBox(height: 16),
-            _buildTextField(
-              controller: _emailController,
-              label: 'Email Address*',
-              icon: Icons.email_outlined,
-              keyboardType: TextInputType.emailAddress,
-            ),
-            const SizedBox(height: 16),
-            _buildTextField(
-              controller: _passwordController,
-              label: 'Password*',
-              icon: Icons.lock_outlined,
-              obscureText: _obscurePassword,
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                  color: Colors.grey,
-                  size: 20,
-                ),
-                onPressed: () =>
-                    setState(() => _obscurePassword = !_obscurePassword),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Role Dropdown
-            _buildDropdown(),
-            const SizedBox(height: 16),
-
-            _buildTextField(
-              controller: _addressController,
-              label: 'Business Address',
-              icon: Icons.business_outlined,
-              maxLines: 2,
-            ),
-            const SizedBox(height: 24),
-
-            // Location Capture Button
-            _buildLocationButton(),
-            const SizedBox(height: 32),
-
-            // Register Button
-            ElevatedButton(
-              onPressed: _isLoading ? null : _handleRegister,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green.shade600,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 0,
-              ),
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 24,
-                      width: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text(
-                      'Register Account',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-            ),
-
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(child: Divider(color: Colors.grey.shade300)),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    'OR REGISTER WITH',
-                    style: TextStyle(
-                      color: Colors.grey.shade500,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                Expanded(child: Divider(color: Colors.grey.shade300)),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Google Sign Up
-            OutlinedButton.icon(
-              onPressed: _isLoading ? null : _handleGoogleSignIn,
-              icon: SizedBox(
-                height: 24,
-                width: 24,
-                child: SvgPicture.network(
-                  'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
-                  height: 24,
-                  width: 24,
-                  placeholderBuilder: (ctx) => const Icon(
-                    Icons.g_mobiledata,
-                    color: Colors.redAccent,
-                    size: 24,
-                  ),
-                ),
-              ),
-              label: const Text('Sign up with Google'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                side: BorderSide(color: Colors.grey.shade300),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                foregroundColor: Colors.black87,
-                textStyle: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-            const SizedBox(height: 24),
-          ],
+  Widget _socialIconButton(String iconUrl, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade200),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: SvgPicture.network(
+          iconUrl,
+          height: 24,
+          width: 24,
         ),
       ),
     );

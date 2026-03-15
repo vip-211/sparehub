@@ -55,6 +55,10 @@ class _CartScreenState extends State<CartScreen> {
         title: const Text('My Cart'),
         backgroundColor: Colors.redAccent,
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
       ),
       body: cart.items.isEmpty
           ? Center(
@@ -70,7 +74,7 @@ class _CartScreenState extends State<CartScreen> {
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => Navigator.of(context).pop(),
                     style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.redAccent),
                     child: const Text('Continue Shopping',
@@ -89,64 +93,86 @@ class _CartScreenState extends State<CartScreen> {
                       return Card(
                         margin: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 8),
-                        child: ListTile(
-                          title: Text(item.productName),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Row(
                             children: [
-                              Text('Price: Rs. ${item.price}'),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(
-                                        Icons.remove_circle_outline,
-                                        color: Colors.redAccent),
-                                    onPressed: () =>
-                                        cart.decrementItem(item.productId),
-                                    constraints: const BoxConstraints(),
-                                    padding: EdgeInsets.zero,
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12),
-                                    child: Text(
-                                      '${item.quantity}',
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.productName,
                                       style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Price: Rs. ${item.price}',
+                                      style: const TextStyle(
+                                          color: Colors.grey, fontSize: 13),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(
+                                              Icons.remove_circle_outline,
+                                              color: Colors.redAccent),
+                                          onPressed: () => cart
+                                              .decrementItem(item.productId),
+                                          constraints: const BoxConstraints(),
+                                          padding: EdgeInsets.zero,
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 12),
+                                          child: Text(
+                                            '${item.quantity}',
+                                            style: const TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(
+                                              Icons.add_circle_outline,
+                                              color: Colors.green),
+                                          onPressed: () {
+                                            cart.addItemFromCart(
+                                                item.productId);
+                                          },
+                                          constraints: const BoxConstraints(),
+                                          padding: EdgeInsets.zero,
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    'Rs. ${(item.price * item.quantity).toStringAsFixed(2)}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      color: Colors.redAccent,
                                     ),
                                   ),
+                                  const SizedBox(height: 8),
                                   IconButton(
-                                    icon: const Icon(Icons.add_circle_outline,
-                                        color: Colors.green),
-                                    onPressed: () {
-                                      // We need a dummy product object since addItem expects one
-                                      // But we only really need the ID and price which we have
-                                      // Actually, it's better to add a simple increment method to provider
-                                      cart.addItemFromCart(item.productId);
-                                    },
+                                    icon: const Icon(Icons.delete_outline,
+                                        color: Colors.grey, size: 22),
+                                    onPressed: () =>
+                                        cart.removeItem(item.productId),
                                     constraints: const BoxConstraints(),
                                     padding: EdgeInsets.zero,
                                   ),
                                 ],
-                              ),
-                            ],
-                          ),
-                          trailing: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                'Rs. ${(item.price * item.quantity).toStringAsFixed(2)}',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 16),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline,
-                                    color: Colors.grey, size: 20),
-                                onPressed: () =>
-                                    cart.removeItem(item.productId),
                               ),
                             ],
                           ),
@@ -155,56 +181,65 @@ class _CartScreenState extends State<CartScreen> {
                     },
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.5),
-                        spreadRadius: 2,
-                        blurRadius: 5,
-                        offset: const Offset(0, -3),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Total Amount',
-                            style: TextStyle(fontSize: 14, color: Colors.grey),
-                          ),
-                          Text(
-                            'Rs. ${cart.totalAmount.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.redAccent,
+                SafeArea(
+                  top: false,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 15),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.3),
+                          spreadRadius: 1,
+                          blurRadius: 10,
+                          offset: const Offset(0, -3),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Total Amount',
+                              style:
+                                  TextStyle(fontSize: 13, color: Colors.grey),
                             ),
-                          ),
-                        ],
-                      ),
-                      _isPlacingOrder
-                          ? const CircularProgressIndicator()
-                          : ElevatedButton(
-                              onPressed: _placeOrder,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.redAccent,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 30, vertical: 15),
-                              ),
-                              child: const Text(
-                                'Place Order',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold),
+                            Text(
+                              'Rs. ${cart.totalAmount.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.redAccent,
                               ),
                             ),
-                    ],
+                          ],
+                        ),
+                        _isPlacingOrder
+                            ? const CircularProgressIndicator()
+                            : ElevatedButton(
+                                onPressed: _placeOrder,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.redAccent,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 30, vertical: 15),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Place Order',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                      ],
+                    ),
                   ),
                 ),
               ],

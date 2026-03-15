@@ -38,19 +38,25 @@ class _MechanicDashboardState extends State<MechanicDashboard> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Mechanic Dashboard',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Spares Hub'),
+            Text(
+              'Mechanic Dashboard',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.white.withOpacity(0.8),
+                fontWeight: FontWeight.normal,
+              ),
+            ),
+          ],
         ),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.blue.shade700,
         actions: [
           const CartBadge(),
           const NotificationBadge(),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => authProvider.logout(),
-          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: FutureBuilder<bool>(
@@ -65,20 +71,26 @@ class _MechanicDashboardState extends State<MechanicDashboard> {
           );
         },
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_cart),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: _onItemTapped,
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.search_outlined),
+            selectedIcon: Icon(Icons.search),
+            label: 'Search',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.shopping_cart_outlined),
+            selectedIcon: Icon(Icons.shopping_cart),
             label: 'Orders',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
         ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: Colors.blue,
-        unselectedItemColor: Colors.grey,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
       ),
     );
   }

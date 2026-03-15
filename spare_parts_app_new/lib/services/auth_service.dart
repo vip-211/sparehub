@@ -28,21 +28,19 @@ class AuthService {
   // LOGIN
   // =============================
 
-  Future<User?> login(String email, String password) async {
+  Future<User?> login(String identifier, String password) async {
     try {
       if (Constants.useRemote) {
         final res = await http.post(
           Uri.parse('${Constants.baseUrl}/auth/signin'),
           headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'email': email, 'password': password}),
+          body: jsonEncode({'email': identifier, 'password': password}),
         );
         if (res.statusCode == 401 || res.statusCode == 403) {
           final body = res.body.isNotEmpty ? jsonDecode(res.body) : null;
           final msg = body is Map
-              ? (body['message'] ??
-                  body['error'] ??
-                  'Invalid email or password')
-              : 'Invalid email or password';
+              ? (body['message'] ?? body['error'] ?? 'Invalid credentials')
+              : 'Invalid email/phone or password';
           throw Exception(msg.toString());
         }
         if (res.statusCode < 200 || res.statusCode >= 300) {
@@ -62,12 +60,14 @@ class AuthService {
           id: id,
           email: emailVal,
           name: name,
-          phone: null,
+          phone: json['phone'],
           token: token.toString(),
           roles: roles,
           address: null,
           shopImagePath: null,
           status: status,
+          phoneVerified:
+              json['phoneVerified'] == true || json['phone_verified'] == 1,
           latitude: null,
           longitude: null,
         );
@@ -79,8 +79,8 @@ class AuthService {
       final db = await _dbService.database;
       final result = await db.query(
         "users",
-        where: "email = ?",
-        whereArgs: [email],
+        where: "email = ? OR phone = ?",
+        whereArgs: [identifier, identifier],
       );
 
       if (result.isEmpty) {
@@ -108,6 +108,7 @@ class AuthService {
         address: userData["address"] as String?,
         shopImagePath: userData["shopImagePath"] as String?,
         status: status,
+        phoneVerified: userData["phone_verified"] == 1,
         latitude: userData["latitude"] as double?,
         longitude: userData["longitude"] as double?,
       );
@@ -124,13 +125,13 @@ class AuthService {
     }
   }
 
-  Future<User?> loginWithOtp(String email, String otp) async {
+  Future<User?> loginWithOtp(String identifier, String otp) async {
     try {
       if (Constants.useRemote) {
         final res = await http.post(
           Uri.parse('${Constants.baseUrl}/auth/otp-login'),
           headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'email': email, 'otp': otp}),
+          body: jsonEncode({'email': identifier, 'otp': otp}),
         );
         if (res.statusCode < 200 || res.statusCode >= 300) {
           final body = res.body.isNotEmpty ? jsonDecode(res.body) : null;
@@ -153,12 +154,14 @@ class AuthService {
           id: id,
           email: emailVal,
           name: name,
-          phone: null,
+          phone: json['phone'],
           token: token.toString(),
           roles: roles,
           address: null,
           shopImagePath: null,
           status: status,
+          phoneVerified:
+              json['phoneVerified'] == true || json['phone_verified'] == 1,
           latitude: null,
           longitude: null,
         );
@@ -285,6 +288,80 @@ class AuthService {
   }
 
   // =============================
+  // CHANGE PASSWORD
+  // =============================
+
+  Future<void> changePassword(
+    int userId,
+    String currentPassword,
+    String newPassword,
+  ) async {
+    if (Constants.useRemote) {
+      await _remote.postJson('/auth/change-password', {
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      });
+      return;
+    }
+
+    final db = await _dbService.database;
+    final result = await db.query(
+      "users",
+      where: "id = ?",
+      whereArgs: [userId],
+    );
+
+    if (result.isEmpty) throw "User not found";
+
+    final storedPassword = result.first["password"] as String;
+    if (!BCrypt.checkpw(currentPassword, storedPassword)) {
+      throw "Current password is incorrect";
+    }
+
+    final hashed = BCrypt.hashpw(newPassword, BCrypt.gensalt());
+    await db.update(
+      "users",
+      {"password": hashed},
+      where: "id = ?",
+      whereArgs: [userId],
+    );
+  }
+
+  // =============================
+  // PHONE VERIFICATION
+  // =============================
+
+  Future<void> sendVerificationOtp(String email, String phone) async {
+    if (Constants.useRemote) {
+      await _remote.postJson('/auth/send-verification-otp', {
+        'email': email,
+        'phone': phone,
+      });
+      return;
+    }
+    _otp = (100000 + Random().nextInt(900000)).toString();
+    await _emailService.sendOtp(email, _otp!);
+  }
+
+  Future<bool> verifyPhoneNumber(int userId, String otp) async {
+    if (Constants.useRemote) {
+      final res = await _remote.postJson('/auth/verify-phone', {'otp': otp});
+      return res != null;
+    }
+
+    if (_otp != otp) throw "Invalid OTP";
+
+    final db = await _dbService.database;
+    await db.update(
+      "users",
+      {"phone_verified": 1},
+      where: "id = ?",
+      whereArgs: [userId],
+    );
+    return true;
+  }
+
+  // =============================
   // UPDATE ADDRESS
   // =============================
 
@@ -350,6 +427,7 @@ class AuthService {
       roles: [updated["role"] as String],
       address: updated["address"] as String?,
       shopImagePath: updated["shopImagePath"] as String?,
+      phoneVerified: updated["phone_verified"] == 1,
       latitude: updated["latitude"] as double?,
       longitude: updated["longitude"] as double?,
     );
@@ -365,27 +443,49 @@ class AuthService {
   // =============================
 
   Future<String> sendOtp(
-    String email,
+    String identifier,
     Map<String, dynamic> registrationData,
   ) async {
+    final isEmail = identifier.contains('@');
+
     if (Constants.useRemote && !Constants.forceLocalOtp) {
-      final res = await http.post(
-        Uri.parse('${Constants.baseUrl}/auth/send-otp'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email}),
-      );
-      if (res.statusCode < 200 || res.statusCode >= 300) {
-        // Fallback to local email if server fails
-        _otp = (100000 + Random().nextInt(900000)).toString();
-        await _emailService.sendOtp(email, _otp!);
-        return 'email';
+      try {
+        final res = await http.post(
+          Uri.parse('${Constants.baseUrl}/auth/send-otp'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({isEmail ? 'email' : 'phone': identifier}),
+        );
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          _otp = null; // Backend stores OTP
+          return 'server';
+        }
+      } catch (e) {
+        if (kDebugMode) debugPrint('Remote OTP failed, falling back: $e');
       }
-      _otp = null; // Backend stores OTP, we don't need local
-      return 'server';
     }
+
+    // Local Fallback
     _otp = (100000 + Random().nextInt(900000)).toString();
-    await _emailService.sendOtp(email, _otp!);
-    return 'email';
+
+    if (isEmail) {
+      try {
+        await _emailService.sendOtp(identifier, _otp!);
+        return 'email';
+      } catch (e) {
+        if (kDebugMode) debugPrint('Local Email OTP failed: $e');
+        // If real email fails, we still set _otp so user can "guess" or we can see it in logs
+        return 'debug';
+      }
+    } else {
+      // For mobile, in a real app you'd use Twilio/Firebase Auth
+      // Here we simulate it by printing to console and returning success
+      if (kDebugMode) {
+        debugPrint('=========================================');
+        debugPrint('MOBILE OTP FOR $identifier: $_otp');
+        debugPrint('=========================================');
+      }
+      return 'sms_simulated';
+    }
   }
 
   Future<void> sendPasswordResetOtp(String email) async {
@@ -488,6 +588,7 @@ class AuthService {
           roles: [userData["role"] as String],
           address: userData["address"] as String?,
           shopImagePath: userData["shopImagePath"] as String?,
+          phoneVerified: userData["phone_verified"] == 1,
           latitude: userData["latitude"] != null
               ? (userData["latitude"] as num).toDouble()
               : null,

@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../services/websocket_service.dart';
@@ -7,8 +6,9 @@ import '../services/notification_service.dart';
 class NotificationProvider with ChangeNotifier {
   final WebSocketService _wsService = WebSocketService();
   final NotificationService _apiService = NotificationService();
-  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
-  
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
+
   List<Map<String, dynamic>> _notifications = [];
   bool _isConnected = false;
   int _unreadCount = 0;
@@ -24,17 +24,18 @@ class NotificationProvider with ChangeNotifier {
   Future<void> _initLocalNotifications() async {
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
-    
-    const InitializationSettings initializationSettings = InitializationSettings(
+
+    const InitializationSettings initializationSettings =
+        InitializationSettings(
       android: initializationSettingsAndroid,
     );
-    
+
     await _localNotifications.initialize(initializationSettings);
   }
 
   void init(String role) {
     if (_isConnected) return;
-    
+
     _wsService.connect((data) {
       _notifications.insert(0, data);
       _unreadCount++;
@@ -54,10 +55,10 @@ class NotificationProvider with ChangeNotifier {
       priority: Priority.high,
       showWhen: true,
     );
-    
+
     const NotificationDetails platformChannelSpecifics =
         NotificationDetails(android: androidPlatformChannelSpecifics);
-    
+
     await _localNotifications.show(
       DateTime.now().millisecond,
       data['title'] ?? 'New Notification',
@@ -69,11 +70,12 @@ class NotificationProvider with ChangeNotifier {
   Future<void> _fetchNotifications(String role) async {
     final list = await _apiService.getMyNotifications(role);
     _notifications = list;
-    // For now, let's assume all fetched are read unless they are from current session
+    _unreadCount = await _apiService.getUnreadCount(role);
     notifyListeners();
   }
 
-  void markAllAsRead() {
+  Future<void> markAllAsRead() async {
+    await _apiService.markAllAsRead();
     _unreadCount = 0;
     notifyListeners();
   }

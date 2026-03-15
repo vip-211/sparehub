@@ -39,6 +39,8 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
   final _searchController = TextEditingController();
   List<Product> _products = [];
   List<Product> _filteredProducts = [];
+  List<Map<String, dynamic>> _categories = [];
+  int? _selectedCategoryId;
   Map<int, double> _prices = {};
   bool _isLoading = true;
   bool _isListening = false;
@@ -48,20 +50,51 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchProducts();
+    _fetchInitialData();
+  }
+
+  Future<void> _fetchInitialData() async {
+    await Future.wait([
+      _fetchCategories(),
+      _fetchProducts(),
+    ]);
+  }
+
+  Future<void> _fetchCategories() async {
+    try {
+      final cats = await _productService.getCategories();
+      if (mounted) {
+        setState(() {
+          _categories = cats;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching categories: $e');
+    }
+  }
+
+  void _onCategorySelected(int? categoryId) {
+    setState(() {
+      _selectedCategoryId = categoryId;
+      _applyFilters();
+    });
   }
 
   void _onSearchChanged(String val) {
-    final q = val.toLowerCase().trim();
+    _applyFilters();
+  }
+
+  void _applyFilters() {
+    final q = _searchController.text.toLowerCase().trim();
     setState(() {
-      if (q.isEmpty) {
-        _filteredProducts = List.from(_products);
-      } else {
-        _filteredProducts = _products.where((p) {
-          return p.name.toLowerCase().contains(q) ||
-              p.partNumber.toLowerCase().contains(q);
-        }).toList();
-      }
+      _filteredProducts = _products.where((p) {
+        final matchesSearch = q.isEmpty ||
+            p.name.toLowerCase().contains(q) ||
+            p.partNumber.toLowerCase().contains(q);
+        final matchesCategory =
+            _selectedCategoryId == null || p.categoryId == _selectedCategoryId;
+        return matchesSearch && matchesCategory;
+      }).toList();
     });
   }
 
@@ -321,14 +354,10 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
       if (mounted) {
         setState(() {
           _products = products;
-          _filteredProducts = List.from(products);
           _prices = prices;
           _isLoading = false;
         });
-        // Apply filter if there is text in search controller
-        if (_searchController.text.isNotEmpty) {
-          _onSearchChanged(_searchController.text);
-        }
+        _applyFilters();
       }
     } catch (e) {
       if (mounted) {
@@ -465,22 +494,59 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
               children: [
                 Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: Row(
+                  child: Column(
                     children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _searchController,
-                          decoration: InputDecoration(
-                            hintText: 'Search product or part #',
-                            prefixIcon: const Icon(Icons.search),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _searchController,
+                              decoration: InputDecoration(
+                                hintText: 'Search product or part #',
+                                prefixIcon: const Icon(Icons.search),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              onChanged: _onSearchChanged,
                             ),
                           ),
-                          onChanged: _onSearchChanged,
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8.0),
+                              child: FilterChip(
+                                label: const Text('All'),
+                                selected: _selectedCategoryId == null,
+                                onSelected: (selected) =>
+                                    _onCategorySelected(null),
+                                selectedColor: Colors.green.shade100,
+                                checkmarkColor: Colors.green,
+                              ),
+                            ),
+                            ..._categories.map((cat) {
+                              final id = cat['id'] as int;
+                              final name = cat['name'] as String;
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 8.0),
+                                child: FilterChip(
+                                  label: Text(name),
+                                  selected: _selectedCategoryId == id,
+                                  onSelected: (selected) =>
+                                      _onCategorySelected(selected ? id : null),
+                                  selectedColor: Colors.green.shade100,
+                                  checkmarkColor: Colors.green,
+                                ),
+                              );
+                            }),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 10),
                     ],
                   ),
                 ),
@@ -505,7 +571,12 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                                   horizontal: 16,
                                   vertical: 8,
                                 ),
+                                elevation: 4,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
                                 child: InkWell(
+                                  borderRadius: BorderRadius.circular(16),
                                   onTap: () {
                                     if (!isOutOfStock) {
                                       cart.addItem(product, price);
@@ -520,7 +591,18 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                                       );
                                     }
                                   },
-                                  child: Padding(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(16),
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          Colors.white,
+                                          Colors.grey.shade50
+                                        ],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                    ),
                                     padding: const EdgeInsets.all(12.0),
                                     child: Row(
                                       crossAxisAlignment:
@@ -530,12 +612,20 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                                         Stack(
                                           children: [
                                             Container(
-                                              width: 60,
-                                              height: 60,
+                                              width: 80,
+                                              height: 80,
                                               decoration: BoxDecoration(
-                                                color: Colors.grey[200],
+                                                color: Colors.white,
                                                 borderRadius:
-                                                    BorderRadius.circular(8),
+                                                    BorderRadius.circular(12),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black
+                                                        .withOpacity(0.05),
+                                                    blurRadius: 4,
+                                                    offset: const Offset(0, 2),
+                                                  ),
+                                                ],
                                                 image: DecorationImage(
                                                   image: getImageProvider(
                                                       product.imagePath),
@@ -548,25 +638,61 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                                             if (product.stock > 0 &&
                                                 product.stock <= 5)
                                               Positioned(
-                                                top: 0,
-                                                right: 0,
+                                                top: 4,
+                                                right: 4,
                                                 child: Container(
                                                   padding:
-                                                      const EdgeInsets.all(2),
-                                                  decoration:
-                                                      const BoxDecoration(
+                                                      const EdgeInsets.all(4),
+                                                  decoration: BoxDecoration(
                                                     color: Colors.orange,
                                                     shape: BoxShape.circle,
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color: Colors.black
+                                                            .withOpacity(0.2),
+                                                        blurRadius: 4,
+                                                      ),
+                                                    ],
                                                   ),
                                                   child: const Icon(
                                                       Icons.warning_amber,
-                                                      size: 12,
+                                                      size: 14,
                                                       color: Colors.white),
+                                                ),
+                                              ),
+                                            if (discountPercent > 0)
+                                              Positioned(
+                                                bottom: 0,
+                                                left: 0,
+                                                right: 0,
+                                                child: Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.red
+                                                        .withOpacity(0.8),
+                                                    borderRadius:
+                                                        const BorderRadius
+                                                            .vertical(
+                                                      bottom:
+                                                          Radius.circular(12),
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    '${discountPercent.toStringAsFixed(0)}% OFF',
+                                                    textAlign: TextAlign.center,
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 10,
+                                                    ),
+                                                  ),
                                                 ),
                                               ),
                                           ],
                                         ),
-                                        const SizedBox(width: 12),
+                                        const SizedBox(width: 16),
                                         // Title and Subtitle
                                         Expanded(
                                           child: Column(
@@ -577,82 +703,104 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                                                 product.name,
                                                 style: const TextStyle(
                                                   fontWeight: FontWeight.bold,
-                                                  fontSize: 15,
+                                                  fontSize: 16,
+                                                  color: Colors.black87,
                                                 ),
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
                                               ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                'Part: ${product.partNumber}',
-                                                style: const TextStyle(
-                                                    color: Colors.grey,
-                                                    fontSize: 13),
-                                              ),
-                                              Text(
-                                                'Stock: ${isOutOfStock ? "Out of Stock" : product.stock}',
-                                                style: TextStyle(
-                                                  fontSize: 13,
-                                                  color: (product.stock > 0 &&
-                                                          product.stock <= 5)
-                                                      ? Colors.orange.shade700
-                                                      : Colors.grey,
-                                                  fontWeight: (product.stock >
-                                                              0 &&
-                                                          product.stock <= 5)
-                                                      ? FontWeight.bold
-                                                      : null,
+                                              const SizedBox(height: 6),
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 8,
+                                                        vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.blue.shade50,
+                                                  borderRadius:
+                                                      BorderRadius.circular(6),
                                                 ),
-                                              ),
-                                              if (discountPercent > 0)
-                                                Container(
-                                                  margin: const EdgeInsets.only(
-                                                      top: 4),
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                      horizontal: 6,
-                                                      vertical: 2),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.red.shade50,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            4),
+                                                child: Text(
+                                                  'Part: ${product.partNumber}',
+                                                  style: TextStyle(
+                                                    color: Colors.blue.shade700,
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600,
                                                   ),
-                                                  child: Text(
-                                                    '${discountPercent.toStringAsFixed(0)}% OFF',
-                                                    style: const TextStyle(
-                                                      color: Colors.red,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 6),
+                                              Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.inventory_2_outlined,
+                                                    size: 14,
+                                                    color: isOutOfStock
+                                                        ? Colors.red
+                                                        : (product.stock <= 5
+                                                            ? Colors.orange
+                                                            : Colors.grey),
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    isOutOfStock
+                                                        ? "Out of Stock"
+                                                        : "Stock: ${product.stock}",
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color: isOutOfStock
+                                                          ? Colors.red
+                                                          : (product.stock <= 5
+                                                              ? Colors.orange
+                                                                  .shade700
+                                                              : Colors.grey
+                                                                  .shade700),
                                                       fontWeight:
-                                                          FontWeight.bold,
-                                                      fontSize: 11,
+                                                          product.stock <= 5
+                                                              ? FontWeight.bold
+                                                              : FontWeight
+                                                                  .normal,
                                                     ),
                                                   ),
-                                                ),
+                                                ],
+                                              ),
                                             ],
                                           ),
                                         ),
                                         // Trailing Prices and Button
+                                        const SizedBox(width: 8),
                                         Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.end,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
                                           children: [
-                                            if (product.mrp > price)
-                                              Text(
-                                                '₹${product.mrp.toStringAsFixed(0)}',
-                                                style: const TextStyle(
-                                                  decoration: TextDecoration
-                                                      .lineThrough,
-                                                  color: Colors.grey,
-                                                  fontSize: 12,
+                                            Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.end,
+                                              children: [
+                                                if (product.mrp > price)
+                                                  Text(
+                                                    '₹${product.mrp.toStringAsFixed(0)}',
+                                                    style: const TextStyle(
+                                                      decoration: TextDecoration
+                                                          .lineThrough,
+                                                      color: Colors.grey,
+                                                      fontSize: 12,
+                                                    ),
+                                                  ),
+                                                Text(
+                                                  '₹${price.toStringAsFixed(0)}',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w900,
+                                                    color:
+                                                        Colors.green.shade700,
+                                                    fontSize: 20,
+                                                  ),
                                                 ),
-                                              ),
-                                            Text(
-                                              '₹$price',
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.blue,
-                                                fontSize: 17,
-                                              ),
+                                              ],
                                             ),
-                                            const SizedBox(height: 8),
+                                            const SizedBox(height: 12),
                                             if (!isOutOfStock)
                                               ElevatedButton(
                                                 onPressed: () {
@@ -672,21 +820,35 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                                                 style: ElevatedButton.styleFrom(
                                                   padding: const EdgeInsets
                                                       .symmetric(
-                                                      horizontal: 12,
-                                                      vertical: 0),
+                                                      horizontal: 16),
                                                   minimumSize:
-                                                      const Size(60, 32),
-                                                  backgroundColor: Colors.blue,
+                                                      const Size(80, 36),
+                                                  backgroundColor:
+                                                      Colors.green.shade600,
                                                   foregroundColor: Colors.white,
+                                                  elevation: 2,
                                                   shape: RoundedRectangleBorder(
                                                     borderRadius:
                                                         BorderRadius.circular(
-                                                            8),
+                                                            10),
                                                   ),
                                                 ),
-                                                child: const Text('Add',
-                                                    style: TextStyle(
-                                                        fontSize: 13)),
+                                                child: const Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                        Icons.add_shopping_cart,
+                                                        size: 16),
+                                                    SizedBox(width: 4),
+                                                    Text('Add',
+                                                        style: TextStyle(
+                                                            fontSize: 14,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .bold)),
+                                                  ],
+                                                ),
                                               ),
                                           ],
                                         ),

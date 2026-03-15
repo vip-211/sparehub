@@ -39,19 +39,24 @@ class _RetailerDashboardState extends State<RetailerDashboard> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Retailer Dashboard',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Spares Hub'),
+            Text(
+              'Retailer Dashboard',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.white.withOpacity(0.8),
+                fontWeight: FontWeight.normal,
+              ),
+            ),
+          ],
         ),
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
         actions: [
           const CartBadge(),
           const NotificationBadge(),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => authProvider.logout(),
-          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: FutureBuilder<bool>(
@@ -66,24 +71,31 @@ class _RetailerDashboardState extends State<RetailerDashboard> {
           );
         },
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(icon: Icon(Icons.store), label: 'Shop'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.inventory),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: _onItemTapped,
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.store_outlined),
+            selectedIcon: Icon(Icons.store),
+            label: 'Shop',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.inventory_2_outlined),
+            selectedIcon: Icon(Icons.inventory_2),
             label: 'Inventory',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_cart),
+          NavigationDestination(
+            icon: Icon(Icons.shopping_cart_outlined),
+            selectedIcon: Icon(Icons.shopping_cart),
             label: 'Orders',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
         ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: Colors.green,
-        unselectedItemColor: Colors.grey,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
       ),
     );
   }

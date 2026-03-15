@@ -49,6 +49,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   bool _aiEnabled = true;
   bool _voiceEnabled = true;
   final List<Widget> _widgetOptions = [
+    const AdminOverviewScreen(),
     const AllOrdersScreen(),
     const OrderRequestsScreen(),
     const ManageProductsScreen(),
@@ -104,7 +105,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                             setDialogState(() => isUploading = true);
                             try {
                               final url = await ProductService()
-                                  .uploadProductImage(File(image.path));
+                                  .uploadProductImage(image.path);
                               if (url != null) {
                                 setDialogState(() {
                                   imageUrlController.text =
@@ -276,26 +277,38 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
               const Divider(height: 1),
               ListTile(
-                leading: const Icon(Icons.list_alt),
-                title: const Text('Orders'),
+                leading: const Icon(Icons.dashboard),
+                title: const Text('Overview'),
+                selected: _selectedIndex == 0,
                 onTap: () {
                   setState(() => _selectedIndex = 0);
                   Navigator.pop(context);
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.assignment),
-                title: const Text('Requests'),
+                leading: const Icon(Icons.list_alt),
+                title: const Text('Orders'),
+                selected: _selectedIndex == 1,
                 onTap: () {
                   setState(() => _selectedIndex = 1);
                   Navigator.pop(context);
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.inventory),
-                title: const Text('Products'),
+                leading: const Icon(Icons.assignment),
+                title: const Text('Requests'),
+                selected: _selectedIndex == 2,
                 onTap: () {
                   setState(() => _selectedIndex = 2);
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.inventory),
+                title: const Text('Products'),
+                selected: _selectedIndex == 3,
+                onTap: () {
+                  setState(() => _selectedIndex = 3);
                   Navigator.pop(context);
                 },
               ),
@@ -303,40 +316,45 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ListTile(
                   leading: const Icon(Icons.category),
                   title: const Text('Categories'),
+                  selected: _selectedIndex == 4,
                   onTap: () {
-                    setState(() => _selectedIndex = 3);
+                    setState(() => _selectedIndex = 4);
                     Navigator.pop(context);
                   },
                 ),
               ListTile(
                 leading: const Icon(Icons.bar_chart),
                 title: const Text('Reports'),
-                onTap: () {
-                  setState(() => _selectedIndex = 4);
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.receipt),
-                title: const Text('Invoicing'),
+                selected: _selectedIndex == 5,
                 onTap: () {
                   setState(() => _selectedIndex = 5);
                   Navigator.pop(context);
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.people),
-                title: const Text('Users'),
+                leading: const Icon(Icons.receipt),
+                title: const Text('Invoicing'),
+                selected: _selectedIndex == 6,
                 onTap: () {
                   setState(() => _selectedIndex = 6);
                   Navigator.pop(context);
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.restore_from_trash),
-                title: const Text('Recycle Bin'),
+                leading: const Icon(Icons.people),
+                title: const Text('Users'),
+                selected: _selectedIndex == 7,
                 onTap: () {
                   setState(() => _selectedIndex = 7);
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.restore_from_trash),
+                title: const Text('Recycle Bin'),
+                selected: _selectedIndex == 8,
+                onTap: () {
+                  setState(() => _selectedIndex = 8);
                   Navigator.pop(context);
                 },
               ),
@@ -344,16 +362,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ListTile(
                   leading: const Icon(Icons.record_voice_over),
                   title: const Text('Voice Training'),
+                  selected: _selectedIndex == 9,
                   onTap: () {
-                    setState(() => _selectedIndex = 8);
+                    setState(() => _selectedIndex = 9);
                     Navigator.pop(context);
                   },
                 ),
               ListTile(
                 leading: const Icon(Icons.person),
                 title: const Text('Profile'),
+                selected: _selectedIndex == 10,
                 onTap: () {
-                  setState(() => _selectedIndex = 9);
+                  setState(() => _selectedIndex = 10);
                   Navigator.pop(context);
                 },
               ),
@@ -397,6 +417,237 @@ class _AdminDashboardState extends State<AdminDashboard> {
           _widgetOptions[_selectedIndex],
           if (_aiEnabled) const AIChatbotWidget(),
         ],
+      ),
+    );
+  }
+}
+
+class AdminOverviewScreen extends StatefulWidget {
+  const AdminOverviewScreen({super.key});
+
+  @override
+  State<AdminOverviewScreen> createState() => _AdminOverviewScreenState();
+}
+
+class _AdminOverviewScreenState extends State<AdminOverviewScreen> {
+  final OrderService _orderService = OrderService();
+  final ProductService _productService = ProductService();
+  final AuthService _authService = AuthService();
+
+  Map<String, dynamic> _stats = {
+    'totalOrders': 0,
+    'pendingOrders': 0,
+    'totalRevenue': 0.0,
+    'totalProducts': 0,
+    'lowStockProducts': 0,
+    'totalUsers': 0,
+    'pendingRequests': 0,
+  };
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchStats();
+  }
+
+  Future<void> _fetchStats() async {
+    setState(() => _isLoading = true);
+    try {
+      final orders = await _orderService.getAllOrders();
+      final products = await _productService.getAllProducts();
+      final users = await _authService.getAllUsers();
+      final requests = await _orderService.getOrderRequests();
+
+      double revenue = 0;
+      int pending = 0;
+      for (var o in orders) {
+        if (o.status == 'DELIVERED' || o.status == 'APPROVED') {
+          revenue += o.totalAmount;
+        }
+        if (o.status == 'PENDING') pending++;
+      }
+
+      int lowStock = products.where((p) => p.stock <= 5).length;
+      int pendingReq = requests.where((r) => r['status'] == 'PENDING').length;
+
+      if (mounted) {
+        setState(() {
+          _stats = {
+            'totalOrders': orders.length,
+            'pendingOrders': pending,
+            'totalRevenue': revenue,
+            'totalProducts': products.length,
+            'lowStockProducts': lowStock,
+            'totalUsers': users.length,
+            'pendingRequests': pendingReq,
+          };
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) return const Center(child: CircularProgressIndicator());
+
+    return RefreshIndicator(
+      onRefresh: _fetchStats,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Dashboard Overview',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 16,
+              childAspectRatio: 1.5,
+              children: [
+                _buildStatCard(
+                  'Total Revenue',
+                  '₹${_stats['totalRevenue'].toStringAsFixed(0)}',
+                  Icons.payments,
+                  Colors.green,
+                ),
+                _buildStatCard(
+                  'Total Orders',
+                  '${_stats['totalOrders']}',
+                  Icons.shopping_bag,
+                  Colors.blue,
+                ),
+                _buildStatCard(
+                  'Pending Orders',
+                  '${_stats['pendingOrders']}',
+                  Icons.pending_actions,
+                  Colors.orange,
+                ),
+                _buildStatCard(
+                  'Pending Requests',
+                  '${_stats['pendingRequests']}',
+                  Icons.assignment_late,
+                  Colors.redAccent,
+                ),
+                _buildStatCard(
+                  'Total Products',
+                  '${_stats['totalProducts']}',
+                  Icons.inventory_2,
+                  Colors.purple,
+                ),
+                _buildStatCard(
+                  'Low Stock',
+                  '${_stats['lowStockProducts']}',
+                  Icons.warning,
+                  Colors.amber,
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Quick Actions',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            _buildQuickAction(
+              context,
+              'Add New Product',
+              Icons.add_box,
+              Colors.green.shade700,
+              () => (context.findAncestorStateOfType<_AdminDashboardState>())
+                  ?.setState(() =>
+                      (context.findAncestorStateOfType<_AdminDashboardState>())
+                          ?._selectedIndex = 3),
+            ),
+            _buildQuickAction(
+              context,
+              'Create Invoice',
+              Icons.receipt_long,
+              Colors.blue.shade700,
+              () => (context.findAncestorStateOfType<_AdminDashboardState>())
+                  ?.setState(() =>
+                      (context.findAncestorStateOfType<_AdminDashboardState>())
+                          ?._selectedIndex = 6),
+            ),
+            _buildQuickAction(
+              context,
+              'View All Users',
+              Icons.people,
+              Colors.orange.shade700,
+              () => (context.findAncestorStateOfType<_AdminDashboardState>())
+                  ?.setState(() =>
+                      (context.findAncestorStateOfType<_AdminDashboardState>())
+                          ?._selectedIndex = 7),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatCard(
+      String title, String value, IconData icon, Color color) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            colors: [color.withOpacity(0.1), Colors.white],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+            Text(
+              title,
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickAction(BuildContext context, String title, IconData icon,
+      Color color, VoidCallback onTap) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: color.withOpacity(0.1),
+          child: Icon(icon, color: color),
+        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () {
+          // This is a bit hacky to change the parent state, but it works for this structure
+          onTap();
+        },
       ),
     );
   }

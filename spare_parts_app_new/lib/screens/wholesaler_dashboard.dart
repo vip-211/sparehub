@@ -39,17 +39,25 @@ class _WholesalerDashboardState extends State<WholesalerDashboard> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Wholesaler Dashboard',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.purple,
-        foregroundColor: Colors.white,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Spares Hub'),
+            Text(
+              'Wholesaler Dashboard',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.white.withOpacity(0.8),
+                fontWeight: FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.purple.shade700,
         actions: [
           const CartBadge(),
           const NotificationBadge(),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => authProvider.logout(),
-          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: FutureBuilder<bool>(
@@ -64,20 +72,31 @@ class _WholesalerDashboardState extends State<WholesalerDashboard> {
           );
         },
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-              icon: Icon(Icons.shopping_bag), label: 'Shop'),
-          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Sales'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.history), label: 'Buy History'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: _onItemTapped,
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.shopping_bag_outlined),
+            selectedIcon: Icon(Icons.shopping_bag),
+            label: 'Shop',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.bar_chart_outlined),
+            selectedIcon: Icon(Icons.bar_chart),
+            label: 'Sales',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.history_outlined),
+            selectedIcon: Icon(Icons.history),
+            label: 'History',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
         ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: Colors.purple,
-        unselectedItemColor: Colors.grey,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
       ),
     );
   }

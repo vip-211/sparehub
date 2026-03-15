@@ -56,6 +56,7 @@ class NotificationService {
         'targetRole': targetRole,
         'imageUrl': imageUrl,
         'createdAt': DateTime.now().toIso8601String(),
+        'isRead': 0,
       });
     } catch (e) {
       if (kDebugMode) {
@@ -88,6 +89,47 @@ class NotificationService {
         debugPrint('Get notifications error: $e');
       }
       return [];
+    }
+  }
+
+  // ===============================
+  // READ ACTIONS
+  // ===============================
+
+  Future<void> markAllAsRead() async {
+    try {
+      if (Constants.useRemote) {
+        await _remote.postJson('/notifications/read-all', {});
+        return;
+      }
+
+      final db = await _dbService.database;
+      await db.update('notifications', {'isRead': 1});
+    } catch (e) {
+      if (kDebugMode) debugPrint('Mark all as read error: $e');
+    }
+  }
+
+  Future<int> getUnreadCount(String myRole) async {
+    try {
+      if (Constants.useRemote) {
+        final res =
+            await _remote.getJson('/notifications/unread-count?role=$myRole');
+        if (res != null && res['count'] != null) {
+          return (res['count'] as num).toInt();
+        }
+        return 0;
+      }
+
+      final db = await _dbService.database;
+      final result = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM notifications WHERE (targetRole = ? OR targetRole = "ALL") AND isRead = 0',
+        [myRole],
+      );
+      if (result.isEmpty) return 0;
+      return (result.first['count'] as num).toInt();
+    } catch (e) {
+      return 0;
     }
   }
 }

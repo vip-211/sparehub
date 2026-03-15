@@ -51,7 +51,10 @@ class _RetailerOrdersScreenState extends State<RetailerOrdersScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Orders'),
-        leading: const BackButton(),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -67,12 +70,44 @@ class _RetailerOrdersScreenState extends State<RetailerOrdersScreen> {
                       horizontal: 16,
                       vertical: 8,
                     ),
+                    elevation: 1,
                     child: ExpansionTile(
-                      title: Text(
-                        'Order #${order.id} | Total: ₹${order.totalAmount.toStringAsFixed(2)}',
+                      shape: const RoundedRectangleBorder(
+                        side: BorderSide.none,
                       ),
-                      subtitle: Text(
-                        'Status: ${order.status} | Seller: ${order.sellerName}',
+                      title: Text(
+                        'Order #${order.id}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              _buildStatusBadge(order.status),
+                              const SizedBox(width: 8),
+                              Text(
+                                '₹${order.totalAmount.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  color: Colors.green.shade700,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Seller: ${order.sellerName}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
                       ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -92,14 +127,22 @@ class _RetailerOrdersScreenState extends State<RetailerOrdersScreen> {
                         ],
                       ),
                       children: [
+                        const Divider(height: 1),
                         ...order.items.map(
                           (item) => ListTile(
-                            title: Text(item.productName),
+                            dense: true,
+                            title: Text(
+                              item.productName,
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w500),
+                            ),
                             subtitle: Text(
                               'Qty: ${item.quantity} | Price: ₹${item.price}',
                             ),
                             trailing: Text(
                               '₹${(item.price * item.quantity).toStringAsFixed(2)}',
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ),
                         ),
@@ -113,37 +156,41 @@ class _RetailerOrdersScreenState extends State<RetailerOrdersScreen> {
                             (order.status == 'PENDING' ||
                                 order.status == 'APPROVED'))
                           Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            child: Row(
-                              children: [
-                                ElevatedButton(
-                                  onPressed: () async {
-                                    final updated = await _orderService
-                                        .cancelOrder(order.id);
+                            padding: const EdgeInsets.all(16),
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                icon:
+                                    const Icon(Icons.cancel_outlined, size: 18),
+                                label: const Text('Cancel Order'),
+                                onPressed: () async {
+                                  final confirm =
+                                      await _showCancelConfirmation();
+                                  if (confirm != true) return;
 
-                                    if (updated != null) {
-                                      await _fetchOrders();
+                                  final updated =
+                                      await _orderService.cancelOrder(order.id);
 
-                                      if (!mounted) return;
+                                  if (updated != null) {
+                                    await _fetchOrders();
 
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Order cancelled'),
-                                        ),
-                                      );
-                                    }
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.red,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                  child: const Text('Cancel Order'),
+                                    if (!mounted) return;
+
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                            'Order cancelled successfully'),
+                                      ),
+                                    );
+                                  }
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.red,
+                                  side: const BorderSide(color: Colors.red),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
                                 ),
-                              ],
+                              ),
                             ),
                           ),
                       ],
@@ -152,6 +199,64 @@ class _RetailerOrdersScreenState extends State<RetailerOrdersScreen> {
                 },
               ),
             ),
+    );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    Color color;
+    switch (status.toUpperCase()) {
+      case 'PENDING':
+        color = Colors.orange;
+        break;
+      case 'APPROVED':
+        color = Colors.blue;
+        break;
+      case 'DELIVERED':
+        color = Colors.green;
+        break;
+      case 'CANCELLED':
+        color = Colors.red;
+        break;
+      default:
+        color = Colors.grey;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.5)),
+      ),
+      child: Text(
+        status,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Future<bool?> _showCancelConfirmation() {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancel Order?'),
+        content: const Text('Are you sure you want to cancel this order?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Yes, Cancel'),
+          ),
+        ],
+      ),
     );
   }
 }

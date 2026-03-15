@@ -109,6 +109,48 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  Future<void> changePassword(String currentPassword, String newPassword) async {
+    if (_user != null) {
+      _isLoading = true;
+      notifyListeners();
+      try {
+        await _authService.changePassword(_user!.id, currentPassword, newPassword);
+      } finally {
+        _isLoading = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<void> verifyPhoneNumber(String otp) async {
+    if (_user != null) {
+      _isLoading = true;
+      notifyListeners();
+      try {
+        final success = await _authService.verifyPhoneNumber(_user!.id, otp);
+        if (success) {
+          _user = await _authService.getCurrentUser();
+        }
+      } finally {
+        _isLoading = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<void> sendVerificationOtp() async {
+    if (_user != null && _user!.phone != null) {
+      _isLoading = true;
+      notifyListeners();
+      try {
+        await _authService.sendVerificationOtp(_user!.email, _user!.phone!);
+      } finally {
+        _isLoading = false;
+        notifyListeners();
+      }
+    }
+  }
+
   Future<void> updateProfile(String name, String phone, String address) async {
     if (_user != null) {
       _isLoading = true;
