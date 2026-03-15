@@ -40,10 +40,13 @@ public class ProductDto {
     private boolean enabled;
     
     private String imagePath;
+    private String imageLink;
     private String description;
     
     private Long wholesalerId;
     
     private Long categoryId;
     private String categoryName;
+    private String categoryImagePath;
+    private String categoryImageLink;
 }

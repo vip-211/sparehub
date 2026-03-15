@@ -11,10 +11,13 @@ class Product {
   final int stock;
   final int wholesalerId;
   final String? imagePath;
+  final String? imageLink;
   final String? description;
   final bool enabled;
   final int? categoryId;
   final String? categoryName;
+  final String? categoryImagePath;
+  final String? categoryImageLink;
 
   Product({
     required this.id,
@@ -29,10 +32,13 @@ class Product {
     required this.stock,
     required this.wholesalerId,
     this.imagePath,
+    this.imageLink,
     this.description,
     this.enabled = true,
     this.categoryId,
     this.categoryName,
+    this.categoryImagePath,
+    this.categoryImageLink,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
@@ -55,6 +61,7 @@ class Product {
       stock: json['stock'] ?? 0,
       wholesalerId: json['wholesalerId'] ?? 0,
       imagePath: json['imagePath'],
+      imageLink: json['imageLink'],
       description: json['description'],
       enabled: json['enabled'] is bool
           ? json['enabled']
@@ -63,6 +70,8 @@ class Product {
           ? json['categoryId']
           : (json['categoryId'] as num?)?.toInt(),
       categoryName: json['categoryName'],
+      categoryImagePath: json['categoryImagePath'],
+      categoryImageLink: json['categoryImageLink'],
     );
   }
 
@@ -80,10 +89,13 @@ class Product {
       'stock': stock,
       'wholesalerId': wholesalerId,
       'imagePath': imagePath,
+      'imageLink': imageLink,
       'description': description,
       'enabled': enabled ? 1 : 0,
       'categoryId': categoryId,
       'categoryName': categoryName,
+      'categoryImagePath': categoryImagePath,
+      'categoryImageLink': categoryImageLink,
     };
   }
 

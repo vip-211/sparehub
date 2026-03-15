@@ -59,6 +59,7 @@ public class ProductService extends ProductSubject {
         product.setStock(productDto.getStock());
         product.setEnabled(productDto.isEnabled());
         product.setImagePath(productDto.getImagePath());
+        product.setImageLink(productDto.getImageLink());
         product.setDescription(productDto.getDescription());
         product.setWholesaler(wholesaler);
         
@@ -174,6 +175,7 @@ public class ProductService extends ProductSubject {
             product.setStock(dto.getStock());
             product.setEnabled(dto.isEnabled());
             product.setImagePath(dto.getImagePath());
+            product.setImageLink(dto.getImageLink());
             product.setWholesaler(wholesaler);
 
             Long categoryId = dto.getCategoryId();
@@ -211,6 +213,7 @@ public class ProductService extends ProductSubject {
         product.setStock(productDto.getStock());
         product.setEnabled(productDto.isEnabled());
         product.setImagePath(productDto.getImagePath());
+        product.setImageLink(productDto.getImageLink());
         if (productDto.getCategoryId() != null) {
             categoryRepository.findById(productDto.getCategoryId()).ifPresent(product::setCategory);
         } else {
@@ -267,11 +270,14 @@ public class ProductService extends ProductSubject {
         dto.setStock(product.getStock());
         dto.setEnabled(product.isEnabled());
         dto.setImagePath(product.getImagePath());
+        dto.setImageLink(product.getImageLink());
         dto.setDescription(product.getDescription());
         dto.setWholesalerId(product.getWholesaler().getId());
         if (product.getCategory() != null) {
             dto.setCategoryId(product.getCategory().getId());
             dto.setCategoryName(product.getCategory().getName());
+            dto.setCategoryImagePath(product.getCategory().getImagePath());
+            dto.setCategoryImageLink(product.getCategory().getImageLink());
         }
         return dto;
     }

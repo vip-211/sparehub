@@ -71,6 +71,9 @@ public class Product {
     @Size(max = 500)
     private String imagePath;
 
+    @Size(max = 500)
+    private String imageLink;
+
     @Column(columnDefinition = "TEXT")
     private String description;
 

@@ -231,9 +231,9 @@ const Shop: React.FC = () => {
             return (
               <div key={p.id} className="group bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col h-full hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                 <div className="relative mb-4 aspect-square bg-gray-50 rounded-xl flex items-center justify-center overflow-hidden">
-                  {p.imagePath ? (
+                  {p.imagePath || p.imageLink || p.categoryImageLink || p.categoryImagePath ? (
                     <img 
-                      src={getImageUrl(p.imagePath)} 
+                      src={getImageUrl(p.imagePath || p.imageLink || p.categoryImageLink || p.categoryImagePath)} 
                       alt={tp(p.name)} 
                       className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
                       onError={(e) => {

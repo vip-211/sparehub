@@ -47,6 +47,8 @@ const AdminDashboard = () => {
   const [uploading, setUploading] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
   const [showAddCategory, setShowAddCategory] = useState(false);
+  const [showEditCategory, setShowEditCategory] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<any>(null);
   const [newCategory, setNewCategory] = useState({ name: '', description: '', imagePath: '', imageLink: '' });
   const [selectedExcelCategory, setSelectedExcelCategory] = useState<string>('');
 
@@ -449,6 +451,40 @@ const AdminDashboard = () => {
     } catch (err) {
       console.error(err);
       alert('Failed to add category');
+    }
+  };
+
+  const handleEditCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCategory) return;
+    try {
+      await api.put(`/categories/${editingCategory.id}`, editingCategory);
+      setShowEditCategory(false);
+      setEditingCategory(null);
+      fetchCategories();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update category');
+    }
+  };
+
+  const handleEditCategoryImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editingCategory) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await api.post('/files/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setEditingCategory({ ...editingCategory, imagePath: res.data.url });
+    } catch (err) {
+      alert('Failed to upload category image');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -1206,7 +1242,10 @@ const AdminDashboard = () => {
                     </div>
                   )}
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center">
-                    <button className="bg-white text-gray-900 px-4 py-2 rounded-lg font-bold text-xs opacity-0 group-hover:opacity-100 transition-all transform translate-y-4 group-hover:translate-y-0">
+                    <button 
+                      onClick={() => { setEditingCategory(category); setShowEditCategory(true); }}
+                      className="bg-white text-gray-900 px-4 py-2 rounded-lg font-bold text-xs opacity-0 group-hover:opacity-100 transition-all transform translate-y-4 group-hover:translate-y-0"
+                    >
                       Edit Category
                     </button>
                   </div>
@@ -1772,6 +1811,74 @@ const AdminDashboard = () => {
               <div className="flex justify-end gap-3 pt-4">
                 <button type="button" onClick={() => setShowAddCategory(false)} className="px-6 py-2 text-gray-500 hover:text-gray-700 font-bold transition">Cancel</button>
                 <button type="submit" className="bg-primary-600 text-white px-8 py-2 rounded-xl hover:bg-primary-700 font-black shadow-lg shadow-primary-100 transition">Create Category</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEditCategory && editingCategory && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl">
+            <h3 className="text-2xl font-black text-gray-900 mb-6">Edit Category</h3>
+            <form onSubmit={handleEditCategory} className="space-y-6">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Category Name</label>
+                <input
+                  type="text"
+                  className="w-full border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-primary-500 outline-none transition"
+                  value={editingCategory.name}
+                  onChange={e => setEditingCategory({...editingCategory, name: e.target.value})}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Description</label>
+                <textarea
+                  className="w-full border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-primary-500 outline-none transition"
+                  rows={3}
+                  value={editingCategory.description || ''}
+                  onChange={e => setEditingCategory({...editingCategory, description: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Category Image</label>
+                <div className="mt-2 flex flex-col items-center p-6 border-2 border-dashed border-gray-200 rounded-2xl hover:border-primary-500 transition cursor-pointer relative group">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleEditCategoryImageUpload}
+                    className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                    disabled={uploading}
+                  />
+                  {editingCategory.imageLink || editingCategory.imagePath ? (
+                    <img src={getImageUrl(editingCategory.imageLink || editingCategory.imagePath)} alt="Preview" className="w-full h-32 object-cover rounded-xl" />
+                  ) : (
+                    <>
+                      <Upload className="text-gray-400 mb-2 group-hover:text-primary-500 transition" size={32} />
+                      <span className="text-sm text-gray-500 font-medium">Click to upload category image</span>
+                    </>
+                  )}
+                  {uploading && (
+                    <div className="absolute inset-0 bg-white/80 flex items-center justify-center rounded-2xl z-20">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">OR Image Link (External URL)</label>
+                <input
+                  type="url"
+                  className="w-full border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-primary-500 outline-none transition"
+                  value={editingCategory.imageLink || ''}
+                  onChange={e => setEditingCategory({...editingCategory, imageLink: e.target.value})}
+                  placeholder="https://example.com/image.jpg"
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <button type="button" onClick={() => setShowEditCategory(false)} className="px-6 py-2 text-gray-500 hover:text-gray-700 font-bold transition">Cancel</button>
+                <button type="submit" className="bg-primary-600 text-white px-8 py-2 rounded-xl hover:bg-primary-700 font-black shadow-lg shadow-primary-100 transition">Save Changes</button>
               </div>
             </form>
           </div>
