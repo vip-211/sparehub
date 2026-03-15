@@ -4,7 +4,7 @@ import { useCart } from '../context/CartContext';
 import { useLanguage } from '../context/LanguageContext';
 import AuthService from '../services/auth.service';
 import { ROLE_ADMIN, ROLE_MECHANIC, ROLE_RETAILER, ROLE_SUPER_MANAGER, ROLE_WHOLESALER } from '../services/constants';
-import { Search, ShoppingCart, Package, Info, CheckCircle2 } from 'lucide-react';
+import { Search, ShoppingCart, Package, Info, CheckCircle2, Settings, Car, StopCircle, Disc, Droplets, Lightbulb, Battery, LayoutGrid, Mic } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import Skeleton from '../components/Skeleton';
 
@@ -14,6 +14,7 @@ const Shop: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [isListening, setIsListening] = useState(false);
   const { addItem } = useCart();
   const currentUser = AuthService.getCurrentUser();
   const location = useLocation();
@@ -22,12 +23,40 @@ const Shop: React.FC = () => {
 
   const isRestricted = currentUser?.roles?.includes(ROLE_ADMIN) || currentUser?.roles?.includes(ROLE_SUPER_MANAGER);
 
+  const getCategoryIcon = (name: string) => {
+    const n = name.toLowerCase();
+    if (n.includes('engine')) return <Settings className="w-5 h-5" />;
+    if (n.includes('body')) return <Car className="w-5 h-5" />;
+    if (n.includes('brake')) return <StopCircle className="w-5 h-5" />;
+    if (n.includes('tyre') || n.includes('tire')) return <Disc className="w-5 h-5" />;
+    if (n.includes('oil')) return <Droplets className="w-5 h-5" />;
+    if (n.includes('light')) return <Lightbulb className="w-5 h-5" />;
+    if (n.includes('battery')) return <Battery className="w-5 h-5" />;
+    return <Package className="w-5 h-5" />;
+  };
+
   const getImageUrl = (path: string) => {
     if (!path) return '';
     if (path.startsWith('http')) return path;
     // Remove /api from base URL if path already includes it
     const base = API_BASE_URL.endsWith('/api') ? API_BASE_URL.replace('/api', '') : API_BASE_URL;
     return `${base}${path.startsWith('/') ? '' : '/'}${path}`;
+  };
+
+  const toggleVoiceSearch = () => {
+    if (!('webkitSpeechRecognition' in window)) {
+      alert('Voice search not supported in this browser');
+      return;
+    }
+    const recognition = new (window as any).webkitSpeechRecognition();
+    recognition.lang = 'en-IN';
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onresult = (event: any) => {
+      const text = event.results[0][0].transcript;
+      setSearchTerm(text);
+    };
+    recognition.start();
   };
 
   useEffect(() => {
@@ -127,38 +156,48 @@ const Shop: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 mb-2">{t('shop.title')}</h1>
-          <p className="text-gray-500 font-medium">Find high-quality spare parts for your business</p>
+          <h1 className="text-4xl font-black text-gray-900 mb-2">{t('shop.title')}</h1>
+          <p className="text-gray-500 font-bold text-lg">See parts, tap to buy</p>
         </div>
 
-        <div className="relative group w-full md:w-96">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-primary-500 transition" />
-          <input
-            type="text"
-            placeholder={t('shop.search')}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 shadow-sm transition-all"
-          />
+        <div className="flex items-center gap-4 w-full md:w-auto">
+          <div className="relative group flex-1 md:w-96">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400 group-focus-within:text-primary-500 transition" />
+            <input
+              type="text"
+              placeholder={t('shop.search')}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-4 bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 shadow-sm transition-all text-lg font-bold"
+            />
+          </div>
+          <button
+            onClick={toggleVoiceSearch}
+            className={`p-4 rounded-2xl transition-all shadow-lg ${isListening ? 'bg-red-500 animate-pulse scale-110 shadow-red-200' : 'bg-primary-600 hover:bg-primary-700 shadow-primary-100'}`}
+            title="Speak to find parts"
+          >
+            <Mic className={`w-7 h-7 text-white ${isListening ? 'animate-bounce' : ''}`} />
+          </button>
         </div>
       </div>
       {categories.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-8">
+        <div className="flex flex-wrap gap-3 mb-10 overflow-x-auto pb-2 scrollbar-hide">
           <button
             onClick={() => { setCategoryId(null); }}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold border ${categoryId === null ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-700 border-gray-200'}`}
+            className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black border-2 transition-all ${categoryId === null ? 'bg-primary-600 text-white border-primary-600 shadow-lg shadow-primary-200 scale-105' : 'bg-white text-gray-700 border-gray-200 hover:border-primary-300'}`}
           >
+            <LayoutGrid className="w-5 h-5" />
             All
           </button>
           {categories.map((c) => (
             <button
               key={c.id}
               onClick={() => { setCategoryId(c.id); }}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold border ${categoryId === c.id ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-700 border-gray-200'}`}
-              title={c.description || ''}
+              className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black border-2 transition-all ${categoryId === c.id ? 'bg-primary-600 text-white border-primary-600 shadow-lg shadow-primary-200 scale-105' : 'bg-white text-gray-700 border-gray-200 hover:border-primary-300'}`}
             >
+              {getCategoryIcon(c.name)}
               {c.name}
             </button>
           ))}
@@ -213,23 +252,26 @@ const Shop: React.FC = () => {
                 </div>
 
                 <div className="flex-grow">
-                  <div className="flex justify-between items-start gap-2 mb-1">
-                    <h3 className="font-bold text-gray-900 leading-tight line-clamp-2">{tp(p.name)}</h3>
+                  <div className="flex justify-between items-start gap-2 mb-2">
+                    <h3 className="text-xl font-black text-gray-900 leading-tight line-clamp-2">{tp(p.name)}</h3>
                   </div>
-                  <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Part: {p.partNumber}</div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${inStock ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                      {inStock ? <CheckCircle2 className="w-3 h-3" /> : <Info className="w-3 h-3" />}
+                      {inStock ? 'In Stock' : 'Out of Stock'}
+                    </span>
+                    <span className="text-xs font-bold text-gray-400">#{p.partNumber}</span>
+                  </div>
                   
-                  <div className="flex items-baseline gap-2 mb-2">
-                    <span className="text-2xl font-black text-primary-700">₹{displayPrice}</span>
-                    <span className="text-sm text-gray-400 line-through">₹{p.mrp}</span>
+                  <div className="flex flex-col mb-4">
+                    <span className="text-3xl font-black text-primary-600">₹{displayPrice}</span>
+                    {p.mrp > displayPrice && (
+                      <span className="text-sm text-gray-400 line-through font-bold">MRP: ₹{p.mrp}</span>
+                    )}
                   </div>
                 </div>
 
-                <div className="mt-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${inStock ? 'bg-green-500' : 'bg-red-500'}`} />
-                    <span className="text-xs font-bold text-gray-600">{t('shop.stock')}: {p.stock}</span>
-                  </div>
-
+                <div className="mt-auto pt-4 border-t border-gray-50">
                   {!isRestricted && (
                     <button
                       onClick={() =>
@@ -244,20 +286,20 @@ const Shop: React.FC = () => {
                           1,
                         )
                       }
-                      className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all shadow-lg ${
+                      className={`w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-black text-lg transition-all shadow-xl active:scale-95 ${
                         inStock 
-                          ? 'bg-primary-600 text-white hover:bg-primary-700 shadow-primary-100' 
+                          ? 'bg-primary-600 text-white hover:bg-primary-700 shadow-primary-200 hover:shadow-2xl' 
                           : 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
                       }`}
                       disabled={!inStock}
                     >
                       {inStock ? (
                         <>
-                          <ShoppingCart className="w-4 h-4" />
+                          <ShoppingCart className="w-6 h-6" />
                           {t('shop.addToCart')}
                         </>
                       ) : (
-                        t('shop.outOfStock')
+                        'Sold Out'
                       )}
                     </button>
                   )}

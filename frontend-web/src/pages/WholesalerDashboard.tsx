@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import api, { API_BASE_URL } from '../services/api';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { Package, ShoppingCart, TrendingUp, Upload } from 'lucide-react';
@@ -20,6 +20,13 @@ const WholesalerDashboard = () => {
   const [orderQty, setOrderQty] = useState<number>(1);
   const [placing, setPlacing] = useState(false);
   const [orderMsg, setOrderMsg] = useState('');
+
+  const getImageUrl = (path: string) => {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
+    const base = API_BASE_URL.endsWith('/api') ? API_BASE_URL.replace('/api', '') : API_BASE_URL;
+    return `${base}${path.startsWith('/') ? '' : '/'}${path}`;
+  };
 
   useEffect(() => {
     fetchProducts();
@@ -56,7 +63,7 @@ const WholesalerDashboard = () => {
     }
   };
 
-  const openOrderModal = (product) => {
+  const openOrderModal = (product: any) => {
     setSelectedProduct(product);
     setOrderQty(1);
     setOrderMsg('');
@@ -89,7 +96,7 @@ const WholesalerDashboard = () => {
     }
   };
 
-  const handleFileUpload = async (e) => {
+  const handleFileUpload = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!file) return;
 
@@ -113,7 +120,7 @@ const WholesalerDashboard = () => {
     }
   };
 
-  const updateOrderStatus = async (orderId, status) => {
+  const updateOrderStatus = async (orderId: number, status: string) => {
     try {
       await api.put(`/orders/${orderId}/status?status=${status}`);
       fetchOrders();
@@ -210,7 +217,14 @@ const WholesalerDashboard = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         {product.imagePath ? (
-                          <img src={product.imagePath} alt={product.name} className="w-10 h-10 rounded-lg object-cover bg-gray-50 border border-gray-100" />
+                          <img 
+                            src={getImageUrl(product.imagePath)} 
+                            alt={product.name} 
+                            className="w-10 h-10 rounded-lg object-cover bg-gray-50 border border-gray-100" 
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'https://via.placeholder.com/100x100?text=Part';
+                            }}
+                          />
                         ) : (
                           <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center border border-gray-100">
                             <Package size={20} className="text-gray-300" />

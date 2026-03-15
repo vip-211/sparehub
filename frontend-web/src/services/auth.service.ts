@@ -2,15 +2,30 @@
 import api from './api';
 import { ROLE_MECHANIC, ROLE_RETAILER, ROLE_WHOLESALER, ROLE_ADMIN, ROLE_STAFF, ROLE_SUPER_MANAGER } from './constants';
 
-const register = (name, email, password, role, phone, countryCode, otp, address) => {
-  // Normalize role
+const normalizeRoles = (roles: string[] | undefined) => {
+  if (!roles) return [];
+  return roles.map(r => {
+    const roleLower = r.toLowerCase();
+    if (roleLower === 'mechanic') return ROLE_MECHANIC;
+    if (roleLower === 'retailer') return ROLE_RETAILER;
+    if (roleLower === 'wholesaler') return ROLE_WHOLESALER;
+    if (roleLower === 'admin') return ROLE_ADMIN;
+    if (roleLower === 'staff') return ROLE_STAFF;
+    if (roleLower === 'supermanager') return ROLE_SUPER_MANAGER;
+    return r;
+  });
+};
+
+const register = (name: string, email: string, password: string, role: string, phone: string, countryCode: string, otp: string, address: string) => {
+  // Normalize role for request
   let finalRole = role;
-  if (role === 'mechanic') finalRole = ROLE_MECHANIC;
-  if (role === 'retailer') finalRole = ROLE_RETAILER;
-  if (role === 'wholesaler') finalRole = ROLE_WHOLESALER;
-  if (role === 'admin') finalRole = ROLE_ADMIN;
-  if (role === 'staff') finalRole = ROLE_STAFF;
-  if (role === 'supermanager') finalRole = ROLE_SUPER_MANAGER;
+  const roleLower = role.toLowerCase();
+  if (roleLower === 'mechanic') finalRole = ROLE_MECHANIC;
+  else if (roleLower === 'retailer') finalRole = ROLE_RETAILER;
+  else if (roleLower === 'wholesaler') finalRole = ROLE_WHOLESALER;
+  else if (roleLower === 'admin') finalRole = ROLE_ADMIN;
+  else if (roleLower === 'staff') finalRole = ROLE_STAFF;
+  else if (roleLower === 'supermanager') finalRole = ROLE_SUPER_MANAGER;
 
   return api.post('/auth/signup', {
     name,
@@ -24,51 +39,29 @@ const register = (name, email, password, role, phone, countryCode, otp, address)
   });
 };
 
-const sendOtp = (email) => {
+const sendOtp = (email: string) => {
   return api.post('/auth/send-otp', { email });
 };
 
-const login = async (email, password) => {
+const login = async (email: string, password: string) => {
   const response = await api.post('/auth/signin', {
     email,
     password,
   });
   if (response.data.token) {
-    // Normalize roles in the response for consistency
-    if (response.data.roles) {
-      response.data.roles = response.data.roles.map(r => {
-        if (r === 'mechanic') return ROLE_MECHANIC;
-        if (r === 'retailer') return ROLE_RETAILER;
-        if (r === 'wholesaler') return ROLE_WHOLESALER;
-        if (r === 'admin') return ROLE_ADMIN;
-        if (r === 'staff') return ROLE_STAFF;
-        if (r === 'supermanager') return ROLE_SUPER_MANAGER;
-        return r;
-      });
-    }
+    response.data.roles = normalizeRoles(response.data.roles);
     localStorage.setItem('user', JSON.stringify(response.data));
   }
   return response.data;
 };
 
-const loginWithOtp = async (email, otp) => {
+const loginWithOtp = async (email: string, otp: string) => {
   const response = await api.post('/auth/otp-login', {
     email,
     otp,
   });
   if (response.data.token) {
-    // Normalize roles in the response for consistency
-    if (response.data.roles) {
-      response.data.roles = response.data.roles.map(r => {
-        if (r === 'mechanic') return ROLE_MECHANIC;
-        if (r === 'retailer') return ROLE_RETAILER;
-        if (r === 'wholesaler') return ROLE_WHOLESALER;
-        if (r === 'admin') return ROLE_ADMIN;
-        if (r === 'staff') return ROLE_STAFF;
-        if (r === 'supermanager') return ROLE_SUPER_MANAGER;
-        return r;
-      });
-    }
+    response.data.roles = normalizeRoles(response.data.roles);
     localStorage.setItem('user', JSON.stringify(response.data));
   }
   return response.data;
@@ -78,21 +71,10 @@ const logout = () => {
   localStorage.removeItem('user');
 };
 
-const googleLogin = async (email, name) => {
+const googleLogin = async (email: string, name: string) => {
   const response = await api.post('/auth/google', { email, name });
   if (response.data.token) {
-    // Normalize roles in the response for consistency
-    if (response.data.roles) {
-      response.data.roles = response.data.roles.map(r => {
-        if (r === 'mechanic') return ROLE_MECHANIC;
-        if (r === 'retailer') return ROLE_RETAILER;
-        if (r === 'wholesaler') return ROLE_WHOLESALER;
-        if (r === 'admin') return ROLE_ADMIN;
-        if (r === 'staff') return ROLE_STAFF;
-        if (r === 'supermanager') return ROLE_SUPER_MANAGER;
-        return r;
-      });
-    }
+    response.data.roles = normalizeRoles(response.data.roles);
     localStorage.setItem('user', JSON.stringify(response.data));
   }
   return response.data;

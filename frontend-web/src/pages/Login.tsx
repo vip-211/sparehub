@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+import { useLanguage } from '../context/LanguageContext';
 import AuthService from '../services/auth.service';
+import { API_BASE_URL } from '../services/api';
 
 const Login: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
@@ -72,9 +73,8 @@ const Login: React.FC = () => {
   };
 
   const handleGoogleLogin = () => {
-    // This would typically involve redirecting to a backend endpoint 
-    // or using a library like react-google-login
-    window.location.href = `${process.env.REACT_APP_API_URL || 'http://localhost:8080/api'}/auth/google`;
+    // Redirect to backend for Google OAuth
+    window.location.href = `${API_BASE_URL}/auth/google`;
   };
 
   return (
@@ -172,7 +172,7 @@ const Login: React.FC = () => {
             >
               {isOtpLogin ? t('login.switchPass') : t('login.switchOtp')}
             </button>
-            <Link to="/forgot-password" size="sm" className="text-sm font-medium text-primary-600 hover:text-primary-500">
+            <Link to="/forgot-password" title={t('login.forgotPass')} className="text-sm font-medium text-primary-600 hover:text-primary-500">
               {t('login.forgotPass')}
             </Link>
           </div>
