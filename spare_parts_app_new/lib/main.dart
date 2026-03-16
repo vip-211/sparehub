@@ -41,56 +41,67 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.green,
-          primary: Colors.green.shade700,
-          secondary: Colors.blue.shade700,
+          seedColor: const Color(0xFF2E7D32), // Emerald Green
+          primary: const Color(0xFF2E7D32),
+          secondary: const Color(0xFF1565C0), // Royal Blue
           surface: Colors.white,
+          background: const Color(0xFFF8F9FA),
         ),
-        fontFamily: 'Roboto',
+        fontFamily: 'Inter', // Modern font
         cardTheme: CardThemeData(
-          elevation: 2,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          elevation: 0,
+          color: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: BorderSide(color: Colors.grey.shade100, width: 1),
+          ),
           clipBehavior: Clip.antiAlias,
         ),
-        appBarTheme: AppBarTheme(
-          centerTitle: true,
+        appBarTheme: const AppBarTheme(
+          centerTitle: false,
           elevation: 0,
-          backgroundColor: Colors.green.shade700,
-          foregroundColor: Colors.white,
-          titleTextStyle: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.5,
+          backgroundColor: Colors.transparent,
+          foregroundColor: Color(0xFF1A1C1E),
+          titleTextStyle: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w900,
+            color: Color(0xFF1A1C1E),
+            letterSpacing: -0.5,
           ),
+          iconTheme: IconThemeData(color: Color(0xFF1A1C1E)),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            elevation: 0,
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+            elevation: 8,
+            shadowColor: const Color(0xFF2E7D32).withOpacity(0.3),
+            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 32),
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            textStyle:
-                const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            backgroundColor: const Color(0xFF2E7D32),
+            foregroundColor: Colors.white,
+            textStyle: const TextStyle(
+                fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 0.5),
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: Colors.grey.shade50,
+          fillColor: Colors.white,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide(color: Colors.grey.shade200),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide(color: Colors.grey.shade200),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.green.shade700, width: 2),
+            borderRadius: BorderRadius.circular(20),
+            borderSide: const BorderSide(color: Color(0xFF2E7D32), width: 2),
           ),
           contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          hintStyle: TextStyle(
+              color: Colors.grey.shade400, fontWeight: FontWeight.w500),
         ),
       ),
       home: const AuthWrapper(),

@@ -184,120 +184,121 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
         title: const Text('Edit Profile'),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1A1C1E),
+        elevation: 0,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.all(24),
         child: Form(
           key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Full Name',
-                    prefixIcon: Icon(Icons.person_outline),
-                    border: OutlineInputBorder(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'PERSONAL DETAILS',
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF1A1C1E),
+                    letterSpacing: 1.5),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _nameController,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+                decoration: const InputDecoration(
+                  labelText: 'Full Name',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
+                validator: (val) => val!.isEmpty ? 'Name is required' : null,
+              ),
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: _phoneController,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+                decoration: const InputDecoration(
+                  labelText: 'Phone Number',
+                  prefixIcon: Icon(Icons.phone_android_outlined),
+                ),
+              ),
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: _addressController,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Delivery Address',
+                  prefixIcon: Padding(
+                    padding: EdgeInsets.only(bottom: 40),
+                    child: Icon(Icons.location_on_outlined),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your name';
-                    }
-                    return null;
-                  },
                 ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _phoneController,
-                        decoration: const InputDecoration(
-                          labelText: 'Mobile Number',
-                          prefixIcon: Icon(Icons.phone_outlined),
-                          border: OutlineInputBorder(),
-                        ),
-                        keyboardType: TextInputType.phone,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Consumer<AuthProvider>(
-                      builder: (context, auth, _) {
-                        final isVerified = auth.user?.phoneVerified ?? false;
-                        return ElevatedButton(
-                          onPressed: isVerified ? null : _showVerifyPhoneDialog,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                isVerified ? Colors.green : Colors.orange,
-                            foregroundColor: Colors.white,
-                          ),
-                          child: Text(isVerified ? 'Verified' : 'Verify'),
-                        );
-                      },
-                    ),
-                  ],
+              ),
+              const SizedBox(height: 32),
+              const Text(
+                'SECURITY',
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF1A1C1E),
+                    letterSpacing: 1.5),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.grey.shade100),
                 ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _addressController,
-                  decoration: const InputDecoration(
-                    labelText: 'Shop Address',
-                    prefixIcon: Icon(Icons.location_on_outlined),
-                    border: OutlineInputBorder(),
+                child: ListTile(
+                  onTap: _showChangePasswordDialog,
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.lock_outline_rounded,
+                        color: Colors.blue, size: 20),
                   ),
-                  maxLines: 2,
+                  title: const Text('Change Password',
+                      style:
+                          TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                  trailing: const Icon(Icons.chevron_right_rounded),
                 ),
-                const SizedBox(height: 24),
-                ElevatedButton(
+              ),
+              const SizedBox(height: 40),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
                   onPressed: () async {
                     if (_formKey.currentState!.validate()) {
-                      final authProvider =
+                      final auth =
                           Provider.of<AuthProvider>(context, listen: false);
-                      try {
-                        await authProvider.updateProfile(
-                          _nameController.text,
-                          _phoneController.text,
-                          _addressController.text,
-                        );
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text('Profile updated successfully')),
-                        );
-                        Navigator.of(context).pop();
-                      } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text('Failed to update profile: $e')),
-                        );
-                      }
+                      await auth.updateProfile(
+                        _nameController.text,
+                        _phoneController.text,
+                        _addressController.text,
+                      );
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Profile updated successfully!'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
                     }
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: const Text('Save Changes',
-                      style: TextStyle(fontSize: 16)),
+                  child: const Text('SAVE CHANGES'),
                 ),
-                const SizedBox(height: 16),
-                OutlinedButton.icon(
-                  onPressed: _showChangePasswordDialog,
-                  icon: const Icon(Icons.lock_outline),
-                  label: const Text('Change Password'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

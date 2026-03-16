@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import React, { useState, useEffect, useCallback } from 'react';
+import api, { API_BASE_URL } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { 
   Users, 
@@ -30,6 +30,9 @@ import {
   AreaChart,
   Area
 } from 'recharts';
+import useSound from 'use-sound';
+import SockJS from 'sockjs-client';
+import Stomp from 'stompjs';
 
 const MobileDashboard = () => {
   const { tp } = useLanguage();
@@ -37,38 +40,68 @@ const MobileDashboard = () => {
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [playNotification] = useSound('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [ordersRes, usersRes, productsRes] = await Promise.all([
+        api.get('/admin/orders'),
+        api.get('/admin/users'),
+        api.get('/products')
+      ]);
+
+      const orders = ordersRes.data;
+      const totalRevenue = orders.reduce((acc: number, o: any) => acc + o.totalAmount, 0);
+      const pendingOrders = orders.filter((o: any) => o.status === 'PENDING').length;
+      
+      setStats({
+        totalOrders: orders.length,
+        totalUsers: usersRes.data.length,
+        totalProducts: productsRes.data.length,
+        totalRevenue,
+        pendingOrders
+      });
+
+      setRecentOrders(orders.slice(0, 5));
+    } catch (err) {
+      console.error("Failed to fetch dashboard data:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        const [ordersRes, usersRes, productsRes] = await Promise.all([
-          api.get('/admin/orders'),
-          api.get('/admin/users'),
-          api.get('/products')
-        ]);
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
-        const orders = ordersRes.data;
-        const totalRevenue = orders.reduce((acc: number, o: any) => acc + o.totalAmount, 0);
-        const pendingOrders = orders.filter((o: any) => o.status === 'PENDING').length;
-        
-        setStats({
-          totalOrders: orders.length,
-          totalUsers: usersRes.data.length,
-          totalProducts: productsRes.data.length,
-          totalRevenue,
-          pendingOrders
-        });
+  useEffect(() => {
+    const socketBaseUrl = API_BASE_URL.endsWith('/api') 
+      ? API_BASE_URL.substring(0, API_BASE_URL.length - 4) 
+      : API_BASE_URL;
+    
+    const socket = new SockJS(`${socketBaseUrl}/ws`);
+    const stompClient = Stomp.over(socket);
+    stompClient.debug = () => {};
 
-        setRecentOrders(orders.slice(0, 5));
-      } catch (err) {
-        console.error("Failed to fetch dashboard data:", err);
-      } finally {
-        setLoading(false);
+    stompClient.connect({}, () => {
+      stompClient.subscribe('/topic/orders', (message) => {
+        const orderData = JSON.parse(message.body);
+        if (orderData.status === 'PENDING') {
+          playNotification();
+          fetchDashboardData();
+        }
+      });
+    }, (error) => {
+      console.error('WebSocket error:', error);
+    });
+
+    return () => {
+      if (stompClient.connected) {
+        stompClient.disconnect(() => {});
       }
     };
-
-    fetchDashboardData();
-  }, []);
+  }, [playNotification, fetchDashboardData]);
 
   const chartData = [
     { name: 'Mon', sales: 4000 },

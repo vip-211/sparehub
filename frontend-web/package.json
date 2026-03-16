@@ -20,12 +20,17 @@
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.22.2",
     "recharts": "^3.8.0",
-    "tailwind-merge": "^2.2.1"
+    "sockjs-client": "^1.6.1",
+    "stompjs": "^2.3.3",
+    "tailwind-merge": "^2.2.1",
+    "use-sound": "^5.0.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.56",
     "@types/react-dom": "^18.2.19",
     "@types/recharts": "^1.8.29",
+    "@types/sockjs-client": "^1.5.4",
+    "@types/stompjs": "^2.3.10",
     "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.4.18",
     "postcss": "^8.4.35",

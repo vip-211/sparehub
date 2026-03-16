@@ -1,17 +1,23 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api, { API_BASE_URL } from '../services/api';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
-import { Users, ShoppingBag, BarChart2, CheckCircle, XCircle, Plus, Package, UserPlus, Upload, Truck, Trash2, RotateCcw, Settings, Bell, MessageSquare } from 'lucide-react';
+import { Users, ShoppingBag, BarChart2, CheckCircle, XCircle, Plus, Package, UserPlus, Upload, Truck, Trash2, RotateCcw, Settings, Bell, MessageSquare, Search } from 'lucide-react';
 import { ROLE_SUPER_MANAGER, ROLE_ADMIN, ROLE_MECHANIC, ROLE_RETAILER, ROLE_WHOLESALER, ROLE_STAFF } from '../services/constants';
 import AuthService from '../services/auth.service';
 import Skeleton from '../components/Skeleton';
+import useSound from 'use-sound';
+import SockJS from 'sockjs-client';
+import Stomp from 'stompjs';
 
 const AdminDashboard = () => {
   const { tp } = useLanguage();
   const currentUser = AuthService.getCurrentUser();
   const isSuperManager = currentUser?.roles?.includes(ROLE_SUPER_MANAGER);
+
+  // Sound hook - using a public notification sound URL
+  const [playNotification] = useSound('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
   const getImageUrl = (path: string) => {
     if (!path) return '';
@@ -71,6 +77,7 @@ const AdminDashboard = () => {
 
   const [productSelectionMode, setProductSelectionMode] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
+  const [userSearchTerm, setUserSearchTerm] = useState('');
 
   useEffect(() => { 
     const init = async () => {
@@ -220,14 +227,43 @@ const AdminDashboard = () => {
     }
   };
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
       const res = await api.get('/admin/orders');
       setOrders(res.data);
     } catch (err) {
       console.error(err);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // WebSocket setup for new orders
+    const socketBaseUrl = API_BASE_URL.endsWith('/api') 
+      ? API_BASE_URL.substring(0, API_BASE_URL.length - 4) 
+      : API_BASE_URL;
+    
+    const socket = new SockJS(`${socketBaseUrl}/ws`);
+    const stompClient = Stomp.over(socket);
+    stompClient.debug = () => {}; // Disable debug logs
+
+    stompClient.connect({}, () => {
+      stompClient.subscribe('/topic/orders', (message) => {
+        const orderData = JSON.parse(message.body);
+        if (orderData.status === 'PENDING') {
+          playNotification();
+          fetchOrders(); // Refresh list
+        }
+      });
+    }, (error) => {
+      console.error('WebSocket error:', error);
+    });
+
+    return () => {
+      if (stompClient.connected) {
+        stompClient.disconnect(() => {});
+      }
+    };
+  }, [playNotification, fetchOrders]);
 
   const fetchCategories = async () => {
     try {
@@ -710,28 +746,142 @@ const AdminDashboard = () => {
       </div>
 
       {activeTab === 'users' && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-100">
-            <thead className="bg-gray-50/50">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">User Details</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Role & Permissions</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-100">
-              {users.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50/50 transition">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-bold text-gray-900">{user.name}</div>
-                    <div className="text-xs text-gray-500">{user.email}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+        <div className="space-y-4">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-2">
+            <div className="relative w-full md:max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <input
+                type="text"
+                placeholder="Search users by name, email, or role..."
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition shadow-sm"
+                value={userSearchTerm}
+                onChange={(e) => setUserSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase">
+              <Users size={16} />
+              <span>{users.filter(u => 
+                u.name.toLowerCase().includes(userSearchTerm.toLowerCase()) || 
+                u.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+                (u.role?.name || u.role).toLowerCase().includes(userSearchTerm.toLowerCase())
+              ).length} Users Found</span>
+            </div>
+          </div>
+
+          <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-100">
+              <thead className="bg-gray-50/50">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">User Details</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Role & Permissions</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {users.filter(u => 
+                  u.name.toLowerCase().includes(userSearchTerm.toLowerCase()) || 
+                  u.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+                  (u.role?.name || u.role).toLowerCase().includes(userSearchTerm.toLowerCase())
+                ).map((user) => (
+                  <tr key={user.id} className="hover:bg-gray-50/50 transition">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-black text-sm uppercase">
+                          {user.name.charAt(0)}
+                        </div>
+                        <div>
+                          <div className="font-bold text-gray-900">{user.name}</div>
+                          <div className="text-xs text-gray-500">{user.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <select 
+                        value={user.role?.name || user.role}
+                        onChange={(e) => updateUserRole(user.id, e.target.value)}
+                        className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 transition"
+                      >
+                        <option value={ROLE_MECHANIC}>Mechanic</option>
+                        <option value={ROLE_RETAILER}>Retailer</option>
+                        <option value={ROLE_WHOLESALER}>Wholesaler</option>
+                        <option value={ROLE_STAFF}>Staff</option>
+                        <option value={ROLE_SUPER_MANAGER}>Super Manager</option>
+                        <option value={ROLE_ADMIN}>Admin</option>
+                      </select>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-3 py-1 text-[10px] font-black tracking-widest uppercase rounded-lg ${
+                        user.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
+                      }`}>
+                        {user.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        {user.status === 'PENDING' ? (
+                          <button
+                            onClick={() => updateUserStatus(user.id, 'ACTIVE')}
+                            className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition"
+                            title="Approve User"
+                          >
+                            <CheckCircle size={18} />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => updateUserStatus(user.id, 'PENDING')}
+                            className="p-2 bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 transition"
+                            title="Suspend User"
+                          >
+                            <XCircle size={18} />
+                          </button>
+                        )}
+                        <button 
+                          onClick={() => deleteUser(user.id)}
+                          className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition"
+                          title="Delete User"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="md:hidden space-y-4">
+            {users.filter(u => 
+              u.name.toLowerCase().includes(userSearchTerm.toLowerCase()) || 
+              u.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+              (u.role?.name || u.role).toLowerCase().includes(userSearchTerm.toLowerCase())
+            ).map((user) => (
+              <div key={user.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-black text-lg uppercase">
+                      {user.name.charAt(0)}
+                    </div>
+                    <div>
+                      <div className="font-black text-gray-900">{user.name}</div>
+                      <div className="text-xs font-bold text-gray-400">{user.email}</div>
+                    </div>
+                  </div>
+                  <span className={`px-3 py-1 text-[10px] font-black tracking-widest uppercase rounded-lg ${
+                    user.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
+                  }`}>
+                    {user.status}
+                  </span>
+                </div>
+                
+                <div className="flex items-center justify-between pt-2 border-t border-gray-50">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Assign Role</span>
                     <select 
                       value={user.role?.name || user.role}
                       onChange={(e) => updateUserRole(user.id, e.target.value)}
-                      className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 transition"
+                      className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-bold text-gray-700"
                     >
                       <option value={ROLE_MECHANIC}>Mechanic</option>
                       <option value={ROLE_RETAILER}>Retailer</option>
@@ -740,37 +890,34 @@ const AdminDashboard = () => {
                       <option value={ROLE_SUPER_MANAGER}>Super Manager</option>
                       <option value={ROLE_ADMIN}>Admin</option>
                     </select>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-3 py-1 text-[10px] font-black tracking-widest uppercase rounded-lg ${
-                      user.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
-                    }`}>
-                      {user.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                  </div>
+                  <div className="flex items-center gap-2">
                     {user.status === 'PENDING' ? (
                       <button
                         onClick={() => updateUserStatus(user.id, 'ACTIVE')}
-                        className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition"
-                        title="Approve"
+                        className="p-3 bg-green-600 text-white rounded-xl shadow-lg shadow-green-100 transition"
                       >
-                        <CheckCircle size={18} />
+                        <CheckCircle size={20} />
                       </button>
                     ) : (
                       <button
                         onClick={() => updateUserStatus(user.id, 'PENDING')}
-                        className="p-2 bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 transition"
-                        title="Suspend"
+                        className="p-3 bg-orange-500 text-white rounded-xl shadow-lg shadow-orange-100 transition"
                       >
-                        <XCircle size={18} />
+                        <XCircle size={20} />
                       </button>
                     )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    <button 
+                      onClick={() => deleteUser(user.id)}
+                      className="p-3 bg-red-600 text-white rounded-xl shadow-lg shadow-red-100 transition"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

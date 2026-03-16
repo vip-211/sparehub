@@ -215,37 +215,73 @@ const StaffDashboard = () => {
       )}
 
       {activeTab === 'users' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location / Address</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredUsers.map((user) => (
-                <tr key={user.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                        <div className="text-sm text-gray-500">{user.email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.role?.name || user.role}</td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    <div className="flex items-start">
-                      <MapPin size={16} className="text-gray-400 mr-2 mt-0.5" />
-                      <span>{user.address || 'No address provided'}</span>
-                    </div>
-                  </td>
+        <div className="space-y-4">
+          <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-100">
+              <thead className="bg-gray-50/50">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">User Details</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Role</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Location / Address</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {filteredUsers.map((user) => (
+                  <tr key={user.id} className="hover:bg-gray-50/50 transition">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-black text-sm uppercase">
+                          {user.name.charAt(0)}
+                        </div>
+                        <div>
+                          <div className="font-bold text-gray-900">{user.name}</div>
+                          <div className="text-xs text-gray-500">{user.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="px-2.5 py-1 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-black uppercase tracking-wider">
+                        {user.role?.name || user.role}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      <div className="flex items-start gap-2 max-w-xs">
+                        <MapPin size={16} className="text-gray-400 mt-0.5 shrink-0" />
+                        <span className="truncate">{user.address || 'No address provided'}</span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="md:hidden space-y-4">
+            {filteredUsers.map((user) => (
+              <div key={user.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-black text-lg uppercase">
+                      {user.name.charAt(0)}
+                    </div>
+                    <div>
+                      <div className="font-black text-gray-900">{user.name}</div>
+                      <div className="text-xs font-bold text-gray-400">{user.email}</div>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-black uppercase tracking-wider">
+                    {user.role?.name || user.role}
+                  </span>
+                </div>
+                <div className="pt-3 border-t border-gray-50 flex items-start gap-2">
+                  <MapPin size={16} className="text-gray-400 mt-0.5 shrink-0" />
+                  <p className="text-xs font-medium text-gray-600 leading-relaxed">
+                    {user.address || 'No address provided'}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

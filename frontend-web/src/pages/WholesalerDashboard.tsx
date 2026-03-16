@@ -200,123 +200,211 @@ const WholesalerDashboard = () => {
       </div>
 
       {activeTab === 'products' && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-100">
-            <thead className="bg-gray-50/50">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Product Name</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Part Number</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Pricing</th>
-                <th className="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Stock</th>
-                <th className="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Action</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-100">
-                {products.map((product) => (
-                  <tr key={product.id} className="hover:bg-gray-50/50 transition">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
-                        {product.imagePath || product.imageLink || product.categoryImageLink || product.categoryImagePath ? (
-                          <img 
-                            src={getImageUrl(product.imagePath || product.imageLink || product.categoryImageLink || product.categoryImagePath)} 
-                            alt={product.name} 
-                            className="w-10 h-10 rounded-lg object-cover bg-gray-50 border border-gray-100" 
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = 'https://via.placeholder.com/100x100?text=Part';
-                            }}
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center border border-gray-100">
-                            <Package size={20} className="text-gray-300" />
-                          </div>
-                        )}
-                        <div className="text-sm font-bold text-gray-900">{tp(product.name)}</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-gray-400 uppercase tracking-widest">{product.partNumber}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-xs text-gray-400 line-through">₹{product.mrp}</div>
-                      <div className="text-sm font-black text-primary-700">₹{product.sellingPrice}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span className="px-3 py-1 rounded-lg bg-gray-100 text-xs font-black text-gray-700">
-                        {product.stock}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <button
-                        onClick={() => openOrderModal(product)}
-                        className="px-3 py-1.5 bg-primary-50 text-primary-600 rounded-lg text-xs font-bold hover:bg-primary-100 transition"
-                      >
-                        Order
-                      </button>
-                    </td>
+        <div className="space-y-4">
+          <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-100">
+              <thead className="bg-gray-50/50">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Product Name</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Part Number</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Pricing</th>
+                  <th className="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Stock</th>
+                  <th className="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                  {products.map((product) => (
+                    <tr key={product.id} className="hover:bg-gray-50/50 transition">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          {product.imagePath || product.imageLink || product.categoryImageLink || product.categoryImagePath ? (
+                            <img 
+                              src={getImageUrl(product.imagePath || product.imageLink || product.categoryImageLink || product.categoryImagePath)} 
+                              alt={product.name} 
+                              className="w-10 h-10 rounded-lg object-cover bg-gray-50 border border-gray-100" 
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = 'https://via.placeholder.com/100x100?text=Part';
+                              }}
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center border border-gray-100">
+                              <Package size={20} className="text-gray-300" />
+                            </div>
+                          )}
+                          <div className="text-sm font-bold text-gray-900">{tp(product.name)}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-gray-400 uppercase tracking-widest">{product.partNumber}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-xs text-gray-400 line-through">₹{product.mrp}</div>
+                        <div className="text-sm font-black text-primary-700">₹{product.sellingPrice}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <span className="px-3 py-1 rounded-lg bg-gray-100 text-xs font-black text-gray-700">
+                          {product.stock}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <button
+                          onClick={() => openOrderModal(product)}
+                          className="px-3 py-1.5 bg-primary-50 text-primary-600 rounded-lg text-xs font-bold hover:bg-primary-100 transition"
+                        >
+                          Order
+                        </button>
+                      </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="md:hidden space-y-4">
+            {products.map((product) => (
+              <div key={product.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {product.imagePath || product.imageLink || product.categoryImageLink || product.categoryImagePath ? (
+                      <img 
+                        src={getImageUrl(product.imagePath || product.imageLink || product.categoryImageLink || product.categoryImagePath)} 
+                        alt={product.name} 
+                        className="w-14 h-14 rounded-xl object-cover bg-gray-50 border border-gray-100 shadow-sm"
+                      />
+                    ) : (
+                      <div className="w-14 h-14 rounded-xl bg-gray-50 flex items-center justify-center border border-gray-100">
+                        <Package size={24} className="text-gray-300" />
+                      </div>
+                    )}
+                    <div>
+                      <div className="font-black text-gray-900 leading-tight mb-1">{tp(product.name)}</div>
+                      <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{product.partNumber}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[10px] text-gray-400 line-through font-bold">₹{product.mrp}</div>
+                    <div className="text-lg font-black text-primary-700 leading-tight">₹{product.sellingPrice}</div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between pt-3 border-t border-gray-50">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Available Stock</span>
+                    <span className="text-sm font-black text-gray-700">{product.stock} Units</span>
+                  </div>
+                  <button
+                    onClick={() => openOrderModal(product)}
+                    className="px-6 py-2.5 bg-primary-600 text-white rounded-xl text-xs font-black hover:bg-primary-700 transition shadow-lg shadow-primary-100"
+                  >
+                    Place Order
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
       {activeTab === 'orders' && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-100">
-            <thead className="bg-gray-50/50">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Order Info</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Customer</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Amount</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Action</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-100">
-              {orders.map((order) => (
-                <tr key={order.id} className="hover:bg-gray-50/50 transition">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-xs font-black text-primary-700 bg-primary-50 px-2 py-1 rounded-md">#{order.id}</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">{order.customerName}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-gray-900">₹{order.totalAmount.toLocaleString()}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-3 py-1 text-[10px] font-black tracking-widest uppercase rounded-lg ${
+        <div className="space-y-4">
+          <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-100">
+              <thead className="bg-gray-50/50">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Order Info</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Customer</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Amount</th>
+                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Action</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {orders.map((order) => (
+                  <tr key={order.id} className="hover:bg-gray-50/50 transition">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-xs font-black text-primary-700 bg-primary-50 px-2 py-1 rounded-md">#{order.id}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">{order.customerName}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-gray-900">₹{order.totalAmount.toLocaleString()}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-3 py-1 text-[10px] font-black tracking-widest uppercase rounded-lg ${
+                        order.status === 'DELIVERED' ? 'bg-green-100 text-green-700' :
+                        order.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-blue-100 text-blue-700'
+                      }`}>
+                        {order.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <div className="flex items-center justify-center gap-3">
+                        {order.status === 'PENDING' && (
+                          <button
+                            onClick={() => updateOrderStatus(order.id, 'ACCEPTED')}
+                            className="px-3 py-1.5 bg-primary-600 text-white rounded-lg text-xs font-bold hover:bg-primary-700 transition shadow-md shadow-primary-100"
+                          >
+                            Accept
+                          </button>
+                        )}
+                        {order.status === 'ACCEPTED' && (
+                          <button
+                            onClick={() => updateOrderStatus(order.id, 'OUT_FOR_DELIVERY')}
+                            className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition shadow-md shadow-blue-100"
+                          >
+                            Ship
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="md:hidden space-y-4">
+            {orders.map((order) => (
+              <div key={order.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 rounded-xl bg-primary-50 text-primary-700">
+                      <ShoppingCart size={20} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-black text-primary-700 mb-0.5 uppercase tracking-wider">Order #{order.id}</div>
+                      <div className="text-sm font-black text-gray-900">{order.customerName}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-black text-gray-900 leading-tight">₹{order.totalAmount.toLocaleString()}</div>
+                    <span className={`inline-block mt-1 px-2.5 py-0.5 text-[9px] font-black tracking-widest uppercase rounded-md ${
                       order.status === 'DELIVERED' ? 'bg-green-100 text-green-700' :
                       order.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
                       'bg-blue-100 text-blue-700'
                     }`}>
                       {order.status}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <div className="flex items-center justify-center gap-3">
-                      {order.status === 'PENDING' && (
-                        <button
-                          onClick={() => updateOrderStatus(order.id, 'ACCEPTED')}
-                          className="px-3 py-1.5 bg-primary-600 text-white rounded-lg text-xs font-bold hover:bg-primary-700 transition shadow-md shadow-primary-100"
-                        >
-                          Accept
-                        </button>
-                      )}
-                      {order.status === 'ACCEPTED' && (
-                        <button
-                          onClick={() => updateOrderStatus(order.id, 'PACKED')}
-                          className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition shadow-md shadow-blue-100"
-                        >
-                          Mark Packed
-                        </button>
-                      )}
-                      <Link
-                        to={`/track/${order.id}`}
-                        className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-200 transition"
-                      >
-                        Track
-                      </Link>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end pt-3 border-t border-gray-50 gap-3">
+                  {order.status === 'PENDING' && (
+                    <button
+                      onClick={() => updateOrderStatus(order.id, 'ACCEPTED')}
+                      className="px-6 py-2.5 bg-primary-600 text-white rounded-xl text-xs font-black hover:bg-primary-700 transition shadow-lg shadow-primary-100"
+                    >
+                      Accept Order
+                    </button>
+                  )}
+                  {order.status === 'ACCEPTED' && (
+                    <button
+                      onClick={() => updateOrderStatus(order.id, 'OUT_FOR_DELIVERY')}
+                      className="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-black hover:bg-blue-700 transition shadow-lg shadow-blue-100"
+                    >
+                      Mark as Shipped
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
