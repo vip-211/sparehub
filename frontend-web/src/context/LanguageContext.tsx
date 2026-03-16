@@ -26,6 +26,9 @@ const translations: Record<Language, Record<string, string>> = {
     'login.google': 'Sign in with Google',
     'login.switchOtp': 'Login with OTP',
     'login.switchPass': 'Login with Password',
+    'login.subtitle': 'Enter your credentials to access your account',
+    'login.forgotPass': 'Forgot Password?',
+    'login.or': 'Or continue with',
     
     // Register
     'reg.title': 'Create Account',
@@ -131,6 +134,9 @@ const translations: Record<Language, Record<string, string>> = {
     'login.google': 'गूगल के साथ साइन इन करें',
     'login.switchOtp': 'ओटीपी के साथ लॉगिन करें',
     'login.switchPass': 'पासवर्ड के साथ लॉगिन करें',
+    'login.subtitle': 'अपने खाते तक पहुँचने के लिए अपनी साख दर्ज करें',
+    'login.forgotPass': 'पासवर्ड भूल गए?',
+    'login.or': 'या इसके साथ जारी रखें',
 
     // Register
     'reg.title': 'खाता बनाएं',
