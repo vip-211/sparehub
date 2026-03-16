@@ -8,6 +8,10 @@ export default defineConfig(({ mode }) => {
   const hasRemote = !!env.VITE_API_BASE
   return {
     plugins: [react()],
+    define: {
+      global: 'window',
+      'process.env': {},
+    },
     server: {
       proxy: hasRemote
         ? {}

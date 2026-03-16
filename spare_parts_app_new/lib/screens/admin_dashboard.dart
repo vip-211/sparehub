@@ -533,51 +533,58 @@ class _AdminOverviewScreenState extends State<AdminOverviewScreen> {
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              childAspectRatio: 1.5,
-              children: [
-                _buildStatCard(
-                  'Total Revenue',
-                  '₹${_stats['totalRevenue'].toStringAsFixed(0)}',
-                  Icons.payments,
-                  Colors.green,
-                ),
-                _buildStatCard(
-                  'Total Orders',
-                  '${_stats['totalOrders']}',
-                  Icons.shopping_bag,
-                  Colors.blue,
-                ),
-                _buildStatCard(
-                  'Pending Orders',
-                  '${_stats['pendingOrders']}',
-                  Icons.pending_actions,
-                  Colors.orange,
-                ),
-                _buildStatCard(
-                  'Pending Requests',
-                  '${_stats['pendingRequests']}',
-                  Icons.assignment_late,
-                  Colors.redAccent,
-                ),
-                _buildStatCard(
-                  'Total Products',
-                  '${_stats['totalProducts']}',
-                  Icons.inventory_2,
-                  Colors.purple,
-                ),
-                _buildStatCard(
-                  'Low Stock',
-                  '${_stats['lowStockProducts']}',
-                  Icons.warning,
-                  Colors.amber,
-                ),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isNarrow = constraints.maxWidth < 360;
+                final crossAxisCount = isNarrow ? 1 : 2;
+                final aspect = isNarrow ? 1.1 : 1.3;
+                return GridView.count(
+                  crossAxisCount: crossAxisCount,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 16,
+                  childAspectRatio: aspect,
+                  children: [
+                    _buildStatCard(
+                      'Total Revenue',
+                      '₹${_stats['totalRevenue'].toStringAsFixed(0)}',
+                      Icons.payments,
+                      Colors.green,
+                    ),
+                    _buildStatCard(
+                      'Total Orders',
+                      '${_stats['totalOrders']}',
+                      Icons.shopping_bag,
+                      Colors.blue,
+                    ),
+                    _buildStatCard(
+                      'Pending Orders',
+                      '${_stats['pendingOrders']}',
+                      Icons.pending_actions,
+                      Colors.orange,
+                    ),
+                    _buildStatCard(
+                      'Pending Requests',
+                      '${_stats['pendingRequests']}',
+                      Icons.assignment_late,
+                      Colors.redAccent,
+                    ),
+                    _buildStatCard(
+                      'Total Products',
+                      '${_stats['totalProducts']}',
+                      Icons.inventory_2,
+                      Colors.purple,
+                    ),
+                    _buildStatCard(
+                      'Low Stock',
+                      '${_stats['lowStockProducts']}',
+                      Icons.warning,
+                      Colors.amber,
+                    ),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 24),
             const Text(
@@ -639,7 +646,7 @@ class _AdminOverviewScreenState extends State<AdminOverviewScreen> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             padding: const EdgeInsets.all(10),
