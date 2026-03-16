@@ -78,8 +78,8 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-2xl border border-gray-100 shadow-xl">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
             {t('login.title')}
@@ -179,7 +179,7 @@ const Login: React.FC = () => {
 
           <button
             type="submit"
-            className="w-full bg-primary-600 text-white py-2.5 rounded-lg font-bold hover:bg-primary-700 transition"
+            className="w-full bg-primary-600 text-white py-3 rounded-xl font-black hover:bg-primary-700 transition shadow-lg shadow-primary-100"
             disabled={loading}
           >
             {loading ? t('common.loading') : (isOtpLogin ? t('login.otpButton') : t('login.button'))}
@@ -200,7 +200,7 @@ const Login: React.FC = () => {
             <button
               onClick={handleGoogleLogin}
               disabled={loading}
-              className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition"
+              className="w-full flex items-center justify-center px-4 py-2 border border-gray-200 rounded-xl shadow-sm text-sm font-bold text-gray-700 bg-white hover:bg-gray-50 transition"
             >
               <img
                 className="h-5 w-5 mr-2"
