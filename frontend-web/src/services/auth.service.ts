@@ -20,12 +20,14 @@ const register = (name: string, email: string, password: string, role: string, p
   // Normalize role for request
   let finalRole = role;
   const roleLower = role.toLowerCase();
-  if (roleLower === 'mechanic') finalRole = ROLE_MECHANIC;
-  else if (roleLower === 'retailer') finalRole = ROLE_RETAILER;
-  else if (roleLower === 'wholesaler') finalRole = ROLE_WHOLESALER;
-  else if (roleLower === 'admin') finalRole = ROLE_ADMIN;
-  else if (roleLower === 'staff') finalRole = ROLE_STAFF;
-  else if (roleLower === 'supermanager') finalRole = ROLE_SUPER_MANAGER;
+  
+  // Handle both "MECHANIC" and "ROLE_MECHANIC"
+  if (roleLower.includes('mechanic')) finalRole = ROLE_MECHANIC;
+  else if (roleLower.includes('retailer')) finalRole = ROLE_RETAILER;
+  else if (roleLower.includes('wholesaler')) finalRole = ROLE_WHOLESALER;
+  else if (roleLower.includes('admin')) finalRole = ROLE_ADMIN;
+  else if (roleLower.includes('staff')) finalRole = ROLE_STAFF;
+  else if (roleLower.includes('supermanager') || roleLower.includes('super_manager')) finalRole = ROLE_SUPER_MANAGER;
 
   return api.post('/auth/signup', {
     name,
@@ -39,8 +41,8 @@ const register = (name: string, email: string, password: string, role: string, p
   });
 };
 
-const sendOtp = (email: string) => {
-  return api.post('/auth/send-otp', { email });
+const sendOtp = (email: string, purpose: string = 'login') => {
+  return api.post('/auth/send-otp', { email, purpose });
 };
 
 const login = async (email: string, password: string) => {

@@ -44,7 +44,7 @@ const Register = () => {
     }
     setLoading(true);
     try {
-      await AuthService.sendOtp(email);
+      await AuthService.sendOtp(email, 'signup');
       setOtpSent(true);
       setMessage(t('login.otp') + ' ' + t('common.success'));
     } catch (err: any) {
@@ -60,7 +60,7 @@ const Register = () => {
     }
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!otpSent) {
       setMessage(t('login.otp') + ' ' + t('common.error'));
@@ -69,26 +69,27 @@ const Register = () => {
     setMessage('');
     setLoading(true);
 
-    AuthService.register(name, email, password, role, phone, '', otp, address).then(
-      () => {
-        setMessage(`${t('common.success')}! Registration completed successfully. Redirecting to login...`);
-        setLoading(false);
-        setTimeout(() => {
-          navigate('/login');
-        }, 3000);
-      },
-      (error) => {
-        const resMessage =
-          (error.response &&
-            error.response.data &&
-            error.response.data.message) ||
-          error.message ||
-          error.toString();
+    try {
+      console.log('Registering user with:', { name, email, role, phone, otp });
+      await AuthService.register(name, email, password, role, phone, '', otp, address);
+      
+      setMessage(`${t('common.success')}! Registration completed successfully. Redirecting to login...`);
+      setLoading(false);
+      setTimeout(() => {
+        navigate('/login');
+      }, 3000);
+    } catch (error: any) {
+      console.error('Registration failed:', error);
+      const resMessage =
+        (error.response &&
+          error.response.data &&
+          error.response.data.message) ||
+        error.message ||
+        error.toString();
 
-        setLoading(false);
-        setMessage(resMessage);
-      }
-    );
+      setLoading(false);
+      setMessage(resMessage);
+    }
   };
 
   const handleGoogleLogin = async () => {
@@ -179,7 +180,7 @@ const Register = () => {
                     className="block w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-100 text-gray-900 text-sm rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-transparent focus:bg-white transition-all outline-none font-medium"
                     placeholder="John Doe"
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    onChange={(e) => setName(e.target.value.slice(0, 100))}
                     required
                   />
                 </div>
@@ -199,7 +200,7 @@ const Register = () => {
                     className="block w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-100 text-gray-900 text-sm rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-transparent focus:bg-white transition-all outline-none font-medium"
                     placeholder="name@company.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => setEmail(e.target.value.slice(0, 100))}
                     required
                   />
                 </div>
@@ -219,7 +220,7 @@ const Register = () => {
                     className="block w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-100 text-gray-900 text-sm rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-transparent focus:bg-white transition-all outline-none font-medium"
                     placeholder="+91 9876543210"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => setPhone(e.target.value.slice(0, 20))}
                     required
                   />
                 </div>
