@@ -85,6 +85,7 @@ const AdminDashboard = () => {
   const [productSelectionMode, setProductSelectionMode] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
   const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [productSearchTerm, setProductSearchTerm] = useState('');
 
   useEffect(() => { 
     const init = async () => {
@@ -106,6 +107,14 @@ const AdminDashboard = () => {
     };
     init();
   }, []);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchProducts(0);
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [productSearchTerm]);
 
   const fetchSettings = async () => {
     try {
@@ -325,7 +334,10 @@ const AdminDashboard = () => {
 
   const fetchProducts = async (page = 0) => {
     try {
-      const res = await api.get(`/products?page=${page}&size=10&sortBy=id&direction=desc`);
+      const endpoint = productSearchTerm 
+        ? `/products/search?query=${productSearchTerm}&page=${page}&size=10&sortBy=id&direction=desc`
+        : `/products?page=${page}&size=10&sortBy=id&direction=desc`;
+      const res = await api.get(endpoint);
       setProducts(res.data.content);
       setPagination({
         pageNumber: res.data.pageNumber,
@@ -1021,8 +1033,26 @@ const AdminDashboard = () => {
       )}
 
       {activeTab === 'products' && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto">
-          <div className="flex items-center justify-between p-4 border-b border-gray-100">
+        <div className="space-y-4">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-2">
+            <div className="relative w-full md:max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <input
+                type="text"
+                placeholder="Search products by name or part number..."
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition shadow-sm"
+                value={productSearchTerm}
+                onChange={(e) => setProductSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase">
+              <Package size={16} />
+              <span>{pagination.totalElements} Products Found</span>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden overflow-x-auto">
+            <div className="flex items-center justify-between p-4 border-b border-gray-100">
             {!productSelectionMode ? (
               <button
                 onClick={() => setProductSelectionMode(true)}
