@@ -24,10 +24,15 @@ public class CategoryController {
 
     @GetMapping
     public ResponseEntity<List<Category>> list(@RequestParam(value = "rootsOnly", required = false, defaultValue = "false") boolean rootsOnly) {
-        if (rootsOnly) {
-            return ResponseEntity.ok(categoryRepository.findByParentIsNullAndDeletedFalse());
+        try {
+            if (rootsOnly) {
+                return ResponseEntity.ok(categoryRepository.findByParentIsNullAndDeletedFalse());
+            }
+            return ResponseEntity.ok(categoryRepository.findByDeletedFalse());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
         }
-        return ResponseEntity.ok(categoryRepository.findByDeletedFalse());
     }
 
     @GetMapping("/{id}/subcategories")
