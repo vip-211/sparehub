@@ -27,7 +27,9 @@ class Category {
       imagePath: json['imagePath'],
       imageLink: json['imageLink'],
       deleted: json['deleted'] == true || json['deleted'] == 1,
-      parentId: json['parent'] != null ? (json['parent']['id'] as num?)?.toInt() : (json['parentId'] as num?)?.toInt(),
+      parentId: json['parent'] != null
+          ? (json['parent']['id'] as num?)?.toInt()
+          : (json['parentId'] as num?)?.toInt(),
       subCategories: json['subCategories'] != null
           ? (json['subCategories'] as List)
               .map((e) => Category.fromJson(e as Map<String, dynamic>))

@@ -15,7 +15,7 @@ public class CategorySimpleDto {
     private String description;
     private String imagePath;
     private String imageLink;
-    private Long parentId; // Added for mobile app compatibility
+    private Long parentId;
     private ParentCategoryDto parent;
     private List<CategorySimpleDto> subCategories;
 
