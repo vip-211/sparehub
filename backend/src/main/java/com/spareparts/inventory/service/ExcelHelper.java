@@ -21,7 +21,7 @@ public class ExcelHelper {
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "application/vnd.ms-excel"
     };
-    static String[] HEADERS = { "Name", "Part Number", "MRP", "Selling Price", "Stock" };
+    static String[] HEADERS = { "Name", "Part Number", "MRP", "Selling Price", "Stock", "Wholesaler Price", "Retailer Price", "Mechanic Price", "Rack Number", "Description" };
     static String SHEET = "Products";
 
     public static boolean hasExcelFormat(MultipartFile file) {
@@ -53,6 +53,11 @@ public class ExcelHelper {
                 row.createCell(2).setCellValue(product.getMrp().doubleValue());
                 row.createCell(3).setCellValue(product.getSellingPrice().doubleValue());
                 row.createCell(4).setCellValue(product.getStock());
+                row.createCell(5).setCellValue(product.getWholesalerPrice().doubleValue());
+                row.createCell(6).setCellValue(product.getRetailerPrice().doubleValue());
+                row.createCell(7).setCellValue(product.getMechanicPrice().doubleValue());
+                row.createCell(8).setCellValue(product.getRackNumber() != null ? product.getRackNumber() : "");
+                row.createCell(9).setCellValue(product.getDescription() != null ? product.getDescription() : "");
             }
 
             workbook.write(out);
@@ -129,6 +134,10 @@ public class ExcelHelper {
                                     product.setSellingPrice(BigDecimal.ZERO);
                                 }
                             }
+                            // Default selling price to MRP if it's 0
+                            if (product.getSellingPrice().compareTo(BigDecimal.ZERO) == 0 && product.getMrp().compareTo(BigDecimal.ZERO) > 0) {
+                                product.setSellingPrice(product.getMrp());
+                            }
                             break;
                         case 4: // Stock
                             if (currentCell.getCellType() == CellType.NUMERIC) {
@@ -145,6 +154,59 @@ public class ExcelHelper {
                                 } catch (Exception e) {
                                     product.setStock(0);
                                 }
+                            }
+                            break;
+                        case 5: // Wholesaler Price
+                            if (currentCell.getCellType() == CellType.NUMERIC) {
+                                product.setWholesalerPrice(BigDecimal.valueOf(currentCell.getNumericCellValue()));
+                            } else {
+                                String val = currentCell.toString().replaceAll("[^\\d.]", "");
+                                if (val.isEmpty() || val.equals(".") || val.equals("null")) val = "0";
+                                try {
+                                    product.setWholesalerPrice(new BigDecimal(val));
+                                } catch (Exception e) {
+                                    product.setWholesalerPrice(BigDecimal.ZERO);
+                                }
+                            }
+                            break;
+                        case 6: // Retailer Price
+                            if (currentCell.getCellType() == CellType.NUMERIC) {
+                                product.setRetailerPrice(BigDecimal.valueOf(currentCell.getNumericCellValue()));
+                            } else {
+                                String val = currentCell.toString().replaceAll("[^\\d.]", "");
+                                if (val.isEmpty() || val.equals(".") || val.equals("null")) val = "0";
+                                try {
+                                    product.setRetailerPrice(new BigDecimal(val));
+                                } catch (Exception e) {
+                                    product.setRetailerPrice(BigDecimal.ZERO);
+                                }
+                            }
+                            break;
+                        case 7: // Mechanic Price
+                            if (currentCell.getCellType() == CellType.NUMERIC) {
+                                product.setMechanicPrice(BigDecimal.valueOf(currentCell.getNumericCellValue()));
+                            } else {
+                                String val = currentCell.toString().replaceAll("[^\\d.]", "");
+                                if (val.isEmpty() || val.equals(".") || val.equals("null")) val = "0";
+                                try {
+                                    product.setMechanicPrice(new BigDecimal(val));
+                                } catch (Exception e) {
+                                    product.setMechanicPrice(BigDecimal.ZERO);
+                                }
+                            }
+                            break;
+                        case 8: // Rack Number
+                            if (currentCell.getCellType() == CellType.STRING) {
+                                product.setRackNumber(currentCell.getStringCellValue());
+                            } else {
+                                product.setRackNumber(currentCell.toString());
+                            }
+                            break;
+                        case 9: // Description
+                            if (currentCell.getCellType() == CellType.STRING) {
+                                product.setDescription(currentCell.getStringCellValue());
+                            } else {
+                                product.setDescription(currentCell.toString());
                             }
                             break;
                         default:

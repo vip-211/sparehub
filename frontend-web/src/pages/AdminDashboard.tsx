@@ -733,7 +733,7 @@ const AdminDashboard = () => {
           </div>
           <div>
             <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">Total Revenue</p>
-            <p className="text-2xl font-black text-gray-900">â‚¹{orders.reduce((acc, o) => acc + o.totalAmount, 0).toLocaleString()}</p>
+            <p className="text-2xl font-black text-gray-900">₹{orders.reduce((acc, o) => acc + o.totalAmount, 0).toLocaleString()}</p>
           </div>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition">
@@ -982,7 +982,7 @@ const AdminDashboard = () => {
                           <div className="text-[10px] text-gray-400 mt-1 font-bold">{new Date(order.createdAt).toLocaleDateString()}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-black text-gray-900">â‚¹{order.totalAmount.toLocaleString()}</div>
+                          <div className="text-sm font-black text-gray-900">₹{order.totalAmount.toLocaleString()}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-3 py-1 text-[10px] font-black tracking-widest uppercase rounded-lg ${
@@ -1163,8 +1163,8 @@ const AdminDashboard = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-gray-400 uppercase tracking-widest">{product.partNumber}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-xs text-gray-400 line-through">â‚¹{product.mrp}</div>
-                    <div className="text-sm font-black text-primary-700">â‚¹{product.sellingPrice}</div>
+                    <div className="text-xs text-gray-400 line-through">₹{product.mrp}</div>
+                    <div className="text-sm font-black text-primary-700">₹{product.sellingPrice}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
                     <span className={`px-3 py-1 rounded-lg text-xs font-black ${
@@ -1449,7 +1449,7 @@ const AdminDashboard = () => {
                         <div className="text-sm font-bold text-gray-900">{order.customerName}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-black text-gray-900">â‚¹{order.totalAmount.toLocaleString()}</div>
+                        <div className="text-sm font-black text-gray-900">₹{order.totalAmount.toLocaleString()}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         <div className="flex items-center justify-center gap-2">
@@ -1975,7 +1975,7 @@ const AdminDashboard = () => {
                           >+</button>
                         </div>
                       </td>
-                      <td className="py-2 text-right">â‚¹{item.price}</td>
+                      <td className="py-2 text-right">₹{item.price}</td>
                       <td className="py-2 text-right">
                         <button
                           onClick={() => {
@@ -1992,7 +1992,7 @@ const AdminDashboard = () => {
             </div>
             <div className="flex justify-between items-center border-t pt-4">
               <p className="text-lg font-bold">
-                Total: â‚¹{editingOrder.items.reduce((acc: any, item: any) => acc + (item.price * item.quantity), 0).toFixed(2)}
+                Total: ₹{editingOrder.items.reduce((acc: any, item: any) => acc + (item.price * item.quantity), 0).toFixed(2)}
               </p>
               <div className="flex space-x-3">
                 <button
