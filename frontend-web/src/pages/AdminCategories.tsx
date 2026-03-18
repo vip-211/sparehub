@@ -19,7 +19,7 @@ const AdminCategories: React.FC = () => {
   const [imageLink, setImageLink] = useState('');
   const [parentId, setParentId] = useState<string>('');
   const [editing, setEditing] = useState<Category | null>(null);
-  const [assignProductId, setAssignProductId] = useState('');
+  const [assignPartNumber, setAssignPartNumber] = useState('');
   const [assignCategoryId, setAssignCategoryId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -28,8 +28,8 @@ const AdminCategories: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      // Get only root categories to show hierarchy, or all for assignment
-      const res = await api.get('/categories');
+      // Get all categories to show hierarchy
+      const res = await api.get('/categories?rootsOnly=false');
       setCategories(res.data || []);
     } catch (e: any) {
       setError('Failed to load categories');
@@ -91,25 +91,26 @@ const AdminCategories: React.FC = () => {
   };
 
   const assign = async () => {
-    const pid = Number(assignProductId);
+    const pn = assignPartNumber.trim();
     const cid = Number(assignCategoryId);
-    if (!pid || !cid) return;
+    if (!pn || !cid) return;
     setLoading(true);
     setError('');
     try {
-      // Fetch product, then update with categoryId
-      const prod = await api.get(`/products`);
-      // Since products is paginated now, we might need a different way to find it
-      // but for this simple assign logic, let's try to find it in the content
-      const p = (prod.data.content || []).find((it: any) => it.id === pid);
-      if (!p) throw new Error('Product not found in current page');
-      const body = { ...p, categoryId: cid };
-      await api.put(`/products/${pid}`, body);
-      setAssignProductId('');
+      // Search for product by part number
+      const searchRes = await api.get(`/products/search?query=${encodeURIComponent(pn)}&size=1`);
+      const products = searchRes.data.content || [];
+      const product = products.find((p: any) => p.partNumber.toLowerCase() === pn.toLowerCase());
+      
+      if (!product) throw new Error('Product not found with this part number');
+      
+      const body = { ...product, categoryId: cid };
+      await api.put(`/products/${product.id}`, body);
+      setAssignPartNumber('');
       setAssignCategoryId('');
-      alert('Category assigned to product');
+      alert('Category assigned to product successfully');
     } catch (e: any) {
-      setError(e.message || 'Assign failed');
+      setError(e.response?.data?.message || e.message || 'Assign failed');
     } finally {
       setLoading(false);
     }
@@ -217,11 +218,11 @@ const AdminCategories: React.FC = () => {
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
             <h2 className="text-lg font-bold mb-4 text-gray-800">Quick Assignment</h2>
-            <p className="text-sm text-gray-500 mb-4 font-medium">Assign a category to a product by its ID.</p>
+            <p className="text-sm text-gray-500 mb-4 font-medium">Assign a category to a product by its Part Number.</p>
             <div className="space-y-4">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Product ID</label>
-                <input value={assignProductId} onChange={(e) => setAssignProductId(e.target.value)} placeholder="e.g. 101" className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all" />
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Product Part Number</label>
+                <input value={assignPartNumber} onChange={(e) => setAssignPartNumber(e.target.value)} placeholder="e.g. PN-12345" className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all" />
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Target Category</label>
@@ -230,7 +231,7 @@ const AdminCategories: React.FC = () => {
                   {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
-              <button onClick={assign} disabled={loading || !assignProductId || !assignCategoryId} className="w-full py-3 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 transition-all shadow-lg shadow-green-200 active:scale-[0.98] disabled:opacity-50">
+              <button onClick={assign} disabled={loading || !assignPartNumber || !assignCategoryId} className="w-full py-3 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 transition-all shadow-lg shadow-green-200 active:scale-[0.98] disabled:opacity-50">
                 Assign Category
               </button>
             </div>

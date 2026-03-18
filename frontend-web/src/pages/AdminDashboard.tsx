@@ -274,7 +274,7 @@ const AdminDashboard = () => {
 
   const fetchCategories = async () => {
     try {
-      const res = await api.get('/categories');
+      const res = await api.get('/categories?rootsOnly=false');
       setCategories(res.data || []);
     } catch (err) {
       console.error(err);
