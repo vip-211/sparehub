@@ -1177,7 +1177,7 @@ const AdminDashboard = () => {
                     <div className="flex items-center justify-center gap-2">
                       <button
                         onClick={() => { setEditingProduct(product); setShowEditProduct(true); }}
-                        className="px-3 py-1.5 bg-gray-50 text-primary-600 rounded-lg text-xs font-bold hover:bg-primary-100 transition"
+                        className="px-3 py-1.5 bg-primary-50 text-primary-700 rounded-lg text-xs font-black hover:bg-primary-100 transition-all border border-primary-100 active:scale-95"
                       >
                         Edit
                       </button>
@@ -1495,7 +1495,7 @@ const AdminDashboard = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {categories.map((category: any) => (
-              <div key={category.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden group">
+              <div key={category.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden group hover:shadow-md transition-shadow cursor-default">
                 <div className="h-40 bg-gray-50 relative overflow-hidden">
                   {category.imageLink || category.imagePath ? (
                     <img src={getImageUrl(category.imageLink || category.imagePath)} alt={category.name} className="w-full h-full object-cover" />
@@ -1504,18 +1504,41 @@ const AdminDashboard = () => {
                       <Package size={48} />
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center gap-2">
                     <button
                       onClick={() => { setEditingCategory(category); setShowEditCategory(true); }}
-                      className="bg-white text-gray-900 px-4 py-2 rounded-lg font-bold text-xs opacity-0 group-hover:opacity-100 transition-all transform translate-y-4 group-hover:translate-y-0"
+                      className="bg-white text-gray-900 px-4 py-2 rounded-lg font-bold text-xs opacity-0 group-hover:opacity-100 transition-all transform translate-y-4 group-hover:translate-y-0 hover:bg-primary-50 hover:text-primary-600"
                     >
-                      Edit Category
+                      Edit
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!window.confirm(`Delete category ${category.name}?`)) return;
+                        try {
+                          await api.delete(`/categories/${category.id}`);
+                          fetchCategories();
+                        } catch (err) {
+                          console.error(err);
+                          alert('Failed to delete category');
+                        }
+                      }}
+                      className="bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-xs opacity-0 group-hover:opacity-100 transition-all transform translate-y-4 group-hover:translate-y-0 hover:bg-red-700"
+                    >
+                      Delete
                     </button>
                   </div>
                 </div>
-                <div className="p-4">
-                  <h4 className="font-black text-gray-900 text-lg">{category.name}</h4>
-                  <p className="text-gray-500 text-sm font-medium mt-1 line-clamp-2">{category.description || 'No description provided'}</p>
+                <div className="p-4 flex justify-between items-start">
+                  <div>
+                    <h4 className="font-black text-gray-900 text-lg">{category.name}</h4>
+                    <p className="text-gray-500 text-sm font-medium mt-1 line-clamp-2">{category.description || 'No description provided'}</p>
+                  </div>
+                  <button
+                    onClick={() => { setEditingCategory(category); setShowEditCategory(true); }}
+                    className="p-2 text-gray-400 hover:text-primary-600 transition-colors md:hidden"
+                  >
+                    <Settings size={20} />
+                  </button>
                 </div>
               </div>
             ))}

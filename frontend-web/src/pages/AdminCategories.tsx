@@ -120,20 +120,32 @@ const AdminCategories: React.FC = () => {
           {c.description && <div className="text-sm text-gray-500">{c.description}</div>}
         </div>
         <div className="flex gap-2">
-          <button 
-            onClick={() => { 
-              setEditing(c); 
-              setName(c.name); 
-              setDescription(c.description || ''); 
-              setImagePath(c.imagePath || ''); 
-              setImageLink(c.imageLink || '');
-            }} 
-            className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 text-sm font-medium"
-          >
-            Edit
-          </button>
-          <button onClick={() => del(c.id)} className="px-3 py-1 rounded bg-red-600 hover:bg-red-700 text-white text-sm font-medium">Delete</button>
-        </div>
+            <button 
+              onClick={(e) => { 
+                e.preventDefault();
+                e.stopPropagation();
+                setEditing(c); 
+                setName(c.name); 
+                setDescription(c.description || ''); 
+                setImagePath(c.imagePath || ''); 
+                setImageLink(c.imageLink || '');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }} 
+              className="px-4 py-2 rounded-lg bg-primary-50 text-primary-700 hover:bg-primary-100 text-sm font-black transition-all border border-primary-100 active:scale-95"
+            >
+              Edit
+            </button>
+            <button 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                del(c.id);
+              }} 
+              className="px-4 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 text-sm font-black transition-all border border-red-100 active:scale-95"
+            >
+              Delete
+            </button>
+          </div>
       </div>
     );
   };
