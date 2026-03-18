@@ -1244,7 +1244,6 @@ const AdminDashboard = () => {
             </div>
           )}
         </div>
-      </div>
       )}
 
       {activeTab === 'deliveries' && (
