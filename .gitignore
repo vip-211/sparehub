@@ -55,3 +55,14 @@ spare_parts_app/web/.dart_tool/
 # Logs
 **/*.log
 
+# Large Heap Dumps and Binaries
+**/*.hprof
+**/*.jar
+!bfg.jar
+**/node_modules/
+**/dist/
+**/build/
+**/.gradle/
+**/.dart_tool/
+**/target/
+
