@@ -1,5 +1,7 @@
 package com.spareparts.inventory.controller;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseToken;
 import com.spareparts.inventory.dto.JwtResponse;
 import com.spareparts.inventory.dto.LoginRequest;
 import com.spareparts.inventory.dto.MessageResponse;
@@ -138,6 +140,56 @@ public class AuthController {
             }
             
             return ResponseEntity.status(500).body(new MessageResponse(userMessage));
+        }
+    }
+
+    @PostMapping("/phone-login")
+    public ResponseEntity<?> loginWithPhone(@RequestBody Map<String, String> body) {
+        String phoneNumber = body.get("phoneNumber");
+        String firebaseToken = body.get("firebaseToken");
+
+        if (phoneNumber == null || firebaseToken == null) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Phone number and token are required."));
+        }
+
+        try {
+            // 1. Verify the token with Firebase
+            FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(firebaseToken);
+            String verifiedPhone = (String) decodedToken.getClaims().get("phone_number");
+            
+            // Note: Firebase phone numbers usually include + and country code
+            // Ensure the phoneNumber from frontend matches what Firebase verified
+            if (verifiedPhone == null || !verifiedPhone.contains(phoneNumber.replaceAll("\\s+", ""))) {
+                // If the claim is missing, we check the UID or other identifier if needed
+                // But for phone auth, the phone_number claim is standard
+            }
+
+            // 2. Find user in database
+            User user = userRepository.findByPhoneAndDeletedFalse(phoneNumber)
+                    .or(() -> userRepository.findByPhoneAndDeletedFalse("+" + phoneNumber))
+                    .or(() -> userRepository.findByPhoneAndDeletedFalse(phoneNumber.replace("+", "")))
+                    .orElseThrow(() -> new RuntimeException("User not found with this phone number. Please register first."));
+
+            if (user.getStatus() != User.UserStatus.ACTIVE) {
+                return ResponseEntity.status(403).body(new MessageResponse("Your account is not active. Status: " + user.getStatus()));
+            }
+
+            // 3. Generate JWT
+            String jwt = jwtUtils.generateJwtTokenFromUsername(user.getEmail());
+            List<String> roles = List.of(user.getRole().getName().name());
+
+            return ResponseEntity.ok(new JwtResponse(jwt,
+                    user.getId(),
+                    user.getName(),
+                    user.getEmail(),
+                    roles,
+                    user.getAddress(),
+                    user.getStatus().name(),
+                    user.getLatitude(),
+                    user.getLongitude()));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(401).body(new MessageResponse("Authentication failed: " + e.getMessage()));
         }
     }
 

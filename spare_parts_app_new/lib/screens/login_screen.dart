@@ -205,7 +205,25 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      // For login, we don't send registrationData, so purpose becomes 'login'
+
+      if (!isEmail) {
+        // Firebase Phone Auth
+        await authProvider.verifyPhone(
+          identifier,
+          onCodeSent: (verId) {
+            setState(() => _otpSource = 'firebase');
+            setState(() => _otpSent = true);
+            _showFeedback('OTP sent to your phone via Firebase.');
+            _promptEnterOtp(identifier, isFirebase: true);
+          },
+          onError: (err) {
+            _showFeedback('Firebase Phone Auth failed: $err', isError: true);
+          },
+        );
+        return;
+      }
+
+      // For email login, we don't send registrationData, so purpose becomes 'login'
       final source = await authProvider.sendOtp(identifier, {});
       setState(() => _otpSource = source);
       setState(() => _otpSent = true);
@@ -219,7 +237,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _promptEnterOtp(String identifier) {
+  void _promptEnterOtp(String identifier, {bool isFirebase = false}) {
     final tempOtpController = TextEditingController();
     showModalBottomSheet(
       context: context,
@@ -254,7 +272,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     if (_otpSource != null)
                       Text(
-                        _otpSource == 'server' ? 'via server' : 'via email',
+                        _otpSource == 'server'
+                            ? 'via server'
+                            : (_otpSource == 'firebase'
+                                ? 'via Firebase'
+                                : 'via email'),
                         style: TextStyle(
                             fontSize: 12, color: Colors.grey.shade600),
                       ),
@@ -280,18 +302,46 @@ class _LoginScreenState extends State<LoginScreen> {
                             : () async {
                                 final ap = Provider.of<AuthProvider>(context,
                                     listen: false);
-                                // Purpose: login
-                                final src = await ap.sendOtp(identifier, {});
-                                setSheet(() => _otpSource = src);
-                                final via =
-                                    src == 'server' ? 'SMS/Server' : 'Email';
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('OTP resent via $via'),
-                                      duration: const Duration(seconds: 2),
-                                    ),
+                                if (isFirebase) {
+                                  await ap.verifyPhone(
+                                    identifier,
+                                    onCodeSent: (verId) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                            content:
+                                                Text('OTP resent via Firebase'),
+                                            duration: Duration(seconds: 2),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    onError: (err) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                              content:
+                                                  Text('Resend failed: $err')),
+                                        );
+                                      }
+                                    },
                                   );
+                                } else {
+                                  // Purpose: login
+                                  final src = await ap.sendOtp(identifier, {});
+                                  setSheet(() => _otpSource = src);
+                                  final via =
+                                      src == 'server' ? 'SMS/Server' : 'Email';
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('OTP resent via $via'),
+                                        duration: const Duration(seconds: 2),
+                                      ),
+                                    );
+                                  }
                                 }
                               },
                         child: const Text('Resend'),
@@ -307,8 +357,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 if (otp.length != 6) {
                                   if (mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: const Text(
+                                      const SnackBar(
+                                        content: Text(
                                             'Please enter a valid 6-digit OTP'),
                                       ),
                                     );
@@ -319,8 +369,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                 try {
                                   final ap = Provider.of<AuthProvider>(context,
                                       listen: false);
-                                  final ok =
-                                      await ap.loginWithOtp(identifier, otp);
+                                  bool ok = false;
+                                  if (isFirebase) {
+                                    ok = await ap.loginWithPhoneCode(
+                                        otp, identifier);
+                                  } else {
+                                    ok = await ap.loginWithOtp(identifier, otp);
+                                  }
+
                                   if (ok && mounted) {
                                     Navigator.pop(ctx); // Close sheet
                                     _showFeedback('Login successful!');
@@ -328,8 +384,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                     if (mounted) {
                                       ScaffoldMessenger.of(context)
                                           .showSnackBar(
-                                        SnackBar(
-                                          content: const Text(
+                                        const SnackBar(
+                                          content: Text(
                                               'Invalid OTP. Please try again.'),
                                         ),
                                       );

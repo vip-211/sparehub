@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:bcrypt/bcrypt.dart';
@@ -16,11 +17,138 @@ class AuthService {
   final EmailService _emailService = EmailService();
   final GoogleSSO _googleSSO = GoogleSSO();
   final RemoteClient _remote = RemoteClient();
+  final fb_auth.FirebaseAuth _firebaseAuth = fb_auth.FirebaseAuth.instance;
 
   String? _otp;
+  String? _verificationId;
 
   Future<SharedPreferences> _prefs() async {
     return await SharedPreferences.getInstance();
+  }
+
+  // =============================
+  // FIREBASE PHONE AUTH
+  // =============================
+
+  Future<void> verifyPhoneNumber(
+    String phoneNumber, {
+    required Function(String verificationId) onCodeSent,
+    required Function(String errorMessage) onError,
+  }) async {
+    try {
+      await _firebaseAuth.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        verificationCompleted: (fb_auth.PhoneAuthCredential credential) async {
+          // Auto-verification (rare on Android, not possible on iOS)
+          // For now we just let the manual code entry handle it
+        },
+        verificationFailed: (fb_auth.FirebaseAuthException e) {
+          onError(e.message ?? 'Phone verification failed');
+        },
+        codeSent: (String verId, int? resendToken) {
+          _verificationId = verId;
+          onCodeSent(verId);
+        },
+        codeAutoRetrievalTimeout: (String verId) {
+          _verificationId = verId;
+        },
+      );
+    } catch (e) {
+      onError(e.toString());
+    }
+  }
+
+  Future<User?> loginWithPhoneCode(String smsCode, String phoneNumber) async {
+    try {
+      if (_verificationId == null) throw 'Verification ID is missing';
+
+      final credential = fb_auth.PhoneAuthProvider.credential(
+        verificationId: _verificationId!,
+        smsCode: smsCode,
+      );
+
+      final userCredential =
+          await _firebaseAuth.signInWithCredential(credential);
+      final fbUser = userCredential.user;
+
+      if (fbUser != null) {
+        // Successfully verified by Firebase
+        if (Constants.useRemote) {
+          // Get the ID token to verify on backend
+          final idToken = await fbUser.getIdToken();
+
+          // Call backend to login/fetch user by phone
+          final json = await _remote.postJson('/auth/phone-login', {
+            'phoneNumber': phoneNumber,
+            'firebaseToken': idToken,
+          });
+
+          return _parseUserJson(json);
+        } else {
+          // Local DB fallback
+          return await _loginLocallyByPhone(phoneNumber);
+        }
+      }
+      return null;
+    } catch (e) {
+      debugPrint("Phone login error: $e");
+      rethrow;
+    }
+  }
+
+  Future<User?> _loginLocallyByPhone(String phone) async {
+    final db = await _dbService.database;
+    final result = await db.query(
+      "users",
+      where: "phone = ?",
+      whereArgs: [phone],
+      limit: 1,
+    );
+    if (result.isEmpty) throw "User not found with this phone number";
+    final userData = result.first;
+    final user = User(
+      id: userData["id"] as int,
+      email: userData["email"] as String,
+      name: userData["name"] as String?,
+      phone: userData["phone"] as String?,
+      token: "local-phone-token",
+      roles: [userData["role"] as String],
+      status: userData["status"] as String? ?? 'ACTIVE',
+    );
+    final prefs = await _prefs();
+    await prefs.setString('user', jsonEncode(user.toJson()));
+    return user;
+  }
+
+  User _parseUserJson(Map<String, dynamic> json) {
+    final token = json['token'] ?? json['accessToken'];
+    final id = (json['id'] as num).toInt();
+    final emailVal = json['email'] as String;
+    final name = json['username'] ?? json['name'] ?? emailVal;
+
+    final roles = (json['roles'] as List).map((e) {
+      if (e is Map && e['name'] != null) return e['name'].toString();
+      return e.toString();
+    }).toList();
+
+    return User(
+      id: id,
+      email: emailVal,
+      name: name,
+      phone: json['phone'],
+      token: token.toString(),
+      roles: roles,
+      address: json['address'],
+      shopImagePath: json['shopImagePath'],
+      status: (json['status'] ?? 'ACTIVE').toString(),
+      phoneVerified: true,
+      latitude: json['latitude'] != null
+          ? (json['latitude'] as num).toDouble()
+          : null,
+      longitude: json['longitude'] != null
+          ? (json['longitude'] as num).toDouble()
+          : null,
+    );
   }
 
   // =============================
@@ -359,7 +487,7 @@ class AuthService {
     await _emailService.sendOtp(email, _otp!);
   }
 
-  Future<bool> verifyPhoneNumber(int userId, String otp) async {
+  Future<bool> verifyPhoneOtpServer(int userId, String otp) async {
     if (Constants.useRemote) {
       final res = await _remote.postJson('/auth/verify-phone', {'otp': otp});
       return res != null;

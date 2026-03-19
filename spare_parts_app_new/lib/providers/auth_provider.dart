@@ -69,6 +69,52 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
     try {
       _user = await _authService.loginWithOtp(email, otp);
+      if (_user != null) {
+        _updateFcmToken();
+      }
+      return _user != null;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> verifyPhone(
+    String phoneNumber, {
+    required Function(String verificationId) onCodeSent,
+    required Function(String errorMessage) onError,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await _authService.verifyPhoneNumber(
+        phoneNumber,
+        onCodeSent: (verId) {
+          _isLoading = false;
+          notifyListeners();
+          onCodeSent(verId);
+        },
+        onError: (err) {
+          _isLoading = false;
+          notifyListeners();
+          onError(err);
+        },
+      );
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      onError(e.toString());
+    }
+  }
+
+  Future<bool> loginWithPhoneCode(String smsCode, String phoneNumber) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      _user = await _authService.loginWithPhoneCode(smsCode, phoneNumber);
+      if (_user != null) {
+        _updateFcmToken();
+      }
       return _user != null;
     } finally {
       _isLoading = false;
@@ -134,7 +180,7 @@ class AuthProvider with ChangeNotifier {
       _isLoading = true;
       notifyListeners();
       try {
-        final success = await _authService.verifyPhoneNumber(_user!.id, otp);
+        final success = await _authService.verifyPhoneOtpServer(_user!.id, otp);
         if (success) {
           _user = await _authService.getCurrentUser();
         }
