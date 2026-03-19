@@ -85,11 +85,6 @@ public class AuthController {
         if ("login".equals(purpose) || "reset".equals(purpose)) {
             // Handle both email and mobile-formatted email (e.g., 1234567890@spares.hub)
             boolean exists = userRepository.existsByEmail(email);
-            if (!exists && email.contains("@")) {
-                // Also check if it might be a username if that's allowed, 
-                // but usually it's email.
-                exists = userRepository.existsByUsername(email);
-            }
             
             if (!exists) {
                 return ResponseEntity.status(404).body(new MessageResponse("User does not exist."));
