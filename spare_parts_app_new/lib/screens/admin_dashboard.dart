@@ -1227,6 +1227,8 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
   final TextEditingController _orderSearchController = TextEditingController();
   String _orderQuery = '';
   StreamSubscription? _orderWsSub;
+  int? _highlightedOrderId;
+
   @override
   void initState() {
     super.initState();
@@ -1234,6 +1236,16 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
     _orderWsSub = WebSocketService.orderUpdates.stream.listen((data) {
       if (!mounted) return;
       _fetchOrders();
+    });
+
+    // Check for highlighted order ID in arguments
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args = ModalRoute.of(context)!.settings.arguments;
+      if (args is Map && args.containsKey('orderId')) {
+        setState(() {
+          _highlightedOrderId = int.tryParse(args['orderId'].toString());
+        });
+      }
     });
   }
 
@@ -1612,19 +1624,31 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
                       ),
                     ),
                     ...customerOrders.map((order) {
+                      final isHighlighted = _highlightedOrderId == order.id;
                       final deliveredAt = order.deliveredAt != null
                           ? DateFormat('dd MMM, hh:mm a')
                               .format(DateTime.parse(order.deliveredAt!))
                           : null;
                       return Card(
-                        elevation: 2,
+                        key: ValueKey('admin_order_${order.id}_$isHighlighted'),
+                        elevation: isHighlighted ? 4 : 2,
+                        color: isHighlighted ? Colors.blue.shade50 : null,
                         margin: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 8),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: ExpansionTile(
-                          title: Text('Order #${order.id} - ${order.status}'),
+                          initiallyExpanded: isHighlighted,
+                          title: Text(
+                            'Order #${order.id} - ${order.status}',
+                            style: TextStyle(
+                              fontWeight:
+                                  isHighlighted ? FontWeight.bold : null,
+                              color:
+                                  isHighlighted ? Colors.blue.shade800 : null,
+                            ),
+                          ),
                           subtitle: Text('Date: ${order.createdAt}'),
                           children: [
                             Align(
@@ -2253,6 +2277,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
     final nameController = TextEditingController(text: product?.name);
     final partController = TextEditingController(text: product?.partNumber);
     final mrpController = TextEditingController(text: product?.mrp.toString());
+    final discountController = TextEditingController(text: '0');
     final priceController = TextEditingController(
       text: product?.sellingPrice.toString(),
     );
@@ -2428,6 +2453,158 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                 controller: mrpController,
                 decoration: const InputDecoration(labelText: 'MRP'),
                 keyboardType: TextInputType.number,
+                onChanged: (val) {
+                  final mrp = double.tryParse(val) ?? 0;
+                  final discount =
+                      double.tryParse(discountController.text) ?? 0;
+                  if (mrp > 0 && discount > 0) {
+                    final price = mrp * (1 - discount / 100);
+                    setDialogState(() {
+                      priceController.text = price.toStringAsFixed(2);
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.red.shade100),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Apply Global Discount %',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.redAccent,
+                          ),
+                        ),
+                        SizedBox(
+                          width: 80,
+                          child: TextField(
+                            controller: discountController,
+                            keyboardType: TextInputType.number,
+                            textAlign: TextAlign.center,
+                            decoration: const InputDecoration(
+                              suffixText: '%',
+                              isDense: true,
+                              border: OutlineInputBorder(),
+                            ),
+                            onChanged: (val) {
+                              final discount = double.tryParse(val) ?? 0;
+                              final mrp =
+                                  double.tryParse(mrpController.text) ?? 0;
+                              if (mrp > 0) {
+                                final price = mrp * (1 - discount / 100);
+                                setDialogState(() {
+                                  priceController.text =
+                                      price.toStringAsFixed(2);
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Entering a percentage will automatically set the default selling price based on the MRP.',
+                      style: TextStyle(fontSize: 10, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Role Discounts (%)',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            decoration: const InputDecoration(
+                              labelText: 'Wholesaler %',
+                            ),
+                            keyboardType: TextInputType.number,
+                            onChanged: (val) {
+                              final d = double.tryParse(val) ?? 0;
+                              final mrp =
+                                  double.tryParse(mrpController.text) ?? 0;
+                              if (mrp > 0 && d >= 0) {
+                                final p = mrp * (1 - d / 100);
+                                setDialogState(() {
+                                  wholesalerPriceController.text =
+                                      p.toStringAsFixed(2);
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            decoration: const InputDecoration(
+                              labelText: 'Retailer %',
+                            ),
+                            keyboardType: TextInputType.number,
+                            onChanged: (val) {
+                              final d = double.tryParse(val) ?? 0;
+                              final mrp =
+                                  double.tryParse(mrpController.text) ?? 0;
+                              if (mrp > 0 && d >= 0) {
+                                final p = mrp * (1 - d / 100);
+                                setDialogState(() {
+                                  retailerPriceController.text =
+                                      p.toStringAsFixed(2);
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            decoration: const InputDecoration(
+                              labelText: 'Mechanic %',
+                            ),
+                            keyboardType: TextInputType.number,
+                            onChanged: (val) {
+                              final d = double.tryParse(val) ?? 0;
+                              final mrp =
+                                  double.tryParse(mrpController.text) ?? 0;
+                              if (mrp > 0 && d >= 0) {
+                                final p = mrp * (1 - d / 100);
+                                setDialogState(() {
+                                  mechanicPriceController.text =
+                                      p.toStringAsFixed(2);
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
               TextField(
                 controller: rackController,
@@ -2489,30 +2666,37 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                 decoration: const InputDecoration(labelText: 'Wholesaler ID'),
                 keyboardType: TextInputType.number,
               ),
-              if (product != null && product.categoryName != null) ...[
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.blue.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.category, size: 16, color: Colors.blue),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Category: ${product.categoryName}',
-                          style:
-                              const TextStyle(fontSize: 12, color: Colors.blue),
-                        ),
+              Visibility(
+                visible: product != null && product.categoryName != null,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue.shade200),
                       ),
-                    ],
-                  ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.category,
+                              size: 16, color: Colors.blue),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Category: ${product?.categoryName ?? ""}',
+                              style: const TextStyle(
+                                  fontSize: 12, color: Colors.blue),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ],
           ),
           actions: [

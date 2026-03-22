@@ -145,12 +145,8 @@ class NotificationService {
             message.data['message'] ?? message.notification?.body;
         final String? imageUrl = message.data['imageUrl'];
 
-        if (route == 'orders' && orderId != null && orderId.isNotEmpty) {
-          _navKey!.currentState
-              ?.pushNamed('/orders', arguments: {'orderId': orderId});
-        }
         _navigateByRoleThenOffers(role, offerType, route,
-            title: title, message: msg, imageUrl: imageUrl);
+            title: title, message: msg, imageUrl: imageUrl, orderId: orderId);
       }
     });
 
@@ -167,13 +163,8 @@ class NotificationService {
           initialMessage.data['message'] ?? initialMessage.notification?.body;
       final String? imageUrl = initialMessage.data['imageUrl'];
 
-      if (route == 'orders' && orderId != null && orderId.isNotEmpty) {
-        _navKey!.currentState
-            ?.pushNamed('/orders', arguments: {'orderId': orderId});
-      }
-
       _navigateByRoleThenOffers(role, offerType, route,
-          title: title, message: msg, imageUrl: imageUrl);
+          title: title, message: msg, imageUrl: imageUrl, orderId: orderId);
     }
   }
 
@@ -188,20 +179,14 @@ class NotificationService {
 
   static Future<void> updateTokenOnServer(int userId, String token) async {
     try {
-      final response = await http.post(
-        Uri.parse("${Constants.baseUrl}/auth/update-fcm-token"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "userId": userId,
-          "token": token,
-        }),
+      await _remote.postJson(
+        '/auth/update-fcm-token',
+        {"userId": userId, "token": token},
       );
-      if (response.statusCode == 200) {
-        if (kDebugMode) debugPrint("FCM Token updated on server");
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('pending_fcm_user');
-        await prefs.remove('pending_fcm_token');
-      }
+      if (kDebugMode) debugPrint("FCM Token updated on server");
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('pending_fcm_user');
+      await prefs.remove('pending_fcm_token');
     } catch (e) {
       debugPrint("Failed to update FCM token on server: $e");
       // Persist for retry when network returns
@@ -273,10 +258,17 @@ class NotificationService {
 
   static void _navigateByRoleThenOffers(
       String? role, String? offerType, String? route,
-      {String? title, String? message, String? imageUrl}) {
+      {String? title, String? message, String? imageUrl, String? orderId}) {
     if (_navKey == null) return;
     final nav = _navKey!.currentState;
     if (nav == null) return;
+
+    // First handle order navigation
+    if (route == 'orders' && orderId != null && orderId.isNotEmpty) {
+      nav.pushNamed('/orders', arguments: {'orderId': orderId});
+      return;
+    }
+
     if (title != null || message != null) {
       final ctx = _navKey!.currentContext;
       if (ctx != null) {

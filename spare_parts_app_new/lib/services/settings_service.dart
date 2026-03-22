@@ -1,9 +1,14 @@
+import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'remote_client.dart';
 import '../utils/constants.dart';
 
 class SettingsService {
   static final _remote = RemoteClient();
+  static final StreamController<String> _settingsChangedController =
+      StreamController<String>.broadcast();
+  static Stream<String> get onSettingsChanged =>
+      _settingsChangedController.stream;
   static const _voiceTrainingKey = 'voice_training_enabled';
   static const _aiChatbotKey = 'ai_chatbot_enabled';
   static const _websocketKey = 'websocket_enabled';
@@ -139,6 +144,31 @@ class SettingsService {
         'settingKey': key,
         'settingValue': value,
       });
+      _remoteCache[key] = value;
+      _settingsChangedController.add(key);
     } catch (_) {}
+  }
+
+  static const _lastOtpErrorMsgKey = 'last_otp_error_msg';
+  static const _lastOtpErrorAtKey = 'last_otp_error_at';
+
+  static Future<void> setLastOtpFailure(String message) async {
+    final p = await _prefs();
+    await p.setString(_lastOtpErrorMsgKey, message);
+    await p.setInt(_lastOtpErrorAtKey, DateTime.now().millisecondsSinceEpoch);
+  }
+
+  static Future<Map<String, dynamic>?> getLastOtpFailure() async {
+    final p = await _prefs();
+    final msg = p.getString(_lastOtpErrorMsgKey);
+    final at = p.getInt(_lastOtpErrorAtKey);
+    if (msg == null || at == null) return null;
+    return {'message': msg, 'at': at};
+  }
+
+  static Future<void> clearLastOtpFailure() async {
+    final p = await _prefs();
+    await p.remove(_lastOtpErrorMsgKey);
+    await p.remove(_lastOtpErrorAtKey);
   }
 }

@@ -12,6 +12,8 @@ import 'forgot_password_screen.dart';
 import '../services/sso_mobile.dart'
     if (dart.library.html) '../services/sso_web.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../services/settings_service.dart';
+import 'offers_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final bool showAppBar;
@@ -36,24 +38,86 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     _loadSavedCredentials();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _maybeShowAdminBanner();
+    });
   }
 
   Future<void> _loadSavedCredentials() async {
     final prefs = await SharedPreferences.getInstance();
     final email = prefs.getString('last_email') ?? '';
-    final password = prefs.getString('last_password') ?? '';
-    if (mounted && (email.isNotEmpty || password.isNotEmpty)) {
+    // Cleanup any previously stored plaintext password
+    if (prefs.containsKey('last_password')) {
+      await prefs.remove('last_password');
+    }
+    if (mounted && email.isNotEmpty) {
       setState(() {
         _emailController.text = email;
-        _passwordController.text = password;
       });
     }
+  }
+
+  Future<void> _maybeShowAdminBanner() async {
+    await SettingsService.preloadRemoteSettings();
+    final enabled = SettingsService.getCachedRemoteSetting(
+            'LOGIN_BANNER_ENABLED', 'false') ==
+        'true';
+    final text =
+        SettingsService.getCachedRemoteSetting('LOGIN_BANNER_TEXT', '');
+    final rawImageUrl =
+        SettingsService.getCachedRemoteSetting('LOGIN_BANNER_IMAGE_URL', '');
+    final imageUrl = rawImageUrl.startsWith('https://') ? rawImageUrl : '';
+    final showButton = SettingsService.getCachedRemoteSetting(
+            'LOGIN_BANNER_SHOW_BUTTON', 'false') ==
+        'true';
+    final buttonText = SettingsService.getCachedRemoteSetting(
+        'LOGIN_BANNER_BUTTON_TEXT', 'Check Offers');
+
+    if (!enabled || text.isEmpty) return;
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).clearMaterialBanners();
+    ScaffoldMessenger.of(context).showMaterialBanner(
+      MaterialBanner(
+        content: Text(text),
+        leading: imageUrl.isNotEmpty
+            ? CircleAvatar(
+                backgroundImage: NetworkImage(imageUrl),
+                radius: 20,
+              )
+            : const Icon(Icons.campaign_outlined),
+        actions: [
+          if (showButton)
+            TextButton(
+              onPressed: () {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const OffersScreen()),
+                );
+              },
+              child: Text(buttonText),
+            ),
+          TextButton(
+            onPressed: () {
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
+            },
+            child: const Text('Dismiss'),
+          ),
+        ],
+        backgroundColor: Colors.lightBlue.shade50,
+      ),
+    );
   }
 
   Future<void> _saveCredentials() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('last_email', _emailController.text);
-    await prefs.setString('last_password', _passwordController.text);
+    // Do not store plaintext passwords
+    if (prefs.containsKey('last_password')) {
+      await prefs.remove('last_password');
+    }
   }
 
   void _showFeedback(String message, {bool isError = false}) {
@@ -230,9 +294,47 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _otpSent = true);
       final via = source == 'server' ? 'SMS/Server' : 'Email';
       _showFeedback('OTP sent via $via.');
+      if (source != 'server' && Constants.useRemote) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ScaffoldMessenger.of(context).clearMaterialBanners();
+          ScaffoldMessenger.of(context).showMaterialBanner(
+            MaterialBanner(
+              content: const Text(
+                  'If email OTP does not arrive, try logging in with your phone number (Firebase) or ask admin to enable local OTP temporarily.'),
+              leading: const Icon(Icons.info_outline),
+              actions: [
+                TextButton(
+                  onPressed: () =>
+                      ScaffoldMessenger.of(context).hideCurrentMaterialBanner(),
+                  child: const Text('Dismiss'),
+                ),
+              ],
+              backgroundColor: Colors.orange.shade50,
+            ),
+          );
+        });
+      }
       _promptEnterOtp(identifier);
     } catch (e) {
       _showFeedback('Failed to send OTP: $e', isError: true);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).clearMaterialBanners();
+        ScaffoldMessenger.of(context).showMaterialBanner(
+          MaterialBanner(
+            content: const Text(
+                'Email delivery seems down. Use phone OTP (enter mobile) or ask admin to enable local OTP.'),
+            leading: const Icon(Icons.report_gmailerrorred_outlined),
+            actions: [
+              TextButton(
+                onPressed: () =>
+                    ScaffoldMessenger.of(context).hideCurrentMaterialBanner(),
+                child: const Text('Dismiss'),
+              ),
+            ],
+            backgroundColor: Colors.orange.shade50,
+          ),
+        );
+      });
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

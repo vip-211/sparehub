@@ -21,6 +21,19 @@ class ThemeProvider extends ChangeNotifier {
     _mode = _strToMode(m);
     final seed = await SettingsService.getThemeSeedColor();
     if (seed != null) _seed = Color(seed);
+    try {
+      final useGlobal = SettingsService.getCachedRemoteSetting(
+              'USE_GLOBAL_THEME_COLOR', 'false') ==
+          'true';
+      if (useGlobal) {
+        final remoteSeedStr =
+            SettingsService.getCachedRemoteSetting('THEME_SEED_COLOR', '');
+        if (remoteSeedStr.isNotEmpty) {
+          final val = int.parse(remoteSeedStr);
+          _seed = Color(val);
+        }
+      }
+    } catch (_) {}
     _textScale = await SettingsService.getTextScale();
     _animationSpeed = await SettingsService.getAnimationSpeed();
     timeDilation = _animationSpeed;
@@ -50,6 +63,28 @@ class ThemeProvider extends ChangeNotifier {
     timeDilation = v;
     notifyListeners();
     await SettingsService.setAnimationSpeed(v);
+  }
+
+  Future<bool> refreshSeedFromServer() async {
+    try {
+      await SettingsService.preloadRemoteSettings();
+      final useGlobal = SettingsService.getCachedRemoteSetting(
+              'USE_GLOBAL_THEME_COLOR', 'false') ==
+          'true';
+      if (useGlobal) {
+        final remoteSeedStr =
+            SettingsService.getCachedRemoteSetting('THEME_SEED_COLOR', '');
+        if (remoteSeedStr.isEmpty) {
+          return false;
+        }
+        final val = int.parse(remoteSeedStr);
+        _seed = Color(val);
+        notifyListeners();
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   ThemeMode _strToMode(String s) {

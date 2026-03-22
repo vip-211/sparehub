@@ -17,9 +17,9 @@ class NotificationBadge extends StatelessWidget {
           children: [
             IconButton(
               icon: Icon(Icons.notifications, color: color),
-              onPressed: () {
-                notificationProvider.markAllAsRead();
-                Navigator.push(
+              onPressed: () async {
+                await notificationProvider.markAllAsRead();
+                await Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const NotificationScreen()),
                 );

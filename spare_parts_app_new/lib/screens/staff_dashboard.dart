@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -6,12 +7,12 @@ import '../providers/auth_provider.dart';
 import '../services/order_service.dart';
 import '../services/database_service.dart';
 import '../services/auth_service.dart';
+import '../services/websocket_service.dart';
 import '../models/order.dart';
 import '../utils/image_utils.dart';
 import '../utils/constants.dart';
 import 'profile_screen.dart';
 import '../widgets/notification_badge.dart';
-import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 
 class StaffDashboard extends StatefulWidget {
@@ -37,8 +38,8 @@ class _StaffDashboardState extends State<StaffDashboard> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final auth = Provider.of<AuthProvider>(context);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     final args = ModalRoute.of(context)?.settings.arguments;
     if (!_bannerShown && args is Map && (args['offerType'] != null)) {
       _incomingOfferType = args['offerType'] as String?;
@@ -104,7 +105,11 @@ class _StaffDashboardState extends State<StaffDashboard> {
         );
       });
     }
+  }
 
+  @override
+  Widget build(BuildContext context) {
+    final auth = Provider.of<AuthProvider>(context);
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
@@ -190,13 +195,35 @@ class StaffOrdersScreen extends StatefulWidget {
 
 class _StaffOrdersScreenState extends State<StaffOrdersScreen> {
   final OrderService _orderService = OrderService();
+  StreamSubscription? _orderWsSub;
   List<Order> _orders = [];
   bool _isLoading = true;
+  int? _highlightedOrderId;
 
   @override
   void initState() {
     super.initState();
     _fetchOrders();
+    _orderWsSub = WebSocketService.orderUpdates.stream.listen((data) {
+      if (!mounted) return;
+      _fetchOrders();
+    });
+
+    // Check for highlighted order ID in arguments
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args = ModalRoute.of(context)!.settings.arguments;
+      if (args is Map && args.containsKey('orderId')) {
+        setState(() {
+          _highlightedOrderId = int.tryParse(args['orderId'].toString());
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _orderWsSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _fetchOrders() async {
@@ -233,18 +260,20 @@ class _StaffOrdersScreenState extends State<StaffOrdersScreen> {
 
   void _viewShopImage(int customerId) async {
     String? path;
-    if (Constants.useRemote) {
-      final users = await AuthService().getAllUsers();
-      final user = users.firstWhere((u) => u.id == customerId,
-          orElse: () => throw 'User not found');
-      path = user.shopImagePath;
-    } else {
-      final db = await DatabaseService().database;
-      final List<Map<String, dynamic>> maps =
-          await db.query('users', where: 'id = ?', whereArgs: [customerId]);
-      if (maps.isNotEmpty) {
-        path = maps.first['shopImagePath'] as String?;
+    try {
+      if (Constants.useRemote) {
+        final user = await AuthService().getUserById(customerId);
+        path = user?.shopImagePath;
+      } else {
+        final db = await DatabaseService().database;
+        final List<Map<String, dynamic>> maps =
+            await db.query('users', where: 'id = ?', whereArgs: [customerId]);
+        if (maps.isNotEmpty) {
+          path = maps.first['shopImagePath'] as String?;
+        }
       }
+    } catch (e) {
+      debugPrint('Error viewing shop image: $e');
     }
 
     if (path != null && mounted) {
@@ -303,14 +332,20 @@ class _StaffOrdersScreenState extends State<StaffOrdersScreen> {
         itemCount: activeOrders.length,
         itemBuilder: (ctx, i) {
           final order = activeOrders[i];
+          final isHighlighted = _highlightedOrderId == order.id;
           return Card(
+            key: ValueKey('staff_order_${order.id}_$isHighlighted'),
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            elevation: 2,
+            elevation: isHighlighted ? 4 : 2,
+            color: isHighlighted ? Colors.blue.shade50 : null,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: ExpansionTile(
+              initiallyExpanded: isHighlighted,
               title: Text('Order #${order.id}',
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: isHighlighted ? Colors.blue.shade800 : null)),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -320,7 +355,8 @@ class _StaffOrdersScreenState extends State<StaffOrdersScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: _getStatusColor(order.status).withOpacity(0.1),
+                      color:
+                          _getStatusColor(order.status).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(

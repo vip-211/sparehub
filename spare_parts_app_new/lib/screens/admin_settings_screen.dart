@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/settings_service.dart';
 import '../widgets/section_header.dart';
+import '../utils/constants.dart';
 
 class AdminSettingsScreen extends StatefulWidget {
   const AdminSettingsScreen({super.key});
@@ -40,6 +41,20 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       TextEditingController();
   final TextEditingController _minRedeemPointsController =
       TextEditingController();
+  final TextEditingController _loginBannerTextController =
+      TextEditingController();
+  final TextEditingController _loginBannerImageUrlController =
+      TextEditingController();
+  final TextEditingController _loginBannerButtonTextController =
+      TextEditingController();
+  final Map<String, bool> _allowedRoles = {
+    Constants.roleMechanic: true,
+    Constants.roleRetailer: true,
+    Constants.roleWholesaler: true,
+    Constants.roleStaff: false,
+    Constants.roleAdmin: false,
+    Constants.roleSuperManager: false,
+  };
 
   bool _loaded = false;
   late ThemeProvider _themeProvider;
@@ -50,6 +65,12 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     Color(0xFF7E57C2), // Purple
     Color(0xFFD32F2F), // Red
   ];
+  bool _useGlobalThemeColor = false;
+  bool _hideRegistration = false;
+  String? _lastOtpError;
+  int? _lastOtpErrorAt;
+  bool _loginBannerEnabled = false;
+  bool _loginBannerShowButton = false;
 
   @override
   void initState() {
@@ -70,6 +91,9 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     _locationBodyPathController.dispose();
     _loyaltyPercentController.dispose();
     _minRedeemPointsController.dispose();
+    _loginBannerTextController.dispose();
+    _loginBannerImageUrlController.dispose();
+    _loginBannerButtonTextController.dispose();
     super.dispose();
   }
 
@@ -80,6 +104,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     final w = await SettingsService.isWebSocketEnabled();
     final o = await SettingsService.isForceLocalOtp();
     final remote = await SettingsService.getRemoteSettings();
+    final last = await SettingsService.getLastOtpFailure();
     if (mounted) {
       setState(() {
         _voice = v;
@@ -112,7 +137,28 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
         _loyaltyPercentController.text = remote['LOYALTY_PERCENT'] ?? '1';
         _minRedeemPointsController.text = remote['MIN_REDEEM_POINTS'] ?? '0';
 
+        final allowedStr = remote['ALLOWED_REG_ROLES'] ??
+            '${Constants.roleMechanic},${Constants.roleRetailer},${Constants.roleWholesaler}';
+        final parts = allowedStr.split(',').map((e) => e.trim()).toSet();
+        _allowedRoles.updateAll((key, value) => parts.contains(key));
+
+        _useGlobalThemeColor =
+            (remote['USE_GLOBAL_THEME_COLOR'] ?? 'false') == 'true';
+        _hideRegistration = (remote['HIDE_REGISTRATION'] ?? 'false') == 'true';
         _loaded = true;
+        if (last != null) {
+          _lastOtpError = last['message'] as String?;
+          _lastOtpErrorAt = last['at'] as int?;
+        }
+        _loginBannerEnabled =
+            (remote['LOGIN_BANNER_ENABLED'] ?? 'false') == 'true';
+        _loginBannerTextController.text = remote['LOGIN_BANNER_TEXT'] ?? '';
+        _loginBannerImageUrlController.text =
+            remote['LOGIN_BANNER_IMAGE_URL'] ?? '';
+        _loginBannerShowButton =
+            (remote['LOGIN_BANNER_SHOW_BUTTON'] ?? 'false') == 'true';
+        _loginBannerButtonTextController.text =
+            remote['LOGIN_BANNER_BUTTON_TEXT'] ?? 'Check Offers';
       });
     }
   }
@@ -129,22 +175,32 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       'NOTIF_WHATSAPP_ENABLED': _notifWhatsApp ? 'true' : 'false',
       'WS_ENABLED': _wsGlobal ? 'true' : 'false',
       'FORCE_LOCAL_OTP': _localOtpGlobal ? 'true' : 'false',
+      'USE_GLOBAL_THEME_COLOR': _useGlobalThemeColor ? 'true' : 'false',
+      'HIDE_REGISTRATION': _hideRegistration ? 'true' : 'false',
+      'THEME_SEED_COLOR': _themeProvider.seedColor.value.toString(),
       'LOGO_URL': _logoUrlController.text,
       'SERVER_HOST': _serverHostController.text,
       'GOOGLE_CLIENT_ID': _googleClientIdController.text,
-      'RESET_PASSWORD_PATH': _resetPasswordPathController.text,
-      'ALT_RESET_PASSWORD_PATH': _altResetPasswordPathController.text,
-      'CHANGE_PASSWORD_PATH': _changePasswordPathController.text,
-      'OTP_LOGIN_PATH': _otpLoginPathController.text,
-      'LOCATION_ID_PATH': _locationIdPathController.text,
-      'LOCATION_BODY_PATH': _locationBodyPathController.text,
       'LOYALTY_PERCENT': _loyaltyPercentController.text,
       'MIN_REDEEM_POINTS': _minRedeemPointsController.text,
+      'ALLOWED_REG_ROLES': _allowedRoles.entries
+          .where((e) => e.value)
+          .map((e) => e.key)
+          .join(','),
+      'LOGIN_BANNER_ENABLED': _loginBannerEnabled ? 'true' : 'false',
+      'LOGIN_BANNER_TEXT': _loginBannerTextController.text,
+      'LOGIN_BANNER_IMAGE_URL': _loginBannerImageUrlController.text,
+      'LOGIN_BANNER_SHOW_BUTTON': _loginBannerShowButton ? 'true' : 'false',
+      'LOGIN_BANNER_BUTTON_TEXT': _loginBannerButtonTextController.text,
     };
 
     for (var entry in remoteMap.entries) {
       await SettingsService.saveRemoteSetting(entry.key, entry.value);
     }
+    await SettingsService.preloadRemoteSettings();
+    // Broadcast a general refresh hint
+    // (AuthHome also refreshes on AppLifecycle and specific key events)
+    // This emits multiple keys already; preload ensures cache consistency.
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -169,6 +225,32 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                if (_lastOtpError != null)
+                  Card(
+                    color: Colors.orange.shade50,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: Colors.orange.shade200)),
+                    child: ListTile(
+                      leading: const Icon(Icons.warning_amber_rounded,
+                          color: Colors.orange),
+                      title: const Text('Recent OTP delivery error'),
+                      subtitle: Text(_lastOtpError!),
+                      trailing: TextButton(
+                        onPressed: () async {
+                          await SettingsService.clearLastOtpFailure();
+                          if (mounted) {
+                            setState(() {
+                              _lastOtpError = null;
+                              _lastOtpErrorAt = null;
+                            });
+                          }
+                        },
+                        child: const Text('Clear'),
+                      ),
+                    ),
+                  ),
                 const SectionHeader(
                     title: 'Appearance',
                     subtitle: 'Customize app look and feel'),
@@ -228,6 +310,30 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   }).toList(),
                 ),
                 const SizedBox(height: 12),
+                SwitchListTile(
+                  title: const Text('Use global theme color (all users)'),
+                  value: _useGlobalThemeColor,
+                  onChanged: (v) => setState(() => _useGlobalThemeColor = v),
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      final messenger = ScaffoldMessenger.of(context);
+                      _themeProvider.refreshSeedFromServer().then((ok) {
+                        messenger.showSnackBar(SnackBar(
+                          content: Text(ok
+                              ? 'Theme updated from server'
+                              : 'Please connect to internet'),
+                        ));
+                      });
+                    },
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Apply Global Theme Now'),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 Text('Text Size',
                     style: Theme.of(context).textTheme.labelLarge),
                 Slider(
@@ -268,6 +374,12 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   onChanged: (v) => setState(() => _voice = v),
                 ),
                 SwitchListTile(
+                  title: const Text('Hide Registration Page'),
+                  subtitle: const Text('Remove the Register tab for all users'),
+                  value: _hideRegistration,
+                  onChanged: (v) => setState(() => _hideRegistration = v),
+                ),
+                SwitchListTile(
                   title: const Text('Enable AI Chatbot'),
                   value: _ai,
                   onChanged: (v) => setState(() => _ai = v),
@@ -306,6 +418,28 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                     'Google OAuth Client ID'),
                 const Divider(),
                 const SectionHeader(
+                    title: 'Login Banner',
+                    subtitle: 'Show a message on the login screen'),
+                SwitchListTile(
+                  title: const Text('Enable Login Banner'),
+                  value: _loginBannerEnabled,
+                  onChanged: (v) => setState(() => _loginBannerEnabled = v),
+                ),
+                _buildTextField('Banner Text', _loginBannerTextController,
+                    'e.g., Today\'s offer: 10% off on brake pads'),
+                _buildTextField('Banner Image URL (Optional)',
+                    _loginBannerImageUrlController, 'Direct link to an image'),
+                SwitchListTile(
+                  title: const Text('Show Action Button'),
+                  subtitle: const Text('Adds a button to navigate to Offers'),
+                  value: _loginBannerShowButton,
+                  onChanged: (v) => setState(() => _loginBannerShowButton = v),
+                ),
+                if (_loginBannerShowButton)
+                  _buildTextField('Button Text',
+                      _loginBannerButtonTextController, 'e.g., View Deals'),
+                const Divider(),
+                const SectionHeader(
                     title: 'Loyalty & Points',
                     subtitle: 'Manage reward system'),
                 _buildTextField('Loyalty Percent', _loyaltyPercentController,
@@ -316,28 +450,17 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                     keyboardType: TextInputType.number),
                 const Divider(),
                 const SectionHeader(
-                    title: 'API Path Configuration',
-                    subtitle: 'Advanced path overrides'),
-                _buildTextField(
-                    'Reset Password Path',
-                    _resetPasswordPathController,
-                    'Default: /auth/reset-password'),
-                _buildTextField(
-                    'Alt Reset Password Path',
-                    _altResetPasswordPathController,
-                    'Default: /auth/password/reset'),
-                _buildTextField(
-                    'Change Password Path',
-                    _changePasswordPathController,
-                    'Default: /auth/change-password'),
-                _buildTextField('OTP Login Path', _otpLoginPathController,
-                    'Default: /auth/otp-login'),
-                _buildTextField('Location ID Path', _locationIdPathController,
-                    'Default: /admin/users/{id}/location'),
-                _buildTextField(
-                    'Location Body Path',
-                    _locationBodyPathController,
-                    'Default: /admin/users/update-location'),
+                    title: 'User Registration Controls',
+                    subtitle:
+                        'Restrict which roles are available during sign-up'),
+                ..._allowedRoles.keys.map((role) {
+                  return SwitchListTile(
+                    title: Text(role.replaceFirst('ROLE_', '')),
+                    subtitle: const Text('Visible in registration'),
+                    value: _allowedRoles[role] ?? false,
+                    onChanged: (v) => setState(() => _allowedRoles[role] = v),
+                  );
+                }).toList(),
                 const Divider(),
                 const SectionHeader(
                     title: 'Global Notification Settings',

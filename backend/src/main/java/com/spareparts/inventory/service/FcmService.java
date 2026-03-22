@@ -49,6 +49,10 @@ public class FcmService {
         }
         userRepository.findById(userId).ifPresent(user -> {
             if (user.getFcmToken() != null && !user.getFcmToken().isEmpty()) {
+                String roleName = "ROLE_MECHANIC";
+                if (user.getRole() != null && user.getRole().getName() != null) {
+                    roleName = user.getRole().getName().name();
+                }
                 Message fcmMessage = Message.builder()
                         .setToken(user.getFcmToken())
                         .setNotification(com.google.firebase.messaging.Notification.builder()
@@ -63,7 +67,7 @@ public class FcmService {
                                 .build())
                         .putData("route", "offers")
                         .putData("offerType", offerType != null ? offerType : "")
-                        .putData("role", user.getRole().getName().name())
+                        .putData("role", roleName)
                         .putData("title", title != null ? title : "")
                         .putData("message", message != null ? message : "")
                         .putData("imageUrl", imageUrl != null ? imageUrl : "")
@@ -183,6 +187,10 @@ public class FcmService {
         }
         userRepository.findById(userId).ifPresent(user -> {
             if (user.getFcmToken() != null && !user.getFcmToken().isEmpty()) {
+                String roleName = "ROLE_MECHANIC";
+                if (user.getRole() != null && user.getRole().getName() != null) {
+                    roleName = user.getRole().getName().name();
+                }
                 Message msg = Message.builder()
                         .setToken(user.getFcmToken())
                         .setNotification(com.google.firebase.messaging.Notification.builder()
@@ -197,7 +205,7 @@ public class FcmService {
                                 .build())
                         .putData("route", "orders")
                         .putData("orderId", orderId != null ? String.valueOf(orderId) : "")
-                        .putData("role", user.getRole().getName().name())
+                        .putData("role", roleName)
                         .putData("title", title != null ? title : "")
                         .putData("message", message != null ? message : "")
                         .build();
@@ -218,13 +226,52 @@ public class FcmService {
         
         // Also push via standard WebSocket /topic/orders if needed (though already handled in OrderService usually)
     }
+    
+    public void sendOrderStatusToStaff(Long orderId, String title, String message) {
+        // Broadcast to all staff via topic and role channel, include route so notifications are clickable
+        // Save log as role-targeted message
+        saveNotification(null, title, message, false, "ROLE_STAFF");
+        
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("title", title);
+        payload.put("message", message);
+        payload.put("orderId", orderId);
+        messagingTemplate.convertAndSend("/topic/notifications/ROLE_STAFF", payload);
+        
+        if (FirebaseApp.getApps().isEmpty()) {
+            return;
+        }
+        Message msg = Message.builder()
+                .setTopic("role-ROLE_STAFF")
+                .setNotification(com.google.firebase.messaging.Notification.builder()
+                        .setTitle(title)
+                        .setBody(message)
+                        .build())
+                .setAndroidConfig(AndroidConfig.builder()
+                        .setPriority(AndroidConfig.Priority.HIGH)
+                        .setNotification(AndroidNotification.builder()
+                                .setChannelId("spare_parts_channel")
+                                .build())
+                        .build())
+                .putData("route", "orders")
+                .putData("orderId", orderId != null ? String.valueOf(orderId) : "")
+                .putData("role", "ROLE_STAFF")
+                .putData("title", title != null ? title : "")
+                .putData("message", message != null ? message : "")
+                .build();
+        try {
+            FirebaseMessaging.getInstance().send(msg);
+        } catch (FirebaseMessagingException e) {
+            System.err.println("FcmService: Error sending staff order status FCM: " + e.getMessage());
+        }
+    }
 
     private Notification saveNotification(Long userId, String title, String message, boolean isBroadcast, String targetRole) {
         Notification notification = new Notification();
         notification.setTitle(title);
         notification.setMessage(message);
         notification.setUserId(userId);
-        notification.setBroadcast(isBroadcast);
+        notification.setIsBroadcast(isBroadcast);
         notification.setTargetRole(targetRole);
         return notificationRepository.save(notification);
     }

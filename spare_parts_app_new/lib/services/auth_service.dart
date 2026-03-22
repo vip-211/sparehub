@@ -11,6 +11,7 @@ import '../services/email_service.dart';
 import '../services/sso_mobile.dart';
 import '../services/remote_client.dart';
 import '../utils/constants.dart';
+import './settings_service.dart';
 
 class AuthService {
   final DatabaseService _dbService = DatabaseService();
@@ -121,15 +122,28 @@ class AuthService {
   }
 
   User _parseUserJson(Map<String, dynamic> json) {
-    final token = json['token'] ?? json['accessToken'];
+    final token = json['token'] ?? json['accessToken'] ?? 'remote';
     final id = (json['id'] as num).toInt();
-    final emailVal = json['email'] as String;
+    final emailVal = json['email'] as String? ?? '';
     final name = json['username'] ?? json['name'] ?? emailVal;
 
-    final roles = (json['roles'] as List).map((e) {
-      if (e is Map && e['name'] != null) return e['name'].toString();
-      return e.toString();
-    }).toList();
+    // Backend roles might be objects like {id: 1, name: "ROLE_MECHANIC"} or just strings
+    List<String> roles = [];
+    if (json['roles'] is List) {
+      roles = (json['roles'] as List).map((e) {
+        if (e is Map && e['name'] != null) return e['name'].toString();
+        return e.toString();
+      }).toList();
+    } else if (json['role'] != null) {
+      final role = json['role'];
+      if (role is Map && role['name'] != null) {
+        roles = [role['name'].toString()];
+      } else {
+        roles = [role.toString()];
+      }
+    }
+
+    if (roles.isEmpty) roles = [Constants.roleRetailer];
 
     return User(
       id: id,
@@ -141,13 +155,15 @@ class AuthService {
       address: json['address'],
       shopImagePath: json['shopImagePath'],
       status: (json['status'] ?? 'ACTIVE').toString(),
-      phoneVerified: true,
+      phoneVerified:
+          json['phoneVerified'] == true || json['phone_verified'] == 1,
       latitude: json['latitude'] != null
           ? (json['latitude'] as num).toDouble()
           : null,
       longitude: json['longitude'] != null
           ? (json['longitude'] as num).toDouble()
           : null,
+      points: (json['points'] as num? ?? 0).toInt(),
     );
   }
 
@@ -165,42 +181,7 @@ class AuthService {
           'password': password,
         });
 
-        final token = json['token'] ?? json['accessToken'];
-        final id = (json['id'] as num).toInt();
-        final emailVal = json['email'] as String;
-        final name = json['username'] ?? json['name'] ?? emailVal;
-
-        // Backend roles might be objects like {id: 1, name: "ROLE_MECHANIC"} or just strings
-        final roles = (json['roles'] as List).map((e) {
-          if (e is Map && e['name'] != null) return e['name'].toString();
-          return e.toString();
-        }).toList();
-
-        final status = (json['status'] ?? 'ACTIVE').toString();
-        /*
-        if (status != 'ACTIVE') {
-          throw Exception('Your account is not active yet.');
-        }
-        */
-        final user = User(
-          id: id,
-          email: emailVal,
-          name: name,
-          phone: json['phone'],
-          token: token.toString(),
-          roles: roles,
-          address: json['address'],
-          shopImagePath: json['shopImagePath'],
-          status: status,
-          phoneVerified:
-              json['phoneVerified'] == true || json['phone_verified'] == 1,
-          latitude: json['latitude'] != null
-              ? (json['latitude'] as num).toDouble()
-              : null,
-          longitude: json['longitude'] != null
-              ? (json['longitude'] as num).toDouble()
-              : null,
-        );
+        final user = _parseUserJson(json);
         final prefs = await _prefs();
         await prefs.setString('user', jsonEncode(user.toJson()));
         return user;
@@ -258,12 +239,16 @@ class AuthService {
   Future<User?> loginWithOtp(String identifier, String otp) async {
     final normalizedIdentifier =
         identifier.contains('@') ? identifier.toLowerCase() : identifier;
+    final isEmail = normalizedIdentifier.contains('@');
     try {
       if (Constants.useRemote) {
-        final json = await _remote.postJson(Constants.otpLoginPath, {
-          'email': normalizedIdentifier,
-          'otp': otp,
-        });
+        final json = await _remote.postJson(
+          Constants.otpLoginPath,
+          {
+            (isEmail ? 'email' : 'phone'): normalizedIdentifier,
+            'otp': otp,
+          },
+        );
 
         final token = json['token'] ?? json['accessToken'];
         final id = (json['id'] as num).toInt();
@@ -753,7 +738,7 @@ class AuthService {
               'AuthService: Requesting remote OTP for $normalizedIdentifier...');
         }
         final body = {
-          'email': normalizedIdentifier,
+          (isEmail ? 'email' : 'phone'): normalizedIdentifier,
           'purpose': (registrationData.isNotEmpty ? 'signup' : 'login'),
         };
         await _remote.postJson('/auth/send-otp', body);
@@ -764,14 +749,10 @@ class AuthService {
         if (kDebugMode) {
           debugPrint('AuthService: Remote OTP failed: $e');
         }
-        if (registrationData.isNotEmpty) {
-          // Signup: allow local fallback
-          if (kDebugMode) {
-            debugPrint('Remote OTP failed, falling back (signup): $e');
-          }
-        } else {
-          // Login/reset: do not fallback; propagate error
-          rethrow;
+        await SettingsService.setLastOtpFailure(e.toString());
+        // Fallback to local for all purposes if remote fails
+        if (kDebugMode) {
+          debugPrint('Remote OTP failed, falling back to local: $e');
         }
       }
     }
@@ -807,13 +788,18 @@ class AuthService {
         final body = {'email': normalizedEmail, 'purpose': 'reset'};
         await _remote.postJson('/auth/send-otp', body);
         _otp = null;
-      } else {
-        _otp = (100000 + Random().nextInt(900000)).toString();
-        await _emailService.sendOtp(normalizedEmail, _otp!);
+        return;
       }
     } catch (e) {
-      rethrow;
+      if (kDebugMode) {
+        debugPrint('AuthService: Remote reset OTP failed: $e');
+      }
+      await SettingsService.setLastOtpFailure(e.toString());
+      // Fall through to local fallback
     }
+    // Local fallback
+    _otp = (100000 + Random().nextInt(900000)).toString();
+    await _emailService.sendOtp(normalizedEmail, _otp!);
   }
 
   // =============================
@@ -1016,33 +1002,9 @@ class AuthService {
   Future<List<User>> getAllUsers() async {
     if (Constants.useRemote) {
       final list = await _remote.getList('/admin/users');
-      return list.map((e) {
-        final m = e as Map<String, dynamic>;
-        final role = m['role'];
-        String roleStr = Constants.roleRetailer;
-        if (role is Map && role['name'] != null) {
-          roleStr = role['name'].toString();
-        } else if (role is String) {
-          roleStr = role;
-        }
-        return User(
-          id: (m['id'] as num).toInt(),
-          email: m['email'] ?? '',
-          name: m['name'],
-          phone: m['phone'],
-          token: 'remote',
-          roles: [roleStr],
-          address: m['address'],
-          shopImagePath: null,
-          status: m['status'],
-          latitude:
-              m['latitude'] != null ? (m['latitude'] as num).toDouble() : null,
-          longitude: m['longitude'] != null
-              ? (m['longitude'] as num).toDouble()
-              : null,
-          points: (m['points'] as num? ?? 0).toInt(),
-        );
-      }).toList();
+      return list
+          .map((e) => _parseUserJson(e as Map<String, dynamic>))
+          .toList();
     }
     final db = await _dbService.database;
     final List<Map<String, dynamic>> maps =
@@ -1062,6 +1024,37 @@ class AuthService {
         longitude: maps[i]["longitude"] as double?,
       );
     });
+  }
+
+  Future<User?> getUserById(int userId) async {
+    if (Constants.useRemote) {
+      try {
+        final json = await _remote.getJson('/admin/users/$userId');
+        return _parseUserJson(json as Map<String, dynamic>);
+      } catch (e) {
+        debugPrint('Error fetching user $userId: $e');
+        return null;
+      }
+    }
+    final db = await _dbService.database;
+    final List<Map<String, dynamic>> maps = await db
+        .query("users", where: "id = ? AND deleted = 0", whereArgs: [userId]);
+    if (maps.isNotEmpty) {
+      return User(
+        id: maps[0]["id"] as int,
+        email: maps[0]["email"] as String,
+        name: maps[0]["name"] as String?,
+        phone: maps[0]["phone"] as String?,
+        token: "local-token",
+        roles: [maps[0]["role"] as String],
+        address: maps[0]["address"] as String?,
+        shopImagePath: maps[0]["shopImagePath"] as String?,
+        status: maps[0]["status"] as String?,
+        latitude: maps[0]["latitude"] as double?,
+        longitude: maps[0]["longitude"] as double?,
+      );
+    }
+    return null;
   }
 
   Future<bool> deleteUser(int userId) async {

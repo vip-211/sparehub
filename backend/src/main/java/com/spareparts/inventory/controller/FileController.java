@@ -18,7 +18,7 @@ import java.nio.file.Paths;
 import java.util.Map;
 import java.util.UUID;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
+@CrossOrigin(origins = "${app.cors.allowed-origins}", maxAge = 3600)
 @RestController
 @RequestMapping("/api/files")
 public class FileController {

@@ -41,7 +41,8 @@ const AdminDashboard = () => {
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showEditProduct, setShowEditProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
-  const [showEditOrder, setShowEditOrder] = useState(false);
+  const [editingDiscountPercent, setEditingDiscountPercent] = useState('0');
+   const [showEditOrder, setShowEditOrder] = useState(false);
   const [editingOrder, setEditingOrder] = useState<any>(null);
   const [newProduct, setNewProduct] = useState({
     name: '',
@@ -55,7 +56,8 @@ const AdminDashboard = () => {
     wholesalerId: '',
     imagePath: '',
     description: '',
-    categoryId: ''
+    categoryId: '',
+    discountPercent: '0'
   });
   const [uploading, setUploading] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
@@ -1222,7 +1224,19 @@ const AdminDashboard = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-center">
                     <div className="flex items-center justify-center gap-2">
                       <button
-                        onClick={() => { setEditingProduct(product); setShowEditProduct(true); }}
+                        onClick={() => { 
+                          setEditingProduct(product); 
+                          // Calculate initial discount percent based on MRP and Selling Price
+                          const mrp = parseFloat(product.mrp) || 0;
+                          const selling = parseFloat(product.sellingPrice) || 0;
+                          if (mrp > 0) {
+                            const disc = ((mrp - selling) / mrp * 100).toFixed(0);
+                            setEditingDiscountPercent(disc);
+                          } else {
+                            setEditingDiscountPercent('0');
+                          }
+                          setShowEditProduct(true); 
+                        }}
                         className="px-3 py-1.5 bg-primary-50 text-primary-700 rounded-lg text-xs font-black hover:bg-primary-100 transition-all border border-primary-100 active:scale-95"
                       >
                         Edit
@@ -1760,27 +1774,37 @@ const AdminDashboard = () => {
                 </div>
 
                 <div className="space-y-4">
-                  <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest px-2">API Path Overrides</h3>
+                  <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest px-2">User Registration Controls</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {[
-                      { key: 'RESET_PASSWORD_PATH', label: 'Reset Password Path', default: '/auth/reset-password' },
-                      { key: 'ALT_RESET_PASSWORD_PATH', label: 'Alt Reset Password Path', default: '/auth/password/reset' },
-                      { key: 'CHANGE_PASSWORD_PATH', label: 'Change Password Path', default: '/auth/change-password' },
-                      { key: 'OTP_LOGIN_PATH', label: 'OTP Login Path', default: '/auth/otp-login' },
-                      { key: 'LOCATION_ID_PATH', label: 'Location ID Path', default: '/admin/users/{id}/location' },
-                      { key: 'LOCATION_BODY_PATH', label: 'Location Body Path', default: '/admin/users/update-location' },
-                    ].map((path) => (
-                      <div key={path.key} className="space-y-1">
-                        <label className="text-xs font-bold text-gray-500 ml-2">{path.label}</label>
-                        <input
-                          type="text"
-                          placeholder={path.default}
-                          value={getSetting(path.key, path.default)}
-                          onChange={(e) => updateSetting(path.key, e.target.value)}
-                          className="w-full border border-gray-200 rounded-xl p-3 text-sm font-medium text-gray-700 outline-none focus:ring-2 focus:ring-primary-500"
-                        />
-                      </div>
-                    ))}
+                      { key: 'ROLE_WHOLESALER', label: 'Wholesaler' },
+                      { key: 'ROLE_RETAILER', label: 'Retailer' },
+                      { key: 'ROLE_MECHANIC', label: 'Mechanic' },
+                      { key: 'ROLE_STAFF', label: 'Staff' },
+                      { key: 'ROLE_ADMIN', label: 'Admin' },
+                      { key: 'ROLE_SUPER_MANAGER', label: 'Super Manager' },
+                    ].map((r) => {
+                      const allowed = getSetting('ALLOWED_REG_ROLES', 'ROLE_MECHANIC,ROLE_RETAILER,ROLE_WHOLESALER')
+                        .split(',')
+                        .map(s => s.trim());
+                      const isChecked = allowed.includes(r.key);
+                      const toggle = (checked: boolean) => {
+                        const set = new Set(allowed);
+                        if (checked) set.add(r.key);
+                        else set.delete(r.key);
+                        updateSetting('ALLOWED_REG_ROLES', Array.from(set).join(','));
+                      };
+                      return (
+                        <label key={r.key} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
+                          <span className="font-bold text-gray-700">{r.label}</span>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => toggle(e.target.checked)}
+                          />
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -1914,6 +1938,37 @@ const AdminDashboard = () => {
                     required
                   />
                 </div>
+              </div>
+              <div className="p-4 bg-primary-50 rounded-xl border border-primary-100">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-bold text-primary-800">Global Discount %</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      className="w-20 border border-primary-200 rounded-lg p-2 focus:ring-2 focus:ring-primary-500 outline-none text-sm font-bold"
+                      value={newProduct.discountPercent}
+                      onChange={e => {
+                        const discount = parseFloat(e.target.value) || 0;
+                        const mrp = parseFloat(newProduct.mrp) || 0;
+                        const discountedPrice = mrp > 0 ? (mrp * (1 - discount / 100)).toFixed(2) : '0';
+                        setNewProduct({
+                          ...newProduct,
+                          discountPercent: e.target.value,
+                          sellingPrice: discountedPrice,
+                          wholesalerPrice: discountedPrice,
+                          retailerPrice: discountedPrice,
+                          mechanicPrice: discountedPrice
+                        });
+                      }}
+                    />
+                    <span className="text-primary-800 font-bold">%</span>
+                  </div>
+                </div>
+                <p className="text-[10px] text-primary-600 font-medium">
+                  Entering a percentage will automatically calculate and set the Selling, Wholesaler, Retailer, and Mechanic prices based on the MRP.
+                </p>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div>
@@ -2056,6 +2111,37 @@ const AdminDashboard = () => {
                     required
                   />
                 </div>
+              </div>
+              <div className="p-4 bg-primary-50 rounded-xl border border-primary-100">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-bold text-primary-800">Global Discount %</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      className="w-20 border border-primary-200 rounded-lg p-2 focus:ring-2 focus:ring-primary-500 outline-none text-sm font-bold"
+                      value={editingDiscountPercent}
+                      onChange={e => {
+                        const discount = parseFloat(e.target.value) || 0;
+                        const mrp = parseFloat(editingProduct.mrp) || 0;
+                        const discountedPrice = mrp > 0 ? (mrp * (1 - discount / 100)).toFixed(2) : '0';
+                        setEditingDiscountPercent(e.target.value);
+                        setEditingProduct({
+                          ...editingProduct,
+                          sellingPrice: discountedPrice,
+                          wholesalerPrice: discountedPrice,
+                          retailerPrice: discountedPrice,
+                          mechanicPrice: discountedPrice
+                        });
+                      }}
+                    />
+                    <span className="text-primary-800 font-bold">%</span>
+                  </div>
+                </div>
+                <p className="text-[10px] text-primary-600 font-medium">
+                  Modifying the percentage will recalculate the prices for all user roles based on the current MRP.
+                </p>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div>

@@ -55,12 +55,49 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             content:
                                 Text('Password reset OTP sent to your email.')),
                       );
+                      // Hint banner to guide if email delivery is flaky
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        ScaffoldMessenger.of(context).clearMaterialBanners();
+                        ScaffoldMessenger.of(context).showMaterialBanner(
+                          MaterialBanner(
+                            content: const Text(
+                                'If you do not receive the email OTP, please check spam or contact admin to enable local OTP temporarily.'),
+                            leading: const Icon(Icons.info_outline),
+                            actions: [
+                              TextButton(
+                                onPressed: () => ScaffoldMessenger.of(context)
+                                    .hideCurrentMaterialBanner(),
+                                child: const Text('Dismiss'),
+                              ),
+                            ],
+                            backgroundColor: Colors.orange.shade50,
+                          ),
+                        );
+                      });
                       Navigator.of(context).pushNamed('/reset-password',
                           arguments: _emailController.text);
                     } catch (e) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Failed to send OTP: $e')),
                       );
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        ScaffoldMessenger.of(context).clearMaterialBanners();
+                        ScaffoldMessenger.of(context).showMaterialBanner(
+                          MaterialBanner(
+                            content: const Text(
+                                'Email delivery seems down. Try again later or contact admin to enable local OTP.'),
+                            leading: const Icon(Icons.report_gmailerrorred_outlined),
+                            actions: [
+                              TextButton(
+                                onPressed: () => ScaffoldMessenger.of(context)
+                                    .hideCurrentMaterialBanner(),
+                                child: const Text('Dismiss'),
+                              ),
+                            ],
+                            backgroundColor: Colors.orange.shade50,
+                          ),
+                        );
+                      });
                     }
                   }
                 },

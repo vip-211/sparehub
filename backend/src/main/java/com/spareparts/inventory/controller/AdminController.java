@@ -40,7 +40,7 @@ import com.spareparts.inventory.repository.VoiceTrainingSampleRepository;
 import com.spareparts.inventory.entity.VoiceTrainingSample;
 import java.util.stream.Collectors;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
+@CrossOrigin(origins = "${app.cors.allowed-origins}", maxAge = 3600)
 @RestController
 @RequestMapping("/api/admin")
 @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER') or hasRole('STAFF')")
@@ -123,6 +123,13 @@ public class AdminController {
     @GetMapping("/users")
     public ResponseEntity<List<User>> getAllUsers() {
         return ResponseEntity.ok(userRepository.findByDeletedFalse());
+    }
+
+    @GetMapping("/users/{id}")
+    public ResponseEntity<User> getUserById(@PathVariable Long id) {
+        return userRepository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/recycle-bin/users")

@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
+@CrossOrigin(origins = "${app.cors.allowed-origins}", maxAge = 3600)
 @RestController
 @RequestMapping("/api/users")
 public class UserController {

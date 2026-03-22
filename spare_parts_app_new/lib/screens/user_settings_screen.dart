@@ -40,6 +40,21 @@ class UserSettingsScreen extends StatelessWidget {
             onSelectionChanged: (sel) => tp.setThemeMode(sel.first),
           ),
           const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: () {
+              final messenger = ScaffoldMessenger.of(context);
+              tp.refreshSeedFromServer().then((ok) {
+                messenger.showSnackBar(SnackBar(
+                  content: Text(ok
+                      ? 'Theme updated from server'
+                      : 'Please connect to internet'),
+                ));
+              });
+            },
+            icon: const Icon(Icons.refresh),
+            label: const Text('Update theme from server'),
+          ),
+          const SizedBox(height: 16),
           Text('Text Size', style: Theme.of(context).textTheme.labelLarge),
           Slider(
             value: tp.textScale,

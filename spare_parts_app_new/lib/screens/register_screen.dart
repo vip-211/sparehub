@@ -6,6 +6,7 @@ import 'package:geocoding/geocoding.dart';
 import '../providers/auth_provider.dart';
 import '../utils/constants.dart';
 import 'otp_verification_screen.dart';
+import '../services/settings_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   final bool showAppBar;
@@ -27,6 +28,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isEmailRegistration = true; // Toggle between Email and Mobile
   double? _latitude;
   double? _longitude;
+  List<String> _allowedRoles = [
+    Constants.roleMechanic,
+    Constants.roleRetailer,
+    Constants.roleWholesaler
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAllowedRoles();
+  }
+
+  Future<void> _loadAllowedRoles() async {
+    try {
+      final remote = await SettingsService.getRemoteSettings();
+      final raw = remote['ALLOWED_REG_ROLES'];
+      if (raw != null && raw.isNotEmpty) {
+        final parts = raw.split(',').map((e) => e.trim()).toList();
+        setState(() {
+          _allowedRoles = parts;
+          if (!_allowedRoles.contains(_selectedRole)) {
+            _selectedRole = _allowedRoles.first;
+          }
+        });
+      }
+    } catch (_) {}
+  }
 
   void _showFeedback(String message, {bool isError = false}) {
     if (!mounted) return;
@@ -206,41 +234,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
       debugPrint('RegisterScreen: OTP source: $source');
 
       if (mounted) {
-        final otp = await Navigator.of(context).push<String>(
+        await Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => OtpVerificationScreen(
               email: target,
               isRegistration: true,
+              registrationData: registrationData,
             ),
           ),
         );
-
-        if (otp != null && otp.isNotEmpty) {
-          try {
-            final success = await authProvider.register(
-              name,
-              _isEmailRegistration ? email : '$phone@spares.hub',
-              password,
-              _selectedRole,
-              phone,
-              address,
-              latitude: _latitude,
-              longitude: _longitude,
-              otp: otp,
-            );
-
-            if (success) {
-              _showFeedback('Registration successful! Please log in.');
-              Navigator.of(context).pop(); // Go back to login screen
-            }
-          } catch (e) {
-            String msg = e.toString();
-            if (msg.startsWith('Exception: ')) {
-              msg = msg.replaceFirst('Exception: ', '');
-            }
-            _showFeedback('Registration failed: $msg', isError: true);
-          }
-        }
       }
     } catch (e) {
       debugPrint('RegisterScreen: Error in registration flow: $e');
@@ -547,6 +549,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       child: DropdownButtonHideUnderline(
         child: DropdownButtonFormField<String>(
           value: _selectedRole,
+          isExpanded: true,
           decoration: InputDecoration(
             labelText: 'Your Role',
             labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 14),
@@ -556,24 +559,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
               size: 22,
             ),
             border: InputBorder.none,
+            isDense: true,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 0, vertical: 12),
           ),
           items: [
-            DropdownMenuItem(
-              value: Constants.roleWholesaler,
-              child: const Text('Wholesaler'),
-            ),
-            DropdownMenuItem(
-              value: Constants.roleRetailer,
-              child: const Text('Retailer'),
-            ),
-            DropdownMenuItem(
-              value: Constants.roleMechanic,
-              child: const Text('Mechanic'),
-            ),
-            DropdownMenuItem(
-              value: Constants.roleSuperManager,
-              child: const Text('Super Manager'),
-            ),
+            if (_allowedRoles.contains(Constants.roleWholesaler))
+              const DropdownMenuItem(
+                value: Constants.roleWholesaler,
+                child: Text('Wholesaler'),
+              ),
+            if (_allowedRoles.contains(Constants.roleRetailer))
+              const DropdownMenuItem(
+                value: Constants.roleRetailer,
+                child: Text('Retailer'),
+              ),
+            if (_allowedRoles.contains(Constants.roleMechanic))
+              const DropdownMenuItem(
+                value: Constants.roleMechanic,
+                child: Text('Mechanic'),
+              ),
+            if (_allowedRoles.contains(Constants.roleSuperManager))
+              const DropdownMenuItem(
+                value: Constants.roleSuperManager,
+                child: Text('Super Manager'),
+              ),
+            if (_allowedRoles.contains(Constants.roleAdmin))
+              const DropdownMenuItem(
+                value: Constants.roleAdmin,
+                child: Text('Admin'),
+              ),
           ],
           onChanged: (val) => setState(() => _selectedRole = val!),
         ),

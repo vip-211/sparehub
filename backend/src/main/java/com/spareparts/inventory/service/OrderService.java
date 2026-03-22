@@ -365,8 +365,29 @@ public class OrderService {
         
         try {
             String title = "Order #" + order.getId() + " " + status.name().replace('_', ' ').toLowerCase();
-            fcmService.sendOrderStatusToUser(order.getCustomer().getId(), order.getId(), title, "Your order status is " + status.name());
-        } catch (Exception ignored) {}
+            String body = "Your order status is " + status.name();
+            fcmService.sendOrderStatusToUser(order.getCustomer().getId(), order.getId(), title, body);
+            
+            // Also notify seller (Wholesaler)
+            if (order.getSeller() != null) {
+                String sellerTitle = "Order #" + order.getId() + " updated";
+                String sellerBody = "Status changed to " + status.name() + " for customer " + order.getCustomer().getName();
+                fcmService.sendOrderStatusToUser(order.getSeller().getId(), order.getId(), sellerTitle, sellerBody);
+            }
+        } catch (Exception e) {
+            System.err.println("Error sending order status notification: " + e.getMessage());
+        }
+        
+        // When APPROVED by Super Manager/Admin, notify Staff to prepare/deliver
+        try {
+            if (status == Order.OrderStatus.APPROVED) {
+                String staffTitle = "New Order to Process: #" + order.getId();
+                String staffMessage = "Order from " + order.getCustomer().getName() + " has been approved. Please prepare for delivery.";
+                fcmService.sendOrderStatusToStaff(order.getId(), staffTitle, staffMessage);
+            }
+        } catch (Exception e) {
+            System.err.println("Error sending staff notification: " + e.getMessage());
+        }
         
         try {
             String performerName = order.getDeliveredBy() != null ? order.getDeliveredBy().getName() : "Staff";

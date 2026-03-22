@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import AuthService from '../services/auth.service';
 import { useLanguage } from '../context/LanguageContext';
 import { ROLE_RETAILER, ROLE_MECHANIC, ROLE_WHOLESALER, ROLE_SUPER_MANAGER, ROLE_ADMIN } from '../services/constants';
+import api from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, 
@@ -35,7 +36,28 @@ const Register = () => {
   const [address, setAddress] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [allowedRoles, setAllowedRoles] = useState<string[]>([ROLE_WHOLESALER, ROLE_RETAILER, ROLE_MECHANIC]);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await api.get('/admin/settings');
+        const s = res.data as Array<{ settingKey: string; settingValue: string }>;
+        const allowed = s.find(x => x.settingKey === 'ALLOWED_REG_ROLES')?.settingValue;
+        if (allowed) {
+          const parts = allowed.split(',').map(p => p.trim()).filter(Boolean);
+          setAllowedRoles(parts);
+          if (!parts.includes(role)) {
+            setRole(parts[0] || ROLE_MECHANIC);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const handleSendOtp = async () => {
     if (!email || !email.includes('@')) {
@@ -282,11 +304,21 @@ const Register = () => {
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
                   >
-                    <option value={ROLE_WHOLESALER}>{t('role.wholesaler')}</option>
-                    <option value={ROLE_RETAILER}>{t('role.retailer')}</option>
-                    <option value={ROLE_MECHANIC}>{t('role.mechanic')}</option>
-                    <option value={ROLE_SUPER_MANAGER}>{t('role.admin')}</option>
-                    <option value={ROLE_ADMIN}>{t('role.admin')}</option>
+                    {allowedRoles.includes(ROLE_WHOLESALER) && (
+                      <option value={ROLE_WHOLESALER}>{t('role.wholesaler')}</option>
+                    )}
+                    {allowedRoles.includes(ROLE_RETAILER) && (
+                      <option value={ROLE_RETAILER}>{t('role.retailer')}</option>
+                    )}
+                    {allowedRoles.includes(ROLE_MECHANIC) && (
+                      <option value={ROLE_MECHANIC}>{t('role.mechanic')}</option>
+                    )}
+                    {allowedRoles.includes(ROLE_SUPER_MANAGER) && (
+                      <option value={ROLE_SUPER_MANAGER}>{t('role.admin')}</option>
+                    )}
+                    {allowedRoles.includes(ROLE_ADMIN) && (
+                      <option value={ROLE_ADMIN}>{t('role.admin')}</option>
+                    )}
                   </select>
                 </div>
               </div>

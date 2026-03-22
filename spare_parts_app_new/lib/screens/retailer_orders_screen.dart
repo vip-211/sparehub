@@ -23,6 +23,7 @@ class _RetailerOrdersScreenState extends State<RetailerOrdersScreen> {
 
   List<Order> _orders = [];
   bool _isLoading = true;
+  int? _highlightedOrderId;
 
   @override
   void initState() {
@@ -31,6 +32,16 @@ class _RetailerOrdersScreenState extends State<RetailerOrdersScreen> {
     _orderSub = WebSocketService.orderUpdates.stream.listen((event) {
       if (!mounted) return;
       _fetchOrders();
+    });
+
+    // Check for highlighted order ID in arguments
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args = ModalRoute.of(context)!.settings.arguments;
+      if (args is Map && args.containsKey('orderId')) {
+        setState(() {
+          _highlightedOrderId = int.tryParse(args['orderId'].toString());
+        });
+      }
     });
   }
 
@@ -77,22 +88,27 @@ class _RetailerOrdersScreenState extends State<RetailerOrdersScreen> {
                 itemCount: _orders.length,
                 itemBuilder: (ctx, i) {
                   final order = _orders[i];
+                  final isHighlighted = _highlightedOrderId == order.id;
 
                   return Card(
+                    key: ValueKey('order_${order.id}_$isHighlighted'),
                     margin: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 8,
                     ),
-                    elevation: 1,
+                    elevation: isHighlighted ? 4 : 1,
+                    color: isHighlighted ? Colors.blue.shade50 : null,
                     child: ExpansionTile(
+                      initiallyExpanded: isHighlighted,
                       shape: const RoundedRectangleBorder(
                         side: BorderSide.none,
                       ),
                       title: Text(
                         'Order #${order.id}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
+                          color: isHighlighted ? Colors.blue.shade800 : null,
                         ),
                       ),
                       subtitle: Column(

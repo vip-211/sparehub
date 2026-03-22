@@ -31,7 +31,21 @@ public class Notification {
     private String targetRole;
 
     @Column(name = "is_broadcast")
-    private boolean isBroadcast = false;
+    private Boolean isBroadcast = false;
+
+    @PrePersist
+    public void prePersist() {
+        if (isBroadcast == null) {
+            isBroadcast = false;
+        }
+    }
+
+    @PostLoad
+    public void postLoad() {
+        if (isBroadcast == null) {
+            isBroadcast = false;
+        }
+    }
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
