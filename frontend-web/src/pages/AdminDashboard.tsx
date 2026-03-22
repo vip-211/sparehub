@@ -64,6 +64,8 @@ const AdminDashboard = () => {
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [showEditCategory, setShowEditCategory] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [salesReport, setSalesReport] = useState<{ totalSales: number; totalOrders: number } | null>(null);
+  const [salesPeriod, setSalesPeriod] = useState<'DAILY'|'WEEKLY'|'MONTHLY'>('MONTHLY');
   const [newCategory, setNewCategory] = useState({ name: '', description: '', imagePath: '', imageLink: '' });
   const [selectedExcelCategory, setSelectedExcelCategory] = useState<string>('');
 
@@ -114,6 +116,23 @@ const AdminDashboard = () => {
     };
     init();
   }, []);
+
+  useEffect(() => {
+    const fetchSales = async () => {
+      try {
+        const res = await api.get(`/admin/sales`, { params: { type: salesPeriod } });
+        const ts = res.data?.totalSales;
+        const to = res.data?.totalOrders;
+        setSalesReport({
+          totalSales: typeof ts === 'number' ? ts : parseFloat(ts || 0),
+          totalOrders: typeof to === 'number' ? to : parseInt(to || 0, 10),
+        });
+      } catch (err) {
+        console.error('Failed to fetch sales report:', err);
+      }
+    };
+    fetchSales();
+  }, [salesPeriod]);
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -672,6 +691,18 @@ const AdminDashboard = () => {
         </h1>
         <div className="flex flex-wrap gap-3">
           <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-1.5 shadow-sm">
+            <span className="text-[10px] font-black text-gray-400 uppercase">Period:</span>
+            <select
+              className="text-xs font-bold text-gray-700 bg-transparent outline-none border-none focus:ring-0"
+              value={salesPeriod}
+              onChange={e => setSalesPeriod(e.target.value as any)}
+            >
+              <option value="DAILY">Daily</option>
+              <option value="WEEKLY">Weekly</option>
+              <option value="MONTHLY">Monthly</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-1.5 shadow-sm">
             <span className="text-[10px] font-black text-gray-400 uppercase">Category:</span>
             <select
               className="text-xs font-bold text-gray-700 bg-transparent outline-none border-none focus:ring-0"
@@ -754,7 +785,7 @@ const AdminDashboard = () => {
           </div>
           <div>
             <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">Total Orders</p>
-            <p className="text-2xl font-black text-gray-900">{orders.length}</p>
+            <p className="text-2xl font-black text-gray-900">{salesReport?.totalOrders ?? orders.length}</p>
           </div>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition">
@@ -763,7 +794,7 @@ const AdminDashboard = () => {
           </div>
           <div>
             <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">Total Revenue</p>
-            <p className="text-2xl font-black text-gray-900">₹{orders.reduce((acc, o) => acc + o.totalAmount, 0).toLocaleString()}</p>
+            <p className="text-2xl font-black text-gray-900">₹{(salesReport?.totalSales ?? orders.reduce((acc, o) => acc + o.totalAmount, 0)).toLocaleString()}</p>
           </div>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition">

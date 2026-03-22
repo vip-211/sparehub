@@ -42,21 +42,24 @@ const MobileDashboard = () => {
 
   const [playNotification] = useSound('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
+  const [period, setPeriod] = useState<'DAILY'|'WEEKLY'|'MONTHLY'>('MONTHLY');
+
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
-      const [ordersRes, usersRes, productsRes] = await Promise.all([
+      const [ordersRes, usersRes, productsRes, salesRes] = await Promise.all([
         api.get('/admin/orders'),
         api.get('/admin/users'),
-        api.get('/products')
+        api.get('/products'),
+        api.get('/admin/sales', { params: { type: period } })
       ]);
 
       const orders = ordersRes.data;
-      const totalRevenue = orders.reduce((acc: number, o: any) => acc + o.totalAmount, 0);
+      const totalRevenue = (salesRes.data?.totalSales ?? orders.reduce((acc: number, o: any) => acc + o.totalAmount, 0));
       const pendingOrders = orders.filter((o: any) => o.status === 'PENDING').length;
       
       setStats({
-        totalOrders: orders.length,
+        totalOrders: (salesRes.data?.totalOrders ?? orders.length),
         totalUsers: usersRes.data.length,
         totalProducts: productsRes.data.length,
         totalRevenue,
@@ -69,7 +72,7 @@ const MobileDashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [period]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -179,9 +182,14 @@ const MobileDashboard = () => {
       <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 mb-8">
         <div className="flex items-center justify-between mb-6">
           <h3 className="font-black text-gray-900 text-lg uppercase tracking-tight">Sales Analytics</h3>
-          <select className="text-xs font-bold text-gray-500 bg-gray-50 border-none rounded-lg px-2 py-1 outline-none">
-            <option>Weekly</option>
-            <option>Monthly</option>
+          <select
+            className="text-xs font-bold text-gray-500 bg-gray-50 border-none rounded-lg px-2 py-1 outline-none"
+            value={period}
+            onChange={(e) => setPeriod(e.target.value as any)}
+          >
+            <option value="DAILY">Daily</option>
+            <option value="WEEKLY">Weekly</option>
+            <option value="MONTHLY">Monthly</option>
           </select>
         </div>
         <div className="h-64 w-full" style={{ minWidth: 0 }}>
