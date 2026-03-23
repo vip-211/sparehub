@@ -14,17 +14,42 @@ export async function initWebPush() {
   try {
     const supported = await isSupported();
     if (!supported) return;
+    // Guard: ensure required Firebase config is present
+    const requiredKeys: Array<keyof typeof firebaseConfig> = [
+      'apiKey',
+      'projectId',
+      'messagingSenderId',
+      'appId',
+    ];
+    const missing = requiredKeys.filter((k) => !firebaseConfig[k]);
+    if (missing.length) {
+      console.info(
+        'WebPush disabled: missing Firebase config keys:',
+        missing.join(', ')
+      );
+      return; // Skip cleanly if not configured
+    }
     const app = initializeApp(firebaseConfig);
     const messaging = getMessaging(app);
 
-    if (Notification.permission !== 'granted') {
-      await Notification.requestPermission();
+    if (typeof Notification !== 'undefined' && Notification.permission !== 'granted') {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        return; // Respect user choice
+      }
     }
 
     // Optional: retrieve FCM web token (useful if you want to persist per user)
     try {
       const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY || undefined;
-      await getToken(messaging, vapidKey ? { vapidKey } : undefined);
+      const reg = await navigator.serviceWorker?.getRegistration();
+      await getToken(
+        messaging,
+        {
+          ...(vapidKey ? { vapidKey } : {}),
+          ...(reg ? { serviceWorkerRegistration: reg } : {}),
+        } as any
+      );
     } catch {}
 
     onMessage(messaging, (payload) => {
