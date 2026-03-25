@@ -14,7 +14,7 @@ interface Message {
 const AIChatbot: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { text: "Hello! I'm your Spares Hub AI assistant. How can I help you today?", isBot: true }
+    { text: "Hello! I'm your Parts Mitra AI assistant. How can I help you today?", isBot: true }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -152,7 +152,7 @@ const AIChatbot: React.FC = () => {
                 <Bot className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-bold text-lg leading-tight">Spares Hub AI</h3>
+                <h3 className="font-bold text-lg leading-tight">Parts Mitra AI</h3>
                 <p className="text-blue-100 text-[10px] font-medium uppercase tracking-widest flex items-center gap-1.5">
                   <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
                   Always Active
@@ -354,7 +354,7 @@ const AIChatbot: React.FC = () => {
                 </div>
               </div>
             )}
-            <p className="text-center text-[9px] text-slate-400 mt-3 font-medium uppercase tracking-tighter">Powered by Spares Hub AI Engine</p>
+            <p className="text-center text-[9px] text-slate-400 mt-3 font-medium uppercase tracking-tighter">Powered by Parts Mitra AI Engine</p>
           </div>
         </div>
       ) : (

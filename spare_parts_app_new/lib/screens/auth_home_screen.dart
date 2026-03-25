@@ -65,7 +65,7 @@ class _AuthHomeScreenState extends State<AuthHomeScreen>
       length: tabs.length,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Spares Hub'),
+          title: const Text('Parts Mitra'),
           bottom: TabBar(tabs: tabs),
           actions: [
             IconButton(

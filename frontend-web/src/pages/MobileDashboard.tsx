@@ -137,7 +137,7 @@ const MobileDashboard = () => {
       <div className="flex items-center justify-between mb-6 px-1">
         <div>
           <h1 className="text-2xl font-black text-gray-900 tracking-tight">Overview</h1>
-          <p className="text-sm text-gray-500 font-medium">Welcome back to SpareHub</p>
+          <p className="text-sm text-gray-500 font-medium">Welcome back to Parts Mitra</p>
         </div>
         <div className="flex gap-2">
           <button className="p-2.5 bg-white rounded-xl shadow-sm border border-gray-100 text-gray-600 hover:bg-gray-50 transition">

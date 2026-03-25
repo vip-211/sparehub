@@ -146,7 +146,7 @@ class _WholesalerDashboardState extends State<WholesalerDashboard> {
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Spares Hub'),
+              const Text('Parts Mitra'),
               Text(
                 'Wholesaler Dashboard',
                 style: TextStyle(

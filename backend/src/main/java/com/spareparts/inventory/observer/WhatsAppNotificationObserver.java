@@ -30,7 +30,7 @@ public class WhatsAppNotificationObserver implements ProductObserver {
         String message = "New Spare Part Alert! \n" +
                          "Name: " + product.getName() + "\n" +
                          "Part No: " + product.getPartNumber() + "\n" +
-                         "Check it out in Spares Hub!";
+                         "Check it out in Parts Mitra!";
 
         for (User user : users) {
             if (user.getPhone() != null && !user.getPhone().isEmpty()) {
@@ -51,7 +51,7 @@ public class WhatsAppNotificationObserver implements ProductObserver {
         
         String message = "🔥 NEW " + offerType.toUpperCase() + " OFFER! 🔥\n" +
                          "Product: " + product.getName() + "\n" +
-                         "Check out this special offer in Spares Hub now!";
+                         "Check out this special offer in Parts Mitra now!";
 
         for (User user : users) {
             if (user.getPhone() != null && !user.getPhone().isEmpty()) {

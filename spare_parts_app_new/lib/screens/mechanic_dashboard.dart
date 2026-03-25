@@ -143,7 +143,7 @@ class _MechanicDashboardState extends State<MechanicDashboard> {
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Spares Hub'),
+              const Text('Parts Mitra'),
               Text(
                 'Mechanic Dashboard',
                 style: TextStyle(

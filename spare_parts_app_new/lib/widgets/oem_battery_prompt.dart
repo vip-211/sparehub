@@ -16,7 +16,7 @@ Future<void> showBatteryOptimizationPromptIfNeeded(BuildContext context) async {
       content: const Text(
         'On some Android devices (Xiaomi, Oppo, Vivo, etc.), battery optimizations may '
         'block notifications when the app is closed. To ensure you always receive alerts:\n\n'
-        '• Allow notifications for Spares Hub\n'
+        '• Allow notifications for Parts Mitra\n'
         '• Disable battery optimization for the app\n'
         '• Allow auto-start/launch on boot if available',
       ),

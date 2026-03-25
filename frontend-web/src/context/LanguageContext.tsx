@@ -13,7 +13,7 @@ const translations: Record<Language, Record<string, string>> = {
   en: {
     // Auth
     'login.title': 'Login',
-    'login.welcome': 'Welcome to Spares Hub',
+    'login.welcome': 'Welcome to Parts Mitra',
     'login.email': 'Email Address',
     'login.password': 'Password',
     'login.otp': 'OTP',
@@ -32,7 +32,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Register
     'reg.title': 'Create Account',
-    'reg.subtitle': 'Join Spares Hub today',
+    'reg.subtitle': 'Join Parts Mitra today',
     'reg.name': 'Full Name',
     'reg.email': 'Email Address',
     'reg.phone': 'Phone Number',
@@ -53,7 +53,7 @@ const translations: Record<Language, Record<string, string>> = {
     'role.admin': 'Admin',
 
     // Dashboard/Shop
-    'shop.title': 'Spares Hub Shop',
+    'shop.title': 'Parts Mitra Shop',
     'shop.search': 'Search parts...',
     'shop.cart': 'Cart',
     'shop.empty': 'Your cart is empty.',
@@ -121,7 +121,7 @@ const translations: Record<Language, Record<string, string>> = {
   hi: {
     // Auth
     'login.title': 'लॉगिन',
-    'login.welcome': 'स्पेयर हब में आपका स्वागत है',
+    'login.welcome': 'पार्ट्स मित्रा में आपका स्वागत है',
     'login.email': 'ईमेल पता',
     'login.password': 'पासवर्ड',
     'login.otp': 'ओटीपी (OTP)',
@@ -140,7 +140,7 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Register
     'reg.title': 'खाता बनाएं',
-    'reg.subtitle': 'आज ही स्पेयर हब से जुड़ें',
+    'reg.subtitle': 'आज ही पार्ट्स मित्रा से जुड़ें',
     'reg.name': 'पूरा नाम',
     'reg.email': 'ईमेल पता',
     'reg.phone': 'फ़ोन नंबर',
@@ -161,7 +161,7 @@ const translations: Record<Language, Record<string, string>> = {
     'role.admin': 'एडमिन',
 
     // Dashboard/Shop
-    'shop.title': 'स्पेयर हब शॉप',
+    'shop.title': 'पार्ट्स मित्रा शॉप',
     'shop.search': 'पार्ट्स खोजें...',
     'shop.cart': 'कार्ट',
     'shop.empty': 'आपकी कार्ट खाली है।',

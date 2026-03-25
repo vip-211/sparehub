@@ -20,7 +20,7 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
   final List<Map<String, dynamic>> _messages = [
     {
       'text':
-          "Hello! I'm your Spares Hub AI assistant. How can I help you today?",
+          "Hello! I'm your Parts Mitra AI assistant. How can I help you today?",
       'isBot': true
     }
   ];
@@ -342,8 +342,8 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Spares Hub AI',
-                                style: TextStyle(
+                                'Parts Mitra AI',
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,

@@ -47,7 +47,7 @@ public class AIService {
                     .map(p -> p.getName() + " (Part: " + p.getPartNumber() + ")")
                     .collect(Collectors.joining(", "));
 
-            String systemPrompt = "You are an AI assistant for Spares Hub, an auto spare parts inventory system. " +
+            String systemPrompt = "You are an AI assistant for Parts Mitra, an auto spare parts inventory system. " +
                     "We have parts like: " + productContext + ". " +
                     "Help users with part identification, maintenance advice, or finding items. " +
                     "Be professional, concise, and helpful.";

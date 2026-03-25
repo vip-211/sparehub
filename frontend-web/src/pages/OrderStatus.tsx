@@ -49,7 +49,7 @@ const OrderStatus: React.FC = () => {
               You saved ₹{order.pointsRedeemed} on this order! 🎉
             </div>
             <div className="text-emerald-700 text-sm font-medium mt-1">
-              Thanks for ordering with SpareHub — smart choice using your points.
+              Thanks for ordering with Parts Mitra — smart choice using your points.
             </div>
           </div>
         )}

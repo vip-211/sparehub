@@ -204,7 +204,7 @@ public class OrderService {
                 fcmService.sendToRole("ROLE_SUPER_MANAGER", "Points Redeemed", redeemMsg, "DAILY", null);
                 fcmService.sendToRole("ROLE_STAFF", "Points Redeemed", redeemMsg, "DAILY", null);
                 try {
-                    fcmService.sendOrderStatusToUser(customer.getId(), order.getId(), "You saved ₹" + order.getPointsRedeemed(), "Thanks for ordering with SpareHub! You saved ₹" + order.getPointsRedeemed() + " by redeeming your points.");
+                    fcmService.sendOrderStatusToUser(customer.getId(), order.getId(), "You saved ₹" + order.getPointsRedeemed(), "Thanks for ordering with Parts Mitra! You saved ₹" + order.getPointsRedeemed() + " by redeeming your points.");
                 } catch (Exception ignored) {}
             }
             
