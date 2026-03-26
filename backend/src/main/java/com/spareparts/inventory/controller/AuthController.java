@@ -15,12 +15,11 @@ import com.spareparts.inventory.repository.RoleRepository;
 import com.spareparts.inventory.repository.UserRepository;
 import com.spareparts.inventory.security.JwtUtils;
 import com.spareparts.inventory.security.UserDetailsImpl;
+import com.spareparts.inventory.service.OtpService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -51,32 +50,28 @@ public class AuthController {
     OtpRepository otpRepository;
 
     @Autowired
+    OtpService otpService;
+
+    @Autowired
     PasswordEncoder encoder;
 
     @Autowired
     JwtUtils jwtUtils;
 
-    @Autowired
-    private JavaMailSender mailSender;
-
     private static final Map<String, Long> RATE_LIMIT_STORAGE = new java.util.concurrent.ConcurrentHashMap<>();
     private static final long RATE_LIMIT_MS = 60000; // 1 minute between OTP requests
-
-    @Value("${spring.mail.username}")
-    private String mailFrom;
 
     @Value("${app.otp.demo-mode:false}")
     private boolean isDemoMode;
 
     @PostMapping("/send-otp")
-    @Transactional
     public ResponseEntity<?> sendOtp(@RequestBody Map<String, String> body) {
         String identifier = body.get("email");
         if (identifier == null || identifier.isEmpty()) {
             return ResponseEntity.badRequest().body(new MessageResponse("Invalid identifier."));
         }
         
-        // Normalize: if it's an email, lowercase it. If it's a phone, keep as is.
+        // Normalize
         final String email = identifier.contains("@") ? identifier.toLowerCase().trim() : identifier.trim();
         
         String purpose = body.getOrDefault("purpose", "login").toLowerCase();
@@ -90,9 +85,7 @@ public class AuthController {
 
         // For login/reset flows, ensure user exists
         if ("login".equals(purpose) || "reset".equals(purpose)) {
-            // Handle both email and mobile-formatted email (e.g., 1234567890@spares.hub)
             boolean exists = userRepository.existsByEmail(email);
-            
             if (!exists) {
                 return ResponseEntity.status(404).body(new MessageResponse("User does not exist."));
             }
@@ -112,9 +105,13 @@ public class AuthController {
         System.out.println("GENERATED OTP for " + email + ": " + otp);
         
         // 1. SAVE OTP FIRST to persistent storage (DB)
-        otpRepository.deleteByEmail(email); // Remove old ones
-        otpRepository.save(new Otp(email, otp, 5)); // Valid for 5 mins
-        System.out.println("Persistent OTP saved for " + email);
+        try {
+            otpService.saveOtp(email, otp);
+            System.out.println("Persistent OTP saved for " + email);
+        } catch (Exception e) {
+            System.err.println("Error saving OTP to DB: " + e.getMessage());
+            return ResponseEntity.status(500).body(new MessageResponse("Failed to process request. Please try again."));
+        }
 
         // Skip sending email if in Demo Mode
         if (isDemoMode) {
@@ -124,13 +121,7 @@ public class AuthController {
         
         // 2. THEN attempt to send OTP via Email
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(mailFrom);
-            message.setTo(email);
-            message.setSubject("Your OTP for Parts Mitra");
-            message.setText("Your OTP is: " + otp + "\n\nThis OTP is valid for 5 minutes.");
-            mailSender.send(message);
-            
+            otpService.sendOtpEmail(email, otp);
             System.out.println("OTP email sent successfully to " + email);
             return ResponseEntity.ok(new MessageResponse("OTP sent successfully to " + email));
         } catch (Exception e) {
@@ -148,8 +139,6 @@ public class AuthController {
                 userMessage += "Please check server logs or contact support.";
             }
             
-            // We return 200 OK because the OTP IS SAVED in DB and can be verified 
-            // if the user gets it via other channels or logs.
             return ResponseEntity.ok(new MessageResponse(userMessage + " You can try verifying if you have the OTP."));
         }
     }

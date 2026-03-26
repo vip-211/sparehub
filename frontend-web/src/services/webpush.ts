@@ -23,11 +23,11 @@ export async function initWebPush() {
     ];
     const missing = requiredKeys.filter((k) => !firebaseConfig[k]);
     if (missing.length) {
-      console.info(
-        'WebPush disabled: missing Firebase config keys:',
-        missing.join(', ')
-      );
-      return; // Skip cleanly if not configured
+      // Suppress noisy warning if not configured
+      if (import.meta.env.DEV) {
+        console.debug('WebPush disabled: missing configuration');
+      }
+      return;
     }
     const app = initializeApp(firebaseConfig);
     const messaging = getMessaging(app);

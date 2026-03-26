@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import api, { API_BASE_URL } from '../services/api';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
-import { Users, ShoppingBag, BarChart2, CheckCircle, XCircle, Plus, Package, UserPlus, Upload, Truck, Trash2, RotateCcw, Settings, Bell, MessageSquare, Search, Star } from 'lucide-react';
+import { Users, ShoppingBag, BarChart2, CheckCircle, XCircle, Plus, Package, UserPlus, Upload, Truck, Trash2, RotateCcw, Settings, Bell, MessageSquare, Search, Star, FileText } from 'lucide-react';
 import { ROLE_SUPER_MANAGER, ROLE_ADMIN, ROLE_MECHANIC, ROLE_RETAILER, ROLE_WHOLESALER, ROLE_STAFF } from '../services/constants';
 import AuthService from '../services/auth.service';
 import Skeleton from '../components/Skeleton';
@@ -186,7 +186,7 @@ const AdminDashboard = () => {
   const fetchOrderRequests = async () => {
     try {
       setFetchingRequests(true);
-      const res = await api.get('/admin/order-requests');
+      const res = await api.get('/orders/custom-requests');
       setOrderRequests(res.data);
     } catch (err) {
       console.error(err);
@@ -197,7 +197,7 @@ const AdminDashboard = () => {
 
   const updateRequestStatus = async (requestId: number, status: string) => {
     try {
-      await api.put(`/admin/order-requests/${requestId}/status?status=${status}`);
+      await api.put(`/orders/custom-requests/${requestId}/status?status=${status}`);
       fetchOrderRequests();
     } catch (err) {
       console.error(err);
@@ -207,7 +207,7 @@ const AdminDashboard = () => {
 
   const assignRequestToStaff = async (requestId: number, staffId: number) => {
     try {
-      await api.put(`/admin/order-requests/${requestId}/assign?staffId=${staffId}`);
+      await api.put(`/orders/custom-requests/${requestId}/status?status=PROCESSING&staffId=${staffId}`);
       fetchOrderRequests();
     } catch (err) {
       console.error(err);
@@ -387,6 +387,7 @@ const AdminDashboard = () => {
     stompClient.debug = () => {}; // Disable debug logs
 
     stompClient.connect({}, () => {
+      console.log('WebSocket connected successfully');
       // 1. Subscribe to admin order updates
       stompClient.subscribe('/topic/admin/orders', () => {
         playNotification();
@@ -401,13 +402,16 @@ const AdminDashboard = () => {
               const data = JSON.parse(frame.body);
               console.log('Received notification for role:', role, data);
               playNotification();
-              // You could also add logic here to show a toast or update a notification list
             }
           });
         });
       }
     }, (error) => {
-      console.error('WebSocket error:', error);
+      // SockJS/Stomp will automatically attempt to reconnect in many cases,
+      // but we should log it for debugging.
+      if (import.meta.env.DEV) {
+        console.warn('WebSocket connection failed. This is expected if the server is waking up or doesn\'t support WS on this path.', error);
+      }
     });
 
     return () => {

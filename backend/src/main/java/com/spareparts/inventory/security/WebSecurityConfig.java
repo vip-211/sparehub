@@ -96,6 +96,7 @@ public class WebSecurityConfig {
                                 .requestMatchers("/api/files/display/**").permitAll()
                                 .requestMatchers("/api/categories/**").permitAll()
                                 .requestMatchers("/ws/**").permitAll()
+                                .requestMatchers("/error").permitAll()
                                 .anyRequest().authenticated()
                 );
 
