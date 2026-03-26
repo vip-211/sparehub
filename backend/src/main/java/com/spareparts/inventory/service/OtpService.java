@@ -54,7 +54,13 @@ public class OtpService {
 
     @Transactional
     public void saveOtp(String email, String otp) {
-        otpRepository.deleteByEmail(email);
+        // Keep only the most recent OTP history (max 2) to handle race conditions
+        java.util.List<Otp> existing = otpRepository.findAllByEmailOrderByExpiryTimeDesc(email);
+        if (existing.size() >= 2) {
+            for (int i = 1; i < existing.size(); i++) {
+                otpRepository.delete(existing.get(i));
+            }
+        }
         otpRepository.save(new Otp(email, otp, 5));
     }
 

@@ -28,7 +28,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String _selectedCountryCode = '+91';
   bool _isLoading = false;
   bool _obscurePassword = true;
-  bool _isEmailRegistration = true; // Toggle between Email and Mobile
   double? _latitude;
   double? _longitude;
 
@@ -229,32 +228,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final password = _passwordController.text;
     final address = _addressController.text.trim();
 
-    if (name.isEmpty || password.isEmpty) {
-      _showFeedback('Please fill in name and password.', isError: true);
+    if (name.isEmpty || password.isEmpty || email.isEmpty || phone.isEmpty) {
+      _showFeedback('Please fill in all required fields.', isError: true);
       return;
     }
 
-    if (_isEmailRegistration && email.isEmpty) {
-      _showFeedback('Please enter your email address.', isError: true);
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(email)) {
+      _showFeedback('Please enter a valid email address.', isError: true);
       return;
     }
 
-    if (!_isEmailRegistration && phone.isEmpty) {
-      _showFeedback('Please enter your mobile number.', isError: true);
+    if (phone.length < 10) {
+      _showFeedback('Please enter a valid mobile number.', isError: true);
       return;
-    }
-
-    if (_isEmailRegistration) {
-      final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-      if (!emailRegex.hasMatch(email)) {
-        _showFeedback('Please enter a valid email address.', isError: true);
-        return;
-      }
-    } else {
-      if (phone.length < 10) {
-        _showFeedback('Please enter a valid mobile number.', isError: true);
-        return;
-      }
     }
 
     if (password.length < 6) {
@@ -272,13 +259,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       debugPrint('RegisterScreen: Starting registration process...');
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-      final fullPhone = _isEmailRegistration
-          ? phone
-          : (_selectedCountryCode + phone.replaceAll(RegExp(r'\D'), ''));
+      final fullPhone =
+          (_selectedCountryCode + phone.replaceAll(RegExp(r'\D'), ''));
 
       final registrationData = {
         'name': name,
-        'email': _isEmailRegistration ? email : '$phone@spares.hub',
+        'email': email,
         'password': password,
         'role': _selectedRole,
         'phone': fullPhone,
@@ -287,39 +273,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'longitude': _longitude,
       };
 
-      final target = _isEmailRegistration ? email : fullPhone;
-      debugPrint('RegisterScreen: Starting verification for $target...');
-
-      if (!_isEmailRegistration) {
-        // ONLY Firebase Phone Auth for mobile registration
-        await authProvider.verifyPhone(
-          target,
-          onCodeSent: (verId) {
-            if (mounted) {
-              setState(() => _isLoading = false);
-              _startResendTimer();
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => OtpVerificationScreen(
-                    email: target,
-                    isRegistration: true,
-                    registrationData: registrationData,
-                    isFirebase: true,
-                  ),
-                ),
-              );
-            }
-          },
-          onError: (err) {
-            setState(() => _isLoading = false);
-            _showFeedback('Firebase Phone Auth failed: $err', isError: true);
-          },
-        );
-        return;
-      }
+      debugPrint('RegisterScreen: Starting verification for $email...');
 
       // For email registration, we still use the provider's sendOtp method
-      final source = await authProvider.sendOtp(target, registrationData);
+      final source = await authProvider.sendOtp(email, registrationData);
       debugPrint('RegisterScreen: OTP source: $source');
       _startResendTimer();
 
@@ -327,7 +284,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         await Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => OtpVerificationScreen(
-              email: target,
+              email: email,
               isRegistration: true,
               registrationData: registrationData,
               isFirebase: false,
@@ -404,79 +361,97 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                           const SizedBox(height: 24),
 
-                          // Registration Toggle
+                          _buildTextField(
+                            controller: _nameController,
+                            label: 'Full Name*',
+                            icon: Icons.person_outline,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildTextField(
+                            controller: _emailController,
+                            label: 'Email Address*',
+                            icon: Icons.email_outlined,
+                            keyboardType: TextInputType.emailAddress,
+                          ),
+                          const SizedBox(height: 16),
                           Container(
                             decoration: BoxDecoration(
                               color: Theme.of(context)
                                   .colorScheme
                                   .surfaceContainerHighest
                                   .withOpacity(0.5),
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .outlineVariant),
                             ),
                             child: Row(
                               children: [
-                                Expanded(
-                                  child: GestureDetector(
-                                    onTap: () => setState(
-                                        () => _isEmailRegistration = true),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 12),
-                                      decoration: BoxDecoration(
-                                        color: _isEmailRegistration
-                                            ? Theme.of(context)
-                                                .colorScheme
-                                                .primary
-                                            : Colors.transparent,
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          'Email',
-                                          style: TextStyle(
-                                            color: _isEmailRegistration
-                                                ? Theme.of(context)
-                                                    .colorScheme
-                                                    .onPrimary
-                                                : Theme.of(context)
-                                                    .colorScheme
-                                                    .onSurfaceVariant,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 12),
+                                  child: Icon(Icons.phone_android_outlined,
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                      size: 22),
+                                ),
+                                const SizedBox(width: 8),
+                                DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    value: _selectedCountryCode,
+                                    style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface,
+                                        fontWeight: FontWeight.bold),
+                                    items: [
+                                      '+91',
+                                      '+1',
+                                      '+44',
+                                      '+971',
+                                      '+61',
+                                      '+81',
+                                      '+92',
+                                      '+880',
+                                      '+94',
+                                      '+65'
+                                    ]
+                                        .map((code) => DropdownMenuItem<String>(
+                                              value: code,
+                                              child: Text(code),
+                                            ))
+                                        .toList(),
+                                    onChanged: (val) {
+                                      if (val != null) {
+                                        setState(() {
+                                          _selectedCountryCode = val;
+                                        });
+                                      }
+                                    },
                                   ),
                                 ),
+                                const VerticalDivider(width: 1),
                                 Expanded(
-                                  child: GestureDetector(
-                                    onTap: () => setState(
-                                        () => _isEmailRegistration = false),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 12),
-                                      decoration: BoxDecoration(
-                                        color: !_isEmailRegistration
-                                            ? Theme.of(context)
-                                                .colorScheme
-                                                .primary
-                                            : Colors.transparent,
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          'Mobile',
-                                          style: TextStyle(
-                                            color: !_isEmailRegistration
-                                                ? Theme.of(context)
-                                                    .colorScheme
-                                                    .onPrimary
-                                                : Theme.of(context)
-                                                    .colorScheme
-                                                    .onSurfaceVariant,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
+                                  child: TextField(
+                                    controller: _phoneController,
+                                    keyboardType: TextInputType.phone,
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface),
+                                    decoration: InputDecoration(
+                                      labelText: 'Mobile Number*',
+                                      labelStyle: TextStyle(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant,
+                                          fontSize: 14),
+                                      border: InputBorder.none,
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 16,
                                       ),
                                     ),
                                   ),
@@ -484,109 +459,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 24),
-
-                          _buildTextField(
-                            controller: _nameController,
-                            label: 'Full Name*',
-                            icon: Icons.person_outline,
-                          ),
-                          const SizedBox(height: 16),
-                          if (_isEmailRegistration)
-                            _buildTextField(
-                              controller: _emailController,
-                              label: 'Email Address*',
-                              icon: Icons.email_outlined,
-                              keyboardType: TextInputType.emailAddress,
-                            )
-                          else
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .surfaceContainerHighest
-                                    .withOpacity(0.5),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .outlineVariant),
-                              ),
-                              child: Row(
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 12),
-                                    child: Icon(Icons.phone_android_outlined,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary,
-                                        size: 22),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  DropdownButtonHideUnderline(
-                                    child: DropdownButton<String>(
-                                      value: _selectedCountryCode,
-                                      style: TextStyle(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface,
-                                          fontWeight: FontWeight.bold),
-                                      items: [
-                                        '+91',
-                                        '+1',
-                                        '+44',
-                                        '+971',
-                                        '+61',
-                                        '+81',
-                                        '+92',
-                                        '+880',
-                                        '+94',
-                                        '+65'
-                                      ]
-                                          .map((code) =>
-                                              DropdownMenuItem<String>(
-                                                value: code,
-                                                child: Text(code),
-                                              ))
-                                          .toList(),
-                                      onChanged: (val) {
-                                        if (val != null) {
-                                          setState(() {
-                                            _selectedCountryCode = val;
-                                          });
-                                        }
-                                      },
-                                    ),
-                                  ),
-                                  const VerticalDivider(width: 1),
-                                  Expanded(
-                                    child: TextField(
-                                      controller: _phoneController,
-                                      keyboardType: TextInputType.phone,
-                                      style: TextStyle(
-                                          fontSize: 16,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface),
-                                      decoration: InputDecoration(
-                                        labelText: 'Mobile Number*',
-                                        labelStyle: TextStyle(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurfaceVariant,
-                                            fontSize: 14),
-                                        border: InputBorder.none,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 16,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
                           const SizedBox(height: 16),
                           _buildTextField(
                             controller: _passwordController,

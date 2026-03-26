@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -6,34 +8,80 @@ import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/order.dart';
 import 'settings_service.dart';
 import '../utils/constants.dart';
 
 class BillingService {
   static Future<void> shareOnWhatsApp(Order order) async {
-    final text = 'Hello, here is the invoice for Order #${order.id}.\n'
-            'Total: Rs. ${order.totalAmount}\n'
-            'Status: ${order.status}\n'
+    final businessName =
+        SettingsService.getCachedRemoteSetting('BUSINESS_NAME', 'Parts Mitra');
+    final text = 'Hello, here is the order summary from $businessName.\n\n'
+            'Order ID: #SH-${order.id}\n'
+            'Customer: ${order.customerName}\n'
+            'Total: Rs. ${order.totalAmount.toStringAsFixed(2)}\n'
+            'Status: ${order.status}\n\n'
             'Items:\n' +
         order.items
             .map((item) =>
-                '- ${item.productName} x ${item.quantity}: Rs. ${item.price * item.quantity}')
-            .join('\n');
+                '- ${item.productName} x ${item.quantity}: Rs. ${(item.price * item.quantity).toStringAsFixed(2)}')
+            .join('\n') +
+        '\n\nThank you for choosing $businessName!';
 
     final encodedText = Uri.encodeComponent(text);
     final url = Uri.parse('whatsapp://send?text=$encodedText');
 
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url);
-    } else {
-      // Fallback to web link if app not installed
-      final webUrl = Uri.parse('https://wa.me/?text=$encodedText');
-      await launchUrl(webUrl);
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url);
+      } else {
+        // Fallback to web link if app not installed
+        final webUrl = Uri.parse('https://wa.me/?text=$encodedText');
+        if (await canLaunchUrl(webUrl)) {
+          await launchUrl(webUrl, mode: LaunchMode.externalApplication);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error launching WhatsApp: $e');
+    }
+  }
+
+  static Future<void> shareInvoice(Order order) async {
+    try {
+      final pdfBytes = await _generatePdfBytes(order);
+      final output = await getTemporaryDirectory();
+      final filePath = "${output.path}/invoice_${order.id}.pdf";
+      final file = File(filePath);
+      await file.writeAsBytes(pdfBytes);
+
+      final businessName = SettingsService.getCachedRemoteSetting(
+          'BUSINESS_NAME', 'Parts Mitra');
+      await Share.shareXFiles(
+        [XFile(filePath)],
+        text: 'Invoice for Order #SH-${order.id} from $businessName',
+        subject: 'Invoice #SH-${order.id}',
+      );
+    } catch (e) {
+      debugPrint('Error sharing invoice: $e');
     }
   }
 
   static Future<void> generateInvoice(Order order) async {
+    try {
+      final pdfBytes = await _generatePdfBytes(order);
+      final output = await getTemporaryDirectory();
+      final filePath = "${output.path}/invoice_${order.id}.pdf";
+      final file = File(filePath);
+      await file.writeAsBytes(pdfBytes);
+
+      await OpenFile.open(file.path);
+    } catch (e) {
+      debugPrint('Error generating/opening invoice: $e');
+    }
+  }
+
+  static Future<Uint8List> _generatePdfBytes(Order order) async {
     final pdf = pw.Document();
 
     // Fetch business settings
@@ -45,8 +93,6 @@ class BillingService {
         'BUSINESS_PHONE', '+91 9876543210');
     final businessEmail = SettingsService.getCachedRemoteSetting(
         'BUSINESS_EMAIL', 'info@partsmitra.com');
-    // final gstNumber =
-    //     SettingsService.getCachedRemoteSetting('GST_NUMBER', 'GSTIN: 22AAAAA0000A1Z5');
 
     final dateStr = DateFormat('dd MMM yyyy, hh:mm a')
         .format(DateTime.tryParse(order.createdAt) ?? DateTime.now());
@@ -95,9 +141,6 @@ class BillingService {
                         style: const pw.TextStyle(fontSize: 10)),
                     pw.Text('Phone: $businessPhone | Email: $businessEmail',
                         style: const pw.TextStyle(fontSize: 10)),
-                    // pw.Text(gstNumber,
-                    //     style: pw.TextStyle(
-                    //         fontSize: 10, fontWeight: pw.FontWeight.bold)),
                   ],
                 ),
                 pw.Column(
@@ -154,7 +197,6 @@ class BillingService {
                       pw.Text(order.customerName,
                           style: pw.TextStyle(
                               fontWeight: pw.FontWeight.bold, fontSize: 14)),
-                      // If customer address is available in order model, add it here
                       pw.Text('Customer ID: #${order.customerId}',
                           style: const pw.TextStyle(fontSize: 10)),
                     ],
@@ -308,23 +350,22 @@ class BillingService {
       ),
     );
 
-    final output = await getTemporaryDirectory();
-    final file = File("${output.path}/invoice_${order.id}.pdf");
-    await file.writeAsBytes(await pdf.save());
-
-    await OpenFile.open(file.path);
+    return pdf.save();
   }
 
   static PdfColor _getPdfStatusColor(String status) {
     switch (status.toUpperCase()) {
+      case 'PENDING':
+        return PdfColors.orange;
+      case 'APPROVED':
+      case 'PACKED':
+        return PdfColors.blue;
+      case 'OUT_FOR_DELIVERY':
+        return PdfColors.amber;
       case 'DELIVERED':
         return PdfColors.green;
       case 'CANCELLED':
         return PdfColors.red;
-      case 'PENDING':
-        return PdfColors.orange;
-      case 'APPROVED':
-        return PdfColors.blue;
       default:
         return PdfColors.grey;
     }

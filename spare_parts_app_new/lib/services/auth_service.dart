@@ -761,10 +761,19 @@ class AuthService {
   ) async {
     final normalizedIdentifier =
         identifier.contains('@') ? identifier.toLowerCase() : identifier;
-    final isEmail = normalizedIdentifier.contains('@');
 
-    if (isEmail) {
-      // Local fallback for email OTP only
+    if (Constants.useRemote) {
+      final purpose =
+          registrationData.containsKey('password') ? 'signup' : 'login';
+      await _remote.postJson('/auth/send-otp', {
+        'email': normalizedIdentifier,
+        'purpose': purpose,
+      });
+      return 'server';
+    }
+
+    // Local fallback for email OTP only
+    if (normalizedIdentifier.contains('@')) {
       _otp = (100000 + Random().nextInt(900000)).toString();
       try {
         await _emailService.sendOtp(normalizedIdentifier, _otp!);
@@ -774,15 +783,20 @@ class AuthService {
         return 'debug';
       }
     } else {
-      // For phone, we use Firebase verifyPhoneNumber instead of this method.
-      // This is now only a placeholder for consistency if needed by other logic.
       throw Exception('Use verifyPhoneNumber for phone OTP');
     }
   }
 
   Future<void> sendPasswordResetOtp(String email) async {
     final normalizedEmail = email.toLowerCase();
-    // Local fallback for email only
+    if (Constants.useRemote) {
+      await _remote.postJson('/auth/send-otp', {
+        'email': normalizedEmail,
+        'purpose': 'reset',
+      });
+      return;
+    }
+    // Local fallback
     _otp = (100000 + Random().nextInt(900000)).toString();
     await _emailService.sendOtp(normalizedEmail, _otp!);
   }

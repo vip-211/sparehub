@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 import '../models/order.dart';
 import '../providers/auth_provider.dart';
 import '../services/order_service.dart';
-import '../services/billing_service.dart';
+import 'package:spare_parts_app/services/billing_service.dart';
 import '../utils/constants.dart';
 import '../services/websocket_service.dart';
 
@@ -195,13 +195,22 @@ class _RetailerOrdersScreenState extends State<RetailerOrdersScreen> {
                                         Theme.of(context).colorScheme.primary),
                                 onPressed: () =>
                                     BillingService.shareOnWhatsApp(order),
-                                tooltip: 'Share via WhatsApp',
+                                tooltip: 'Share Summary',
                               ),
                               IconButton(
                                 icon: Icon(Icons.picture_as_pdf,
                                     color: Theme.of(context).colorScheme.error),
                                 onPressed: () => _generateBill(order),
                                 tooltip: 'View Invoice',
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.ios_share,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .secondary),
+                                onPressed: () =>
+                                    BillingService.shareInvoice(order),
+                                tooltip: 'Share Invoice PDF',
                               ),
                             ],
                           ),

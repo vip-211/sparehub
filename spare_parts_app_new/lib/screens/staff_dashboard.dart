@@ -7,6 +7,7 @@ import '../providers/auth_provider.dart';
 import '../services/order_service.dart';
 import '../services/database_service.dart';
 import '../services/auth_service.dart';
+import 'package:spare_parts_app/services/billing_service.dart';
 import '../services/websocket_service.dart';
 import '../models/order.dart';
 import '../utils/image_utils.dart';
@@ -370,7 +371,39 @@ class _StaffOrdersScreenState extends State<StaffOrdersScreen> {
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Customer: ${order.customerName}'),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Customer: ${order.customerName}'),
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: Icon(Icons.share,
+                                size: 18,
+                                color: Theme.of(context).colorScheme.primary),
+                            onPressed: () =>
+                                BillingService.shareOnWhatsApp(order),
+                            tooltip: 'Share Summary',
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.picture_as_pdf,
+                                size: 18,
+                                color: Theme.of(context).colorScheme.error),
+                            onPressed: () =>
+                                BillingService.generateInvoice(order),
+                            tooltip: 'View Invoice',
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.ios_share,
+                                size: 18,
+                                color: Theme.of(context).colorScheme.secondary),
+                            onPressed: () => BillingService.shareInvoice(order),
+                            tooltip: 'Share Invoice PDF',
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                   Container(
                     margin: const EdgeInsets.only(top: 4),
                     padding:

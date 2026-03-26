@@ -22,6 +22,7 @@ import '../services/product_service.dart';
 import '../services/auth_service.dart';
 import '../services/remote_client.dart';
 import '../services/notification_service.dart';
+import 'package:spare_parts_app/services/billing_service.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -1677,6 +1678,36 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
+                                  IconButton(
+                                    icon: Icon(Icons.share,
+                                        size: 20,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary),
+                                    onPressed: () =>
+                                        BillingService.shareOnWhatsApp(order),
+                                    tooltip: 'Share Summary',
+                                  ),
+                                  IconButton(
+                                    icon: Icon(Icons.picture_as_pdf,
+                                        size: 20,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .error),
+                                    onPressed: () =>
+                                        BillingService.generateInvoice(order),
+                                    tooltip: 'View Invoice',
+                                  ),
+                                  IconButton(
+                                    icon: Icon(Icons.ios_share,
+                                        size: 20,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .secondary),
+                                    onPressed: () =>
+                                        BillingService.shareInvoice(order),
+                                    tooltip: 'Share Invoice PDF',
+                                  ),
                                   IconButton(
                                     icon: const Icon(Icons.delete,
                                         color: Colors.red),

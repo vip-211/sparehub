@@ -16,6 +16,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     java.util.List<User> findByDeletedFalse();
     java.util.List<User> findByDeletedTrue();
 
+    @org.springframework.data.jpa.repository.Query("SELECT u FROM User u WHERE (u.email = :identifier OR u.phone = :identifier) AND u.deleted = false")
+    Optional<User> findByIdentifier(@org.springframework.data.repository.query.Param("identifier") String identifier);
+
     // Legacy support for older code
     default Optional<User> findByEmail(String email) {
         return findByEmailAndDeletedFalse(email);

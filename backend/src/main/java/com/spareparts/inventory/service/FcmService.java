@@ -44,10 +44,10 @@ public class FcmService {
         messagingTemplate.convertAndSendToUser(userId.toString(), "/queue/notifications", payload);
 
         if (FirebaseApp.getApps().isEmpty()) {
-            System.out.println("FcmService: Firebase not initialized, skipping FCM notification.");
+            System.out.println("FcmService: Firebase not initialized, skipping FCM notification for user " + userId);
             return;
         }
-        userRepository.findById(userId).ifPresent(user -> {
+        userRepository.findById(userId).ifPresentOrElse(user -> {
             if (user.getFcmToken() != null && !user.getFcmToken().isEmpty()) {
                 String roleName = "ROLE_MECHANIC";
                 if (user.getRole() != null && user.getRole().getName() != null) {
@@ -75,11 +75,14 @@ public class FcmService {
 
                 try {
                     FirebaseMessaging.getInstance().send(fcmMessage);
+                    System.out.println("FcmService: Successfully sent FCM to user " + userId);
                 } catch (FirebaseMessagingException e) {
-                    System.err.println("FcmService: Error sending FCM message: " + e.getMessage());
+                    System.err.println("FcmService: Error sending FCM message to user " + userId + ": " + e.getMessage());
                 }
+            } else {
+                System.out.println("FcmService: No FCM token for user " + userId);
             }
-        });
+        }, () -> System.out.println("FcmService: User not found: " + userId));
     }
 
     public void sendBroadcast(String title, String message, String offerType, String imageUrl) {
@@ -123,6 +126,7 @@ public class FcmService {
 
         try {
             FirebaseMessaging.getInstance().send(fcmMessage);
+            System.out.println("FcmService: Successfully sent FCM broadcast to all-users topic");
         } catch (FirebaseMessagingException e) {
             System.err.println("FcmService: Error sending FCM broadcast: " + e.getMessage());
         }

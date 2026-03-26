@@ -12,9 +12,9 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     List<Notification> findByTargetRoleOrTargetRoleOrderByCreatedAtDesc(String targetRole, String allRole);
     List<Notification> findByUserIdOrTargetRoleOrTargetRoleOrderByCreatedAtDesc(Long userId, String targetRole, String allRole);
     
-    long countByTargetRoleOrTargetRoleAndCreatedAtAfter(String targetRole, String allRole, LocalDateTime date);
-    long countByUserIdOrTargetRoleOrTargetRoleAndCreatedAtAfter(Long userId, String targetRole, String allRole, LocalDateTime date);
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(n) FROM Notification n WHERE (n.userId = :userId OR n.targetRole = :role OR n.targetRole = 'ALL') AND n.createdAt > :date")
+    long countUnread(@org.springframework.data.repository.query.Param("userId") Long userId, @org.springframework.data.repository.query.Param("role") String role, @org.springframework.data.repository.query.Param("date") LocalDateTime date);
     
-    long countByTargetRoleOrTargetRole(String targetRole, String allRole);
-    long countByUserIdOrTargetRoleOrTargetRole(Long userId, String targetRole, String allRole);
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(n) FROM Notification n WHERE n.userId = :userId OR n.targetRole = :role OR n.targetRole = 'ALL'")
+    long countAll(@org.springframework.data.repository.query.Param("userId") Long userId, @org.springframework.data.repository.query.Param("role") String role);
 }

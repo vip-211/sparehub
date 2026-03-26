@@ -37,9 +37,9 @@ public class NotificationController {
         
         User user = userRepository.findById(userId).orElse(null);
         if (user == null || user.getLastNotificationReadAt() == null) {
-            return ResponseEntity.ok(notificationRepository.countByUserIdOrTargetRoleOrTargetRole(userId, role, "ALL"));
+            return ResponseEntity.ok(notificationRepository.countAll(userId, role));
         }
-        return ResponseEntity.ok(notificationRepository.countByUserIdOrTargetRoleOrTargetRoleAndCreatedAtAfter(userId, role, "ALL", user.getLastNotificationReadAt()));
+        return ResponseEntity.ok(notificationRepository.countUnread(userId, role, user.getLastNotificationReadAt()));
     }
 
     @PostMapping("/mark-all-read")
