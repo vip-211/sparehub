@@ -9,6 +9,8 @@ import com.spareparts.inventory.dto.SignupRequest;
 import com.spareparts.inventory.entity.Role;
 import com.spareparts.inventory.entity.RoleName;
 import com.spareparts.inventory.entity.User;
+import com.spareparts.inventory.entity.Otp;
+import com.spareparts.inventory.repository.OtpRepository;
 import com.spareparts.inventory.repository.RoleRepository;
 import com.spareparts.inventory.repository.UserRepository;
 import com.spareparts.inventory.security.JwtUtils;
@@ -25,10 +27,12 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestController
@@ -44,6 +48,9 @@ public class AuthController {
     RoleRepository roleRepository;
 
     @Autowired
+    OtpRepository otpRepository;
+
+    @Autowired
     PasswordEncoder encoder;
 
     @Autowired
@@ -52,7 +59,6 @@ public class AuthController {
     @Autowired
     private JavaMailSender mailSender;
 
-    private static final Map<String, String> OTP_STORAGE = new java.util.concurrent.ConcurrentHashMap<>();
     private static final Map<String, Long> RATE_LIMIT_STORAGE = new java.util.concurrent.ConcurrentHashMap<>();
     private static final long RATE_LIMIT_MS = 60000; // 1 minute between OTP requests
 
@@ -63,6 +69,7 @@ public class AuthController {
     private boolean isDemoMode;
 
     @PostMapping("/send-otp")
+    @Transactional
     public ResponseEntity<?> sendOtp(@RequestBody Map<String, String> body) {
         String identifier = body.get("email");
         if (identifier == null || identifier.isEmpty()) {
@@ -104,45 +111,46 @@ public class AuthController {
         // Log the generated OTP immediately for troubleshooting
         System.out.println("GENERATED OTP for " + email + ": " + otp);
         
+        // 1. SAVE OTP FIRST to persistent storage (DB)
+        otpRepository.deleteByEmail(email); // Remove old ones
+        otpRepository.save(new Otp(email, otp, 5)); // Valid for 5 mins
+        System.out.println("Persistent OTP saved for " + email);
+
         // Skip sending email if in Demo Mode
         if (isDemoMode) {
-            OTP_STORAGE.put(email, otp);
             System.out.println("DEMO MODE: OTP for " + email + " is " + otp);
             return ResponseEntity.ok(new MessageResponse("Demo mode: Use OTP 123456 for " + email));
         }
         
-        // Send OTP via Email
+        // 2. THEN attempt to send OTP via Email
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(mailFrom);
             message.setTo(email);
-            message.setSubject("Your OTP for Spare Parts App");
+            message.setSubject("Your OTP for Parts Mitra");
             message.setText("Your OTP is: " + otp + "\n\nThis OTP is valid for 5 minutes.");
             mailSender.send(message);
             
-            OTP_STORAGE.put(email, otp);
-            System.out.println("OTP for " + email + ": " + otp);
-            
+            System.out.println("OTP email sent successfully to " + email);
             return ResponseEntity.ok(new MessageResponse("OTP sent successfully to " + email));
         } catch (Exception e) {
             System.err.println("CRITICAL: FAILED to send email to " + email);
             System.err.println("Error Message: " + e.getMessage());
             e.printStackTrace();
             
-            // Store the OTP anyway so the user can still use it if it shows up in backend logs
-            OTP_STORAGE.put(email, otp);
-            
             // Provide more specific guidance in the response
             String userMessage = "OTP generated, but email delivery failed. ";
             if (e.getMessage() != null && e.getMessage().contains("Username and Password not accepted")) {
                 userMessage += "Reason: SMTP Authentication failed. Please check Gmail App Password.";
             } else if (e.getMessage() != null && (e.getMessage().contains("Connect timed out") || e.getMessage().contains("Connection timed out"))) {
-                userMessage += "Reason: Connection to mail server timed out. Please check server network/firewall.";
+                userMessage += "Reason: Connection to mail server timed out. Render may be blocking port 587. Switching to port 465 might help.";
             } else {
                 userMessage += "Please check server logs or contact support.";
             }
             
-            return ResponseEntity.status(500).body(new MessageResponse(userMessage));
+            // We return 200 OK because the OTP IS SAVED in DB and can be verified 
+            // if the user gets it via other channels or logs.
+            return ResponseEntity.ok(new MessageResponse(userMessage + " You can try verifying if you have the OTP."));
         }
     }
 
@@ -200,6 +208,7 @@ public class AuthController {
     }
 
     @PostMapping("/otp-login")
+    @Transactional
     public ResponseEntity<?> otpLogin(@RequestBody Map<String, String> body) {
         String identifier = body.get("email");
         String otp = body.get("otp");
@@ -211,10 +220,15 @@ public class AuthController {
         // Normalize
         final String email = identifier.contains("@") ? identifier.toLowerCase().trim() : identifier.trim();
 
-        String storedOtp = OTP_STORAGE.get(email);
-        if (storedOtp == null || !storedOtp.equals(otp)) {
-            System.out.println("OTP Verification Failed for " + email + ". Received: " + otp + ", Stored: " + storedOtp);
-            return ResponseEntity.badRequest().body(new MessageResponse("Invalid or expired OTP."));
+        Otp storedOtp = otpRepository.findTopByEmailOrderByExpiryTimeDesc(email).orElse(null);
+        
+        if (storedOtp == null || !storedOtp.getOtp().equals(otp)) {
+            System.out.println("OTP Verification Failed for " + email + ". Received: " + otp + ", Stored: " + (storedOtp != null ? storedOtp.getOtp() : "null"));
+            return ResponseEntity.badRequest().body(new MessageResponse("Invalid OTP."));
+        }
+
+        if (storedOtp.isExpired()) {
+            return ResponseEntity.badRequest().body(new MessageResponse("OTP has expired. Please request a new one."));
         }
 
         // Find user
@@ -224,7 +238,7 @@ public class AuthController {
         }
 
         // Remove OTP after use
-        OTP_STORAGE.remove(email);
+        otpRepository.deleteByEmail(email);
 
         User user = userOptional.get();
         String jwt = jwtUtils.generateJwtTokenFromUsername(user.getEmail());
@@ -271,6 +285,7 @@ public class AuthController {
     }
 
     @PostMapping("/signup")
+    @Transactional
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signUpRequest) {
         if (userRepository.existsByEmail(signUpRequest.getEmail())) {
             return ResponseEntity
@@ -278,11 +293,15 @@ public class AuthController {
                     .body(new MessageResponse("Error: Email is already in use!"));
         }
 
-        // Verify OTP
-        String storedOtp = OTP_STORAGE.get(signUpRequest.getEmail());
-        if (storedOtp == null || !storedOtp.equals(signUpRequest.getOtp())) {
-            System.out.println("Signup OTP Verification Failed for " + signUpRequest.getEmail() + ". Received: " + signUpRequest.getOtp() + ", Stored: " + storedOtp);
-            return ResponseEntity.badRequest().body(new MessageResponse("Invalid or expired OTP."));
+        // Verify OTP from DB
+        Otp storedOtp = otpRepository.findTopByEmailOrderByExpiryTimeDesc(signUpRequest.getEmail()).orElse(null);
+        if (storedOtp == null || !storedOtp.getOtp().equals(signUpRequest.getOtp())) {
+            System.out.println("Signup OTP Verification Failed for " + signUpRequest.getEmail() + ". Received: " + signUpRequest.getOtp() + ", Stored: " + (storedOtp != null ? storedOtp.getOtp() : "null"));
+            return ResponseEntity.badRequest().body(new MessageResponse("Invalid OTP."));
+        }
+
+        if (storedOtp.isExpired()) {
+            return ResponseEntity.badRequest().body(new MessageResponse("OTP has expired."));
         }
 
         // Create new user's account
@@ -321,7 +340,7 @@ public class AuthController {
         userRepository.save(user);
 
         // Remove OTP after use
-        OTP_STORAGE.remove(signUpRequest.getEmail());
+        otpRepository.deleteByEmail(signUpRequest.getEmail());
 
         return ResponseEntity.ok(new MessageResponse("User registered successfully! Please wait for admin approval."));
     }
@@ -352,6 +371,7 @@ public class AuthController {
     }
 
     @PostMapping("/reset-password")
+    @Transactional
     public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> body) {
         String identifier = body.get("email");
         String otp = body.get("otp");
@@ -364,9 +384,13 @@ public class AuthController {
         // Normalize
         final String email = identifier.contains("@") ? identifier.toLowerCase().trim() : identifier.trim();
 
-        String storedOtp = OTP_STORAGE.get(email);
-        if (storedOtp == null || !storedOtp.equals(otp)) {
+        Otp storedOtp = otpRepository.findTopByEmailOrderByExpiryTimeDesc(email).orElse(null);
+        if (storedOtp == null || !storedOtp.getOtp().equals(otp)) {
             return ResponseEntity.badRequest().body(new MessageResponse("Invalid or expired OTP."));
+        }
+
+        if (storedOtp.isExpired()) {
+            return ResponseEntity.badRequest().body(new MessageResponse("OTP has expired."));
         }
 
         User user = userRepository.findByEmail(email)
@@ -375,7 +399,7 @@ public class AuthController {
         user.setPassword(encoder.encode(newPassword));
         userRepository.save(user);
 
-        OTP_STORAGE.remove(email);
+        otpRepository.deleteByEmail(email);
 
         return ResponseEntity.ok(new MessageResponse("Password reset successfully."));
     }
