@@ -164,11 +164,35 @@ public class AuthController {
                 // But for phone auth, the phone_number claim is standard
             }
 
-            // 2. Find user in database
-            User user = userRepository.findByPhoneAndDeletedFalse(phoneNumber)
-                    .or(() -> userRepository.findByPhoneAndDeletedFalse("+" + phoneNumber))
-                    .or(() -> userRepository.findByPhoneAndDeletedFalse(phoneNumber.replace("+", "")))
-                    .orElseThrow(() -> new RuntimeException("User not found with this phone number. Please register first."));
+            // 2. Find or auto-create user in database
+            String normalized = phoneNumber.trim();
+            if (normalized.startsWith("00")) normalized = "+" + normalized.substring(2);
+            String plain = normalized.replace("+", "");
+
+            java.util.Optional<User> existingUser = userRepository.findByPhoneAndDeletedFalse(normalized)
+                    .or(() -> userRepository.findByPhoneAndDeletedFalse("+" + plain))
+                    .or(() -> userRepository.findByPhoneAndDeletedFalse(plain));
+
+            User user;
+            if (existingUser.isPresent()) {
+                user = existingUser.get();
+            } else {
+                // Auto-create minimal user
+                String syntheticEmail = plain + "@phone.partsmitra.app";
+                if (userRepository.existsByEmailAndDeletedFalse(syntheticEmail)) {
+                    syntheticEmail = plain + "+1@phone.partsmitra.app";
+                }
+                user = new User();
+                user.setName("User " + (plain.length() >= 4 ? plain.substring(plain.length() - 4) : plain));
+                user.setEmail(syntheticEmail);
+                user.setPassword(encoder.encode(java.util.UUID.randomUUID().toString()));
+                user.setPhone(normalized);
+                user.setStatus(User.UserStatus.ACTIVE);
+                Role role = roleRepository.findByName(RoleName.ROLE_MECHANIC)
+                        .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                user.setRole(role);
+                userRepository.save(user);
+            }
 
             /*
             if (user.getStatus() != User.UserStatus.ACTIVE) {

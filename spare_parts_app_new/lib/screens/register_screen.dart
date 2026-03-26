@@ -231,6 +231,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       final target = _isEmailRegistration ? email : phone;
       debugPrint('RegisterScreen: Sending OTP to $target...');
+
+      if (!_isEmailRegistration) {
+        // Firebase Phone Auth for mobile registration
+        await authProvider.verifyPhone(
+          target,
+          onCodeSent: (verId) {
+            if (mounted) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => OtpVerificationScreen(
+                    email: target,
+                    isRegistration: true,
+                    registrationData: registrationData,
+                    isFirebase: true,
+                  ),
+                ),
+              );
+            }
+          },
+          onError: (err) {
+            _showFeedback('Firebase Phone Auth failed: $err', isError: true);
+            setState(() => _isLoading = false);
+          },
+        );
+        return;
+      }
+
       final source = await authProvider.sendOtp(target, registrationData);
       debugPrint('RegisterScreen: OTP source: $source');
 
@@ -241,6 +268,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               email: target,
               isRegistration: true,
               registrationData: registrationData,
+              isFirebase: false,
             ),
           ),
         );

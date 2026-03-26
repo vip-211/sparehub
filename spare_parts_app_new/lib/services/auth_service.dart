@@ -23,6 +23,13 @@ class AuthService {
   String? _otp;
   String? _verificationId;
 
+  String _normalizePhone(String phone) {
+    var cc =
+        SettingsService.getCachedRemoteSetting('DEFAULT_COUNTRY_CODE', '+91');
+    if (!cc.startsWith('+')) cc = '+$cc';
+    return phone.trim().startsWith('+') ? phone.trim() : (cc + phone.trim());
+  }
+
   Future<SharedPreferences> _prefs() async {
     return await SharedPreferences.getInstance();
   }
@@ -37,8 +44,9 @@ class AuthService {
     required Function(String errorMessage) onError,
   }) async {
     try {
+      final normalized = _normalizePhone(phoneNumber);
       await _firebaseAuth.verifyPhoneNumber(
-        phoneNumber: phoneNumber,
+        phoneNumber: normalized,
         verificationCompleted: (fb_auth.PhoneAuthCredential credential) async {
           // Auto-verification (rare on Android, not possible on iOS)
           // For now we just let the manual code entry handle it
@@ -59,9 +67,25 @@ class AuthService {
     }
   }
 
+  Future<String?> verifyPhoneCodeAndGetToken(String smsCode) async {
+    if (_verificationId == null) throw 'Verification ID is missing';
+    final credential = fb_auth.PhoneAuthProvider.credential(
+      verificationId: _verificationId!,
+      smsCode: smsCode,
+    );
+    final userCredential = await _firebaseAuth.signInWithCredential(credential);
+    final fbUser = userCredential.user;
+    if (fbUser != null) {
+      return await fbUser.getIdToken();
+    }
+    return null;
+  }
+
   Future<User?> loginWithPhoneCode(String smsCode, String phoneNumber) async {
     try {
       if (_verificationId == null) throw 'Verification ID is missing';
+
+      final normalized = _normalizePhone(phoneNumber);
 
       final credential = fb_auth.PhoneAuthProvider.credential(
         verificationId: _verificationId!,
@@ -80,14 +104,14 @@ class AuthService {
 
           // Call backend to login/fetch user by phone
           final json = await _remote.postJson('/auth/phone-login', {
-            'phoneNumber': phoneNumber,
+            'phoneNumber': normalized,
             'firebaseToken': idToken,
           });
 
           return _parseUserJson(json);
         } else {
           // Local DB fallback
-          return await _loginLocallyByPhone(phoneNumber);
+          return await _loginLocallyByPhone(normalized);
         }
       }
       return null;
@@ -386,18 +410,24 @@ class AuthService {
     double? latitude,
     double? longitude,
     String? otp,
+    String? firebaseToken,
   }) async {
     final normalizedEmail = email.toLowerCase();
+    final normalizedPhone = _normalizePhone(phone);
+
     if (Constants.useRemote) {
       final body = {
         'name': name,
         'email': normalizedEmail,
         'password': password,
-        'phone': phone,
+        'phone': normalizedPhone,
         'address': address,
         'role': _mapRoleForBackend(role),
       };
       if (otp != null && otp.isNotEmpty) body['otp'] = otp;
+      if (firebaseToken != null && firebaseToken.isNotEmpty) {
+        body['firebaseToken'] = firebaseToken;
+      }
 
       await _remote.postJson('/auth/signup', body);
       return true;
@@ -421,7 +451,7 @@ class AuthService {
       "email": email,
       "password": hashedPassword,
       "role": role,
-      "phone": phone,
+      "phone": normalizedPhone,
       "address": address,
       "status": "ACTIVE",
       "latitude": latitude,
@@ -486,10 +516,11 @@ class AuthService {
   // =============================
 
   Future<void> sendVerificationOtp(String email, String phone) async {
+    final normalizedPhone = _normalizePhone(phone);
     if (Constants.useRemote) {
       await _remote.postJson('/auth/send-verification-otp', {
         'email': email,
-        'phone': phone,
+        'phone': normalizedPhone,
       });
       return;
     }
@@ -577,10 +608,11 @@ class AuthService {
     String phone,
     String address,
   ) async {
+    final normalizedPhone = _normalizePhone(phone);
     if (Constants.useRemote) {
       final res = await _remote.putJson('/users/profile', {
         'name': name,
-        'phone': phone,
+        'phone': normalizedPhone,
         'address': address,
       });
 
@@ -602,7 +634,7 @@ class AuthService {
 
     await db.update(
       "users",
-      {"name": name, "phone": phone, "address": address},
+      {"name": name, "phone": normalizedPhone, "address": address},
       where: "id = ?",
       whereArgs: [userId],
     );
@@ -731,33 +763,7 @@ class AuthService {
         identifier.contains('@') ? identifier.toLowerCase() : identifier;
     final isEmail = normalizedIdentifier.contains('@');
 
-    if (Constants.useRemote && !Constants.forceLocalOtp) {
-      try {
-        if (kDebugMode) {
-          debugPrint(
-              'AuthService: Requesting remote OTP for $normalizedIdentifier...');
-        }
-        final body = {
-          (isEmail ? 'email' : 'phone'): normalizedIdentifier,
-          'purpose': (registrationData.isNotEmpty ? 'signup' : 'login'),
-        };
-        await _remote.postJson('/auth/send-otp', body);
-
-        _otp = null; // Backend stores OTP
-        return 'server';
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint('AuthService: Remote OTP failed: $e');
-        }
-        await SettingsService.setLastOtpFailure(e.toString());
-        // Fallback to local for all purposes if remote fails
-        if (kDebugMode) {
-          debugPrint('Remote OTP failed, falling back to local: $e');
-        }
-      }
-    }
-
-    // Local Fallback
+    // Local Fallback (Remote API call removed to favor Firebase Phone Auth)
     _otp = (100000 + Random().nextInt(900000)).toString();
 
     if (isEmail) {
@@ -766,7 +772,6 @@ class AuthService {
         return 'email';
       } catch (e) {
         if (kDebugMode) debugPrint('Local Email OTP failed: $e');
-        // If real email fails, we still set _otp so user can "guess" or we can see it in logs
         return 'debug';
       }
     } else {
@@ -783,21 +788,7 @@ class AuthService {
 
   Future<void> sendPasswordResetOtp(String email) async {
     final normalizedEmail = email.toLowerCase();
-    try {
-      if (Constants.useRemote && !Constants.forceLocalOtp) {
-        final body = {'email': normalizedEmail, 'purpose': 'reset'};
-        await _remote.postJson('/auth/send-otp', body);
-        _otp = null;
-        return;
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('AuthService: Remote reset OTP failed: $e');
-      }
-      await SettingsService.setLastOtpFailure(e.toString());
-      // Fall through to local fallback
-    }
-    // Local fallback
+    // Local fallback (Remote API call removed)
     _otp = (100000 + Random().nextInt(900000)).toString();
     await _emailService.sendOtp(normalizedEmail, _otp!);
   }

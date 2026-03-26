@@ -9,12 +9,14 @@ class OtpVerificationScreen extends StatefulWidget {
   final String email;
   final Map<String, dynamic>? registrationData;
   final bool isRegistration;
+  final bool isFirebase;
 
   const OtpVerificationScreen({
     super.key,
     required this.email,
     this.registrationData,
     this.isRegistration = false,
+    this.isFirebase = false,
   });
 
   @override
@@ -196,6 +198,17 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                                             if (widget.registrationData !=
                                                 null) {
                                               // Registration logic
+                                              String? firebaseToken;
+                                              if (widget.isFirebase) {
+                                                firebaseToken = await authProvider
+                                                    .verifyPhoneCodeAndGetToken(
+                                                  _otpController.text,
+                                                );
+                                                if (firebaseToken == null) {
+                                                  throw 'Firebase verification failed';
+                                                }
+                                              }
+
                                               final success =
                                                   await authProvider.register(
                                                 widget
@@ -218,7 +231,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                                                 longitude:
                                                     widget.registrationData![
                                                         'longitude'],
-                                                otp: _otpController.text,
+                                                otp: widget.isFirebase
+                                                    ? null
+                                                    : _otpController.text,
+                                                firebaseToken: firebaseToken,
                                               );
                                               if (success) {
                                                 if (mounted) {
@@ -310,16 +326,32 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                                           context,
                                           listen: false,
                                         );
-                                        final source =
-                                            await authProvider.sendOtp(
-                                          widget.email,
-                                          widget.registrationData ?? {},
-                                        );
-                                        final via = source == 'server'
-                                            ? 'SMS/Server'
-                                            : 'Email';
-                                        _showFeedback('OTP resent via $via');
-                                        _startTimer(); // Restart the 30s timer
+                                        if (widget.isFirebase) {
+                                          await authProvider.verifyPhone(
+                                            widget.email,
+                                            onCodeSent: (verId) {
+                                              _showFeedback(
+                                                  'OTP resent via Firebase');
+                                              _startTimer();
+                                            },
+                                            onError: (err) {
+                                              _showFeedback(
+                                                  'Firebase Phone Auth failed: $err',
+                                                  isError: true);
+                                            },
+                                          );
+                                        } else {
+                                          final source =
+                                              await authProvider.sendOtp(
+                                            widget.email,
+                                            widget.registrationData ?? {},
+                                          );
+                                          final via = source == 'server'
+                                              ? 'SMS/Server'
+                                              : 'Email';
+                                          _showFeedback('OTP resent via $via');
+                                          _startTimer(); // Restart the 30s timer
+                                        }
                                       } catch (e) {
                                         _showFeedback(e.toString(),
                                             isError: true);

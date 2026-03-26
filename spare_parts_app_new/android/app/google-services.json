@@ -1,32 +1,13 @@
 {
   "project_info": {
-    "project_number": "1055897818769",
-    "project_id": "spare-parts-app-c1094",
-    "storage_bucket": "spare-parts-app-c1094.firebasestorage.app"
+    "project_number": "231449365632",
+    "project_id": "jms-spare-parts",
+    "storage_bucket": "jms-spare-parts.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1055897818769:android:e8ce808433158aa5a85130",
-        "android_client_info": {
-          "package_name": "com.spareparts.inventory"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyCGb78rh-_3uQ9UtQTmp6JyJ8Lj2h8UoAo"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:1055897818769:android:53e089cd3941bd1ea85130",
+        "mobilesdk_app_id": "1:231449365632:android:7dbc4fc4b13b3530232a65",
         "android_client_info": {
           "package_name": "com.spareshub.app"
         }
@@ -34,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCGb78rh-_3uQ9UtQTmp6JyJ8Lj2h8UoAo"
+          "current_key": "AIzaSyCo4W9V0h9WLfUK2tABzafZ1VizjdEBdCc"
         }
       ],
       "services": {

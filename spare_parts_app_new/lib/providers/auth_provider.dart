@@ -116,6 +116,10 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  Future<String?> verifyPhoneCodeAndGetToken(String smsCode) async {
+    return await _authService.verifyPhoneCodeAndGetToken(smsCode);
+  }
+
   Future<bool> loginWithPhoneCode(String smsCode, String phoneNumber) async {
     _isLoading = true;
     notifyListeners();
@@ -241,6 +245,7 @@ class AuthProvider with ChangeNotifier {
     double? latitude,
     double? longitude,
     String? otp,
+    String? firebaseToken,
   }) async {
     _isLoading = true;
     notifyListeners();
@@ -255,6 +260,7 @@ class AuthProvider with ChangeNotifier {
         latitude: latitude,
         longitude: longitude,
         otp: otp,
+        firebaseToken: firebaseToken,
       );
       _isLoading = false;
       notifyListeners();
