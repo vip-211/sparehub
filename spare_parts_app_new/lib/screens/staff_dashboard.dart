@@ -103,7 +103,8 @@ class _StaffDashboardState extends State<StaffDashboard> {
                 child: const Text('Dismiss'),
               ),
             ],
-            backgroundColor: Colors.orange.shade50,
+            backgroundColor:
+                Theme.of(context).colorScheme.surfaceContainerHighest,
           ),
         );
       });
@@ -140,8 +141,6 @@ class _StaffDashboardState extends State<StaffDashboard> {
         appBar: AppBar(
           title: const Text('Staff Dashboard',
               style: TextStyle(fontWeight: FontWeight.bold)),
-          backgroundColor: Colors.blueGrey,
-          foregroundColor: Colors.white,
           actions: [
             IconButton(
               icon: const Icon(Icons.settings),
@@ -352,7 +351,12 @@ class _StaffOrdersScreenState extends State<StaffOrdersScreen> {
             key: ValueKey('staff_order_${order.id}_$isHighlighted'),
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             elevation: isHighlighted ? 4 : 2,
-            color: isHighlighted ? Colors.blue.shade50 : null,
+            color: isHighlighted
+                ? Theme.of(context)
+                    .colorScheme
+                    .primaryContainer
+                    .withOpacity(0.3)
+                : null,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: ExpansionTile(
@@ -360,7 +364,9 @@ class _StaffOrdersScreenState extends State<StaffOrdersScreen> {
               title: Text('Order #${order.id}',
                   style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: isHighlighted ? Colors.blue.shade800 : null)),
+                      color: isHighlighted
+                          ? Theme.of(context).colorScheme.primary
+                          : null)),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

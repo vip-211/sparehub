@@ -31,7 +31,9 @@ class ProductGridItem extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(22),
         ),
-        color: isSelected ? Colors.blue.shade100 : Colors.white,
+        color: isSelected
+            ? Theme.of(context).colorScheme.primaryContainer
+            : Theme.of(context).colorScheme.surface,
         child: Stack(
           children: [
             Column(
@@ -57,10 +59,11 @@ class ProductGridItem extends StatelessWidget {
                         child: Image.network(
                           product.imagePath ?? '',
                           fit: BoxFit.cover,
-                          errorBuilder: (ctx, err, st) => const Icon(
+                          errorBuilder: (ctx, err, st) => Icon(
                             Icons.image_not_supported,
                             size: 50,
-                            color: Colors.grey,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ),
@@ -76,16 +79,17 @@ class ProductGridItem extends StatelessWidget {
                         product.name,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Part: ${product.partNumber ?? 'N/A'}',
                         style: TextStyle(
-                          color: Colors.grey.shade600,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 12,
                         ),
                       ),
@@ -95,17 +99,19 @@ class ProductGridItem extends StatelessWidget {
                         children: [
                           Text(
                             '₹${product.sellingPrice}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: Colors.green,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
                           Text(
                             'Stock: ${product.stock}',
                             style: TextStyle(
                               color: product.stock > 0
-                                  ? Colors.grey.shade700
-                                  : Colors.redAccent,
+                                  ? Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant
+                                  : Theme.of(context).colorScheme.error,
                               fontWeight: FontWeight.w600,
                               fontSize: 12,
                             ),
@@ -125,13 +131,19 @@ class ProductGridItem extends StatelessWidget {
                     Expanded(
                       child: Row(
                         children: [
-                          const Text('Enabled'),
+                          Text(
+                            'Enabled',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface,
+                              fontSize: 12,
+                            ),
+                          ),
                           const SizedBox(width: 6),
                           Flexible(
                             child: Switch(
                               value: product.enabled,
                               onChanged: onToggleEnabled,
-                              activeColor: Colors.redAccent,
+                              activeColor: Theme.of(context).colorScheme.error,
                               materialTapTargetSize:
                                   MaterialTapTargetSize.shrinkWrap,
                             ),
@@ -142,7 +154,8 @@ class ProductGridItem extends StatelessWidget {
                     IconButton(
                       iconSize: 20,
                       padding: EdgeInsets.zero,
-                      icon: const Icon(Icons.delete_outline, color: Colors.red),
+                      icon: Icon(Icons.delete_outline,
+                          color: Theme.of(context).colorScheme.error),
                       onPressed: onDelete,
                       tooltip: 'Delete',
                     ),

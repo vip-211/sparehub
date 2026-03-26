@@ -60,11 +60,11 @@ class _OffersScreenState extends State<OffersScreen>
       appBar: AppBar(
         title: const Text('Exclusive Offers',
             style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.orange.shade800,
-        foregroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: Colors.white,
+          indicatorColor: Theme.of(context).colorScheme.onPrimary,
           indicatorWeight: 3,
           labelStyle:
               const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -161,9 +161,13 @@ class _OffersScreenState extends State<OffersScreen>
                               product.imagePath ?? product.imageLink),
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => Container(
-                            color: Colors.grey[200],
-                            child: const Icon(Icons.image_not_supported,
-                                color: Colors.grey),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest,
+                            child: Icon(Icons.image_not_supported,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant),
                           ),
                         ),
                       ),
@@ -175,13 +179,13 @@ class _OffersScreenState extends State<OffersScreen>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.red,
+                              color: Theme.of(context).colorScheme.error,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
                               '${discountPercent.toStringAsFixed(0)}% OFF',
-                              style: const TextStyle(
-                                  color: Colors.white,
+                              style: TextStyle(
+                                  color: Theme.of(context).colorScheme.onError,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 12),
                             ),
@@ -199,8 +203,10 @@ class _OffersScreenState extends State<OffersScreen>
                         product.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 14),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: Theme.of(context).colorScheme.onSurface),
                       ),
                       const SizedBox(height: 4),
                       Row(
@@ -210,16 +216,18 @@ class _OffersScreenState extends State<OffersScreen>
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
-                              color: Colors.orange.shade900,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
                           if (product.mrp > price) ...[
                             const SizedBox(width: 4),
                             Text(
                               '₹${product.mrp.toStringAsFixed(0)}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 decoration: TextDecoration.lineThrough,
-                                color: Colors.grey,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
                                 fontSize: 12,
                               ),
                             ),
@@ -235,13 +243,17 @@ class _OffersScreenState extends State<OffersScreen>
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: Colors.orange.shade100,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .primaryContainer,
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
                                 'Min Qty: ${product.offerMinQty}',
                                 style: TextStyle(
-                                  color: Colors.orange.shade900,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onPrimaryContainer,
                                   fontWeight: FontWeight.w600,
                                   fontSize: 11,
                                 ),
@@ -252,7 +264,7 @@ class _OffersScreenState extends State<OffersScreen>
                             style: TextStyle(
                               color: product.stock > 0
                                   ? Colors.green.shade700
-                                  : Colors.red.shade700,
+                                  : Theme.of(context).colorScheme.error,
                               fontWeight: FontWeight.w600,
                               fontSize: 11,
                             ),
@@ -271,14 +283,17 @@ class _OffersScreenState extends State<OffersScreen>
                                       content:
                                           Text('${product.name} added to cart'),
                                       duration: const Duration(seconds: 1),
-                                      backgroundColor: Colors.orange.shade800,
+                                      backgroundColor:
+                                          Theme.of(context).colorScheme.primary,
                                     ),
                                   );
                                 }
                               : null,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange.shade800,
-                            foregroundColor: Colors.white,
+                            backgroundColor:
+                                Theme.of(context).colorScheme.primary,
+                            foregroundColor:
+                                Theme.of(context).colorScheme.onPrimary,
                             padding: EdgeInsets.zero,
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8)),

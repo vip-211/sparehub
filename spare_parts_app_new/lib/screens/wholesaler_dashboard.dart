@@ -112,7 +112,8 @@ class _WholesalerDashboardState extends State<WholesalerDashboard> {
                 child: const Text('Dismiss'),
               ),
             ],
-            backgroundColor: Colors.orange.shade50,
+            backgroundColor:
+                Theme.of(context).colorScheme.surfaceContainerHighest,
           ),
         );
       });
@@ -151,13 +152,12 @@ class _WholesalerDashboardState extends State<WholesalerDashboard> {
                 'Wholesaler Dashboard',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.white.withOpacity(0.8),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.normal,
                 ),
               ),
             ],
           ),
-          backgroundColor: Colors.purple.shade700,
           actions: [
             IconButton(
               icon: const Icon(Icons.settings),

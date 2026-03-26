@@ -73,269 +73,304 @@ class _RetailerOrdersScreenState extends State<RetailerOrdersScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
 
     return WillPopScope(
-      onWillPop: () async {
-        if (Navigator.of(context).canPop()) {
-          return true;
-        }
-        final roles = auth.user?.roles ?? [];
-        String fallback = '/dashboard/retailer';
-        if (roles.contains(Constants.roleMechanic)) {
-          fallback = '/dashboard/mechanic';
-        } else if (roles.contains(Constants.roleWholesaler)) {
-          fallback = '/dashboard/wholesaler';
-        } else if (roles.contains(Constants.roleAdmin) ||
-            roles.contains(Constants.roleSuperManager)) {
-          fallback = '/dashboard/admin';
-        } else if (roles.contains(Constants.roleStaff)) {
-          fallback = '/dashboard/staff';
-        }
-        Navigator.of(context).pushNamedAndRemoveUntil(fallback, (r) => false);
-        return false;
-      },
-      child: Scaffold(
-      appBar: AppBar(
-        title: const Text('My Orders'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              if (Navigator.of(context).canPop()) {
-                Navigator.of(context).pop();
-              } else {
-                final roles = auth.user?.roles ?? [];
-                String fallback = '/dashboard/retailer';
-                if (roles.contains(Constants.roleMechanic)) {
-                  fallback = '/dashboard/mechanic';
-                } else if (roles.contains(Constants.roleWholesaler)) {
-                  fallback = '/dashboard/wholesaler';
-                } else if (roles.contains(Constants.roleAdmin) ||
-                    roles.contains(Constants.roleSuperManager)) {
-                  fallback = '/dashboard/admin';
-                } else if (roles.contains(Constants.roleStaff)) {
-                  fallback = '/dashboard/staff';
+        onWillPop: () async {
+          if (Navigator.of(context).canPop()) {
+            return true;
+          }
+          final roles = auth.user?.roles ?? [];
+          String fallback = '/dashboard/retailer';
+          if (roles.contains(Constants.roleMechanic)) {
+            fallback = '/dashboard/mechanic';
+          } else if (roles.contains(Constants.roleWholesaler)) {
+            fallback = '/dashboard/wholesaler';
+          } else if (roles.contains(Constants.roleAdmin) ||
+              roles.contains(Constants.roleSuperManager)) {
+            fallback = '/dashboard/admin';
+          } else if (roles.contains(Constants.roleStaff)) {
+            fallback = '/dashboard/staff';
+          }
+          Navigator.of(context).pushNamedAndRemoveUntil(fallback, (r) => false);
+          return false;
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('My Orders'),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                } else {
+                  final roles = auth.user?.roles ?? [];
+                  String fallback = '/dashboard/retailer';
+                  if (roles.contains(Constants.roleMechanic)) {
+                    fallback = '/dashboard/mechanic';
+                  } else if (roles.contains(Constants.roleWholesaler)) {
+                    fallback = '/dashboard/wholesaler';
+                  } else if (roles.contains(Constants.roleAdmin) ||
+                      roles.contains(Constants.roleSuperManager)) {
+                    fallback = '/dashboard/admin';
+                  } else if (roles.contains(Constants.roleStaff)) {
+                    fallback = '/dashboard/staff';
+                  }
+                  Navigator.of(context)
+                      .pushNamedAndRemoveUntil(fallback, (r) => false);
                 }
-                Navigator.of(context)
-                    .pushNamedAndRemoveUntil(fallback, (r) => false);
-              }
-            },
-        ),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _fetchOrders,
-              child: ListView.builder(
-                itemCount: _orders.length,
-                itemBuilder: (ctx, i) {
-                  final order = _orders[i];
-                  final isHighlighted = _highlightedOrderId == order.id;
+              },
+            ),
+          ),
+          body: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : RefreshIndicator(
+                  onRefresh: _fetchOrders,
+                  child: ListView.builder(
+                    itemCount: _orders.length,
+                    itemBuilder: (ctx, i) {
+                      final order = _orders[i];
+                      final isHighlighted = _highlightedOrderId == order.id;
 
-                  return Card(
-                    key: ValueKey('order_${order.id}_$isHighlighted'),
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    elevation: isHighlighted ? 4 : 1,
-                    color: isHighlighted ? Colors.blue.shade50 : null,
-                    child: ExpansionTile(
-                      initiallyExpanded: isHighlighted,
-                      shape: const RoundedRectangleBorder(
-                        side: BorderSide.none,
-                      ),
-                      title: Text(
-                        'Order #${order.id}',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: isHighlighted ? Colors.blue.shade800 : null,
+                      return Card(
+                        key: ValueKey('order_${order.id}_$isHighlighted'),
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
                         ),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 4),
-                          Row(
+                        elevation: isHighlighted ? 4 : 1,
+                        color: isHighlighted
+                            ? Theme.of(context).colorScheme.primaryContainer
+                            : null,
+                        child: ExpansionTile(
+                          initiallyExpanded: isHighlighted,
+                          shape: const RoundedRectangleBorder(
+                            side: BorderSide.none,
+                          ),
+                          title: Text(
+                            'Order #${order.id}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: isHighlighted
+                                  ? Theme.of(context)
+                                      .colorScheme
+                                      .onPrimaryContainer
+                                  : null,
+                            ),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _buildStatusBadge(order.status),
-                              const SizedBox(width: 8),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  _buildStatusBadge(order.status),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '₹${order.totalAmount.toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
                               Text(
-                                '₹${order.totalAmount.toStringAsFixed(2)}',
+                                'Seller: ${order.sellerName}',
                                 style: TextStyle(
-                                  color: Colors.green.shade700,
-                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Seller: ${order.sellerName}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                            ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: Icon(Icons.share,
+                                    color:
+                                        Theme.of(context).colorScheme.primary),
+                                onPressed: () =>
+                                    BillingService.shareOnWhatsApp(order),
+                                tooltip: 'Share via WhatsApp',
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.picture_as_pdf,
+                                    color: Theme.of(context).colorScheme.error),
+                                onPressed: () => _generateBill(order),
+                                tooltip: 'View Invoice',
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.share, color: Colors.green),
-                            onPressed: () =>
-                                BillingService.shareOnWhatsApp(order),
-                            tooltip: 'Share via WhatsApp',
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.picture_as_pdf,
-                                color: Colors.red),
-                            onPressed: () => _generateBill(order),
-                            tooltip: 'View Invoice',
-                          ),
-                        ],
-                      ),
-                      children: [
-                        const Divider(height: 1),
-                        if (order.pointsRedeemed > 0)
-                          Container(
-                            margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE8F5E9),
-                              border:
-                                  Border.all(color: const Color(0xFFC8E6C9)),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'You saved ₹${order.pointsRedeemed} on this order! 🎉',
-                                  style: const TextStyle(
-                                    color: Color(0xFF1B5E20),
+                          children: [
+                            const Divider(height: 1),
+                            if (order.pointsRedeemed > 0)
+                              Container(
+                                margin:
+                                    const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primaryContainer
+                                      .withOpacity(0.3),
+                                  border: Border.all(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primaryContainer),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'You saved ₹${order.pointsRedeemed} on this order! 🎉',
+                                      style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Thanks for ordering with Parts Mitra — smart choice using your points.',
+                                      style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onPrimaryContainer,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            if (order.status == 'DELIVERED' &&
+                                (order.pointsEarned) > 0)
+                              Container(
+                                margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .secondaryContainer
+                                      .withOpacity(0.3),
+                                  border: Border.all(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .secondaryContainer),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  'Loyalty bonus: ${order.pointsEarned} points credited for this order.',
+                                  style: TextStyle(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSecondaryContainer,
                                     fontWeight: FontWeight.w800,
                                   ),
                                 ),
-                                const SizedBox(height: 4),
-                                const Text(
-                                  'Thanks for ordering with Parts Mitra — smart choice using your points.',
-                                  style: TextStyle(
-                                    color: Color(0xFF2E7D32),
-                                    fontWeight: FontWeight.w600,
+                              ),
+                            ...order.items.map(
+                              (item) => ListTile(
+                                dense: true,
+                                title: Text(
+                                  item.productName,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w500),
+                                ),
+                                subtitle: Text(
+                                  'Qty: ${item.quantity} | Price: ₹${item.price}',
+                                ),
+                                trailing: Text(
+                                  '₹${(item.price * item.quantity).toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
+
+                            /// CANCEL ORDER BUTTON
+                            if (auth.user != null &&
+                                (auth.user!.roles
+                                        .contains(Constants.roleRetailer) ||
+                                    auth.user!.roles
+                                        .contains(Constants.roleMechanic)) &&
+                                (order.status == 'PENDING' ||
+                                    order.status == 'APPROVED'))
+                              Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    icon: const Icon(Icons.cancel_outlined,
+                                        size: 18),
+                                    label: const Text('Cancel Order'),
+                                    onPressed: () async {
+                                      final confirm =
+                                          await _showCancelConfirmation();
+                                      if (confirm != true) return;
+
+                                      final updated = await _orderService
+                                          .cancelOrder(order.id);
+
+                                      if (updated != null) {
+                                        await _fetchOrders();
+
+                                        if (!mounted) return;
+
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                                'Order cancelled successfully'),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor:
+                                          Theme.of(context).colorScheme.error,
+                                      side: BorderSide(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .error),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 12),
+                                    ),
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
-                        if (order.status == 'DELIVERED' &&
-                            (order.pointsEarned) > 0)
-                          Container(
-                            margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFF8E1),
-                              border: Border.all(color: Color(0xFFFFECB3)),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              'Loyalty bonus: ${order.pointsEarned} points credited for this order.',
-                              style: const TextStyle(
-                                color: Color(0xFF8D6E63),
-                                fontWeight: FontWeight.w800,
                               ),
-                            ),
-                          ),
-                        ...order.items.map(
-                          (item) => ListTile(
-                            dense: true,
-                            title: Text(
-                              item.productName,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w500),
-                            ),
-                            subtitle: Text(
-                              'Qty: ${item.quantity} | Price: ₹${item.price}',
-                            ),
-                            trailing: Text(
-                              '₹${(item.price * item.quantity).toStringAsFixed(2)}',
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
+                          ],
                         ),
-
-                        /// CANCEL ORDER BUTTON
-                        if (auth.user != null &&
-                            (auth.user!.roles
-                                    .contains(Constants.roleRetailer) ||
-                                auth.user!.roles
-                                    .contains(Constants.roleMechanic)) &&
-                            (order.status == 'PENDING' ||
-                                order.status == 'APPROVED'))
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton.icon(
-                                icon:
-                                    const Icon(Icons.cancel_outlined, size: 18),
-                                label: const Text('Cancel Order'),
-                                onPressed: () async {
-                                  final confirm =
-                                      await _showCancelConfirmation();
-                                  if (confirm != true) return;
-
-                                  final updated =
-                                      await _orderService.cancelOrder(order.id);
-
-                                  if (updated != null) {
-                                    await _fetchOrders();
-
-                                    if (!mounted) return;
-
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                            'Order cancelled successfully'),
-                                      ),
-                                    );
-                                  }
-                                },
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.red,
-                                  side: const BorderSide(color: Colors.red),
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 12),
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-    ));
+                      );
+                    },
+                  ),
+                ),
+        ));
   }
 
   Widget _buildStatusBadge(String status) {
     Color color;
+    final colorScheme = Theme.of(context).colorScheme;
     switch (status.toUpperCase()) {
       case 'PENDING':
         color = Colors.orange;
         break;
       case 'APPROVED':
-        color = Colors.blue;
+        color = colorScheme.primary;
         break;
       case 'DELIVERED':
         color = Colors.green;
         break;
       case 'CANCELLED':
-        color = Colors.red;
+        color = colorScheme.error;
         break;
       default:
-        color = Colors.grey;
+        color = colorScheme.outline;
     }
 
     return Container(

@@ -61,8 +61,8 @@ class _CartScreenState extends State<CartScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Cart'),
-        backgroundColor: Colors.redAccent,
-        foregroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
@@ -73,20 +73,20 @@ class _CartScreenState extends State<CartScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.shopping_cart_outlined,
-                      size: 100, color: Colors.grey),
+                  Icon(Icons.shopping_cart_outlined,
+                      size: 100, color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.3)),
                   const SizedBox(height: 20),
-                  const Text(
+                  Text(
                     'Your cart is empty',
-                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                    style: TextStyle(fontSize: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: () => Navigator.of(context).pop(),
                     style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.redAccent),
-                    child: const Text('Continue Shopping',
-                        style: TextStyle(color: Colors.white)),
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary),
+                    child: const Text('Continue Shopping'),
                   ),
                 ],
               ),
@@ -101,6 +101,10 @@ class _CartScreenState extends State<CartScreen> {
                       return Card(
                         margin: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 8),
+                        color: Theme.of(context).colorScheme.surface,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
                         child: Padding(
                           padding: const EdgeInsets.all(12.0),
                           child: Row(
@@ -111,24 +115,25 @@ class _CartScreenState extends State<CartScreen> {
                                   children: [
                                     Text(
                                       item.productName,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 16,
+                                        color: Theme.of(context).colorScheme.onSurface,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
                                       'Price: Rs. ${item.price}',
-                                      style: const TextStyle(
-                                          color: Colors.grey, fontSize: 13),
+                                      style: TextStyle(
+                                          color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
                                     ),
                                     const SizedBox(height: 8),
                                     Row(
                                       children: [
                                         IconButton(
-                                          icon: const Icon(
+                                          icon: Icon(
                                               Icons.remove_circle_outline,
-                                              color: Colors.redAccent),
+                                              color: Theme.of(context).colorScheme.error),
                                           onPressed: () => cart
                                               .decrementItem(item.productId),
                                           constraints: const BoxConstraints(),
@@ -139,9 +144,10 @@ class _CartScreenState extends State<CartScreen> {
                                               horizontal: 12),
                                           child: Text(
                                             '${item.quantity}',
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                                 fontSize: 16,
-                                                fontWeight: FontWeight.bold),
+                                                fontWeight: FontWeight.bold,
+                                                color: Theme.of(context).colorScheme.onSurface),
                                           ),
                                         ),
                                         IconButton(
@@ -165,16 +171,16 @@ class _CartScreenState extends State<CartScreen> {
                                 children: [
                                   Text(
                                     'Rs. ${(item.price * item.quantity).toStringAsFixed(2)}',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16,
-                                      color: Colors.redAccent,
+                                      color: Theme.of(context).colorScheme.primary,
                                     ),
                                   ),
                                   const SizedBox(height: 8),
                                   IconButton(
-                                    icon: const Icon(Icons.delete_outline,
-                                        color: Colors.grey, size: 22),
+                                    icon: Icon(Icons.delete_outline,
+                                        color: Theme.of(context).colorScheme.onSurfaceVariant, size: 22),
                                     onPressed: () =>
                                         cart.removeItem(item.productId),
                                     constraints: const BoxConstraints(),
@@ -200,13 +206,13 @@ class _CartScreenState extends State<CartScreen> {
                           horizontal: 16, vertical: 8),
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.amber.shade50,
+                        color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.amber.shade200),
+                        border: Border.all(color: Theme.of(context).colorScheme.primaryContainer),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.stars, color: Colors.amber.shade800),
+                          Icon(Icons.stars, color: Theme.of(context).colorScheme.primary),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
@@ -216,14 +222,14 @@ class _CartScreenState extends State<CartScreen> {
                                   'Redeem Points',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.amber.shade900,
+                                    color: Theme.of(context).colorScheme.onPrimaryContainer,
                                   ),
                                 ),
                                 Text(
                                   'You have $points points available',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: Colors.amber.shade800,
+                                    color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.8),
                                   ),
                                 ),
                               ],
@@ -234,7 +240,7 @@ class _CartScreenState extends State<CartScreen> {
                             onChanged: (val) {
                               setState(() => _usePoints = val);
                             },
-                            activeColor: Colors.amber.shade800,
+                            activeColor: Theme.of(context).colorScheme.primary,
                           ),
                         ],
                       ),
@@ -247,10 +253,10 @@ class _CartScreenState extends State<CartScreen> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 20, vertical: 15),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.surface,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.grey.withOpacity(0.3),
+                          color: Colors.black.withOpacity(0.1),
                           spreadRadius: 1,
                           blurRadius: 10,
                           offset: const Offset(0, -3),
@@ -264,10 +270,10 @@ class _CartScreenState extends State<CartScreen> {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Total Amount',
                               style:
-                                  TextStyle(fontSize: 13, color: Colors.grey),
+                                  TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
                             ),
                             Consumer<AuthProvider>(
                               builder: (context, auth, child) {
@@ -284,19 +290,19 @@ class _CartScreenState extends State<CartScreen> {
                                     if (_usePoints && points > 0)
                                       Text(
                                         'Rs. ${total.toStringAsFixed(2)}',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 14,
                                           decoration:
                                               TextDecoration.lineThrough,
-                                          color: Colors.grey,
+                                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                                         ),
                                       ),
                                     Text(
                                       'Rs. ${finalTotal.toStringAsFixed(2)}',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.redAccent,
+                                        color: Theme.of(context).colorScheme.primary,
                                       ),
                                     ),
                                   ],
@@ -310,7 +316,8 @@ class _CartScreenState extends State<CartScreen> {
                             : ElevatedButton(
                                 onPressed: _placeOrder,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.redAccent,
+                                  backgroundColor: Theme.of(context).colorScheme.primary,
+                                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 30, vertical: 15),
                                   shape: RoundedRectangleBorder(
@@ -320,7 +327,6 @@ class _CartScreenState extends State<CartScreen> {
                                 child: const Text(
                                   'Place Order',
                                   style: TextStyle(
-                                      color: Colors.white,
                                       fontWeight: FontWeight.bold),
                                 ),
                               ),

@@ -597,8 +597,10 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
         return AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(28),
+            border:
+                Border.all(color: Theme.of(context).colorScheme.outlineVariant),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.04),
@@ -626,7 +628,10 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                           margin: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(22),
-                            color: Colors.grey.shade50,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest
+                                .withOpacity(0.5),
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(22),
@@ -637,9 +642,15 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                                   p.categoryImagePath),
                               fit: BoxFit.cover,
                               errorBuilder: (c, e, s) => Container(
-                                color: Colors.grey[100],
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerHighest,
                                 child: Icon(Icons.image_not_supported_outlined,
-                                    size: 32, color: Colors.grey[300]),
+                                    size: 32,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant
+                                        .withOpacity(0.3)),
                               ),
                             ),
                           ),
@@ -668,7 +679,10 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.9),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surface
+                                  .withOpacity(0.9),
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
@@ -680,7 +694,9 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                             child: Icon(
                               isOutOfStock ? Icons.close : Icons.check_circle,
                               size: 14,
-                              color: isOutOfStock ? Colors.red : Colors.green,
+                              color: isOutOfStock
+                                  ? Theme.of(context).colorScheme.error
+                                  : Colors.green,
                             ),
                           ),
                         ),
@@ -696,10 +712,10 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                           p.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.w800,
                             fontSize: 14,
-                            color: Color(0xFF1A1C1E),
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -708,7 +724,10 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade400,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant
+                                .withOpacity(0.6),
                             letterSpacing: 0.5,
                           ),
                         ),
@@ -721,7 +740,7 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w900,
-                                color: Theme.of(context).primaryColor,
+                                color: Theme.of(context).colorScheme.primary,
                               ),
                             ),
                             GestureDetector(
@@ -738,8 +757,9 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                                           shape: RoundedRectangleBorder(
                                               borderRadius:
                                                   BorderRadius.circular(12)),
-                                          backgroundColor:
-                                              Theme.of(context).primaryColor,
+                                          backgroundColor: Theme.of(context)
+                                              .colorScheme
+                                              .primary,
                                         ),
                                       );
                                     },
@@ -747,9 +767,12 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
                                   color: isOutOfStock
-                                      ? Colors.grey.shade100
+                                      ? Theme.of(context)
+                                          .colorScheme
+                                          .surfaceContainerHighest
                                       : Theme.of(context)
-                                          .primaryColor
+                                          .colorScheme
+                                          .primary
                                           .withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -757,8 +780,11 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                                   Icons.add_shopping_cart_rounded,
                                   size: 18,
                                   color: isOutOfStock
-                                      ? Colors.grey.shade300
-                                      : Theme.of(context).primaryColor,
+                                      ? Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant
+                                          .withOpacity(0.3)
+                                      : Theme.of(context).colorScheme.primary,
                                 ),
                               ),
                             ),
@@ -781,17 +807,17 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
     final cart = Provider.of<CartProvider>(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: RefreshIndicator(
         onRefresh: () => _fetchProducts(reset: true),
         child: Column(
           children: [
             Container(
               padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-              decoration: const BoxDecoration(
-                color: Colors.white,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius:
-                    BorderRadius.vertical(bottom: Radius.circular(32)),
+                    const BorderRadius.vertical(bottom: Radius.circular(32)),
               ),
               child: Column(
                 children: [
@@ -810,15 +836,26 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                           ),
                           child: TextField(
                             controller: _searchController,
-                            style: const TextStyle(fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.onSurface),
                             decoration: InputDecoration(
                               hintText: 'Search products...',
-                              prefixIcon: const Icon(Icons.search_rounded,
-                                  color: Colors.grey),
+                              hintStyle: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant),
+                              prefixIcon: Icon(Icons.search_rounded,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant),
                               suffixIcon: _searchController.text.isNotEmpty
                                   ? IconButton(
-                                      icon: const Icon(Icons.close_rounded,
-                                          size: 20),
+                                      icon: Icon(Icons.close_rounded,
+                                          size: 20,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant),
                                       onPressed: () {
                                         _searchController.clear();
                                         _fetchInitialData();
@@ -826,7 +863,10 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                                     )
                                   : null,
                               filled: true,
-                              fillColor: const Color(0xFFF1F3F4),
+                              fillColor: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest
+                                  .withOpacity(0.5),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(20),
                                 borderSide: BorderSide.none,
@@ -839,7 +879,8 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                                 borderRadius: BorderRadius.circular(20),
                                 borderSide: BorderSide(
                                     color: Theme.of(context)
-                                        .primaryColor
+                                        .colorScheme
+                                        .primary
                                         .withOpacity(0.3),
                                     width: 1),
                               ),
@@ -857,15 +898,17 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color:
-                                Theme.of(context).primaryColor.withOpacity(0.1),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.1),
                             borderRadius: BorderRadius.circular(18),
                           ),
                           child: Icon(
                             _isGridView
                                 ? Icons.grid_view_rounded
                                 : Icons.view_list_rounded,
-                            color: Theme.of(context).primaryColor,
+                            color: Theme.of(context).colorScheme.primary,
                             size: 22,
                           ),
                         ),
@@ -883,7 +926,7 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                               ? Icons.close_rounded
                               : Icons.auto_awesome_rounded,
                           label: 'Tools',
-                          color: Colors.indigo,
+                          color: Theme.of(context).colorScheme.secondary,
                           onTap: () => setState(
                               () => _showExtraIcons = !_showExtraIcons),
                         ),
@@ -894,7 +937,7 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                                 ? Icons.mic_rounded
                                 : Icons.mic_none_rounded,
                             label: 'Voice',
-                            color: Colors.redAccent,
+                            color: Theme.of(context).colorScheme.error,
                             onTap: _listen,
                             isActive: _isListening,
                           ),
@@ -902,14 +945,14 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                           _buildActionChip(
                             icon: Icons.qr_code_scanner_rounded,
                             label: 'Scan',
-                            color: Colors.blue,
+                            color: Theme.of(context).colorScheme.primary,
                             onTap: _scanQRCode,
                           ),
                           const SizedBox(width: 8),
                           _buildActionChip(
                             icon: Icons.add_shopping_cart_rounded,
                             label: 'Quick Add',
-                            color: Colors.orange,
+                            color: Theme.of(context).colorScheme.tertiary,
                             onTap: _voiceAddToCart,
                           ),
                         ],
@@ -941,11 +984,12 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                         selected: isSelected,
                         onSelected: (_) => _fetchProductsByCategory(
                             i == 0 ? null : _categories[i - 1]['id']),
-                        backgroundColor: Colors.white,
-                        selectedColor: Theme.of(context).primaryColor,
+                        backgroundColor: Theme.of(context).colorScheme.surface,
+                        selectedColor: Theme.of(context).colorScheme.primary,
                         labelStyle: TextStyle(
-                          color:
-                              isSelected ? Colors.white : Colors.grey.shade700,
+                          color: isSelected
+                              ? Theme.of(context).colorScheme.onPrimary
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
                           fontWeight: FontWeight.w700,
                           fontSize: 13,
                         ),
@@ -954,7 +998,7 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                           side: BorderSide(
                             color: isSelected
                                 ? Colors.transparent
-                                : Colors.grey.shade200,
+                                : Theme.of(context).colorScheme.outlineVariant,
                           ),
                         ),
                         elevation: isSelected ? 4 : 0,

@@ -306,7 +306,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 child: const Text('Dismiss'),
               ),
             ],
-            backgroundColor: Colors.orange.shade50,
+            backgroundColor:
+                Theme.of(context).colorScheme.surfaceContainerHighest,
           ),
         );
       });
@@ -353,9 +354,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
             isSuperManager ? 'Super Manager Panel' : 'Admin Panel',
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
-          backgroundColor:
-              isSuperManager ? Colors.deepPurpleAccent : Colors.redAccent,
-          foregroundColor: Colors.white,
+          backgroundColor: isSuperManager
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.error,
+          foregroundColor: isSuperManager
+              ? Theme.of(context).colorScheme.onPrimary
+              : Theme.of(context).colorScheme.onError,
           actions: [
             const CartBadge(),
             const NotificationBadge(),
@@ -407,14 +411,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 UserAccountsDrawerHeader(
                   accountName: Text(auth.user?.name ?? 'Admin'),
                   accountEmail: Text(auth.user?.email ?? ''),
-                  currentAccountPicture: const CircleAvatar(
-                    backgroundColor: Colors.white,
-                    child: Icon(Icons.person, color: Colors.redAccent),
+                  currentAccountPicture: CircleAvatar(
+                    backgroundColor: Theme.of(context).colorScheme.surface,
+                    child: Icon(Icons.person,
+                        color: isSuperManager
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.error),
                   ),
                   decoration: BoxDecoration(
                     color: isSuperManager
-                        ? Colors.deepPurpleAccent
-                        : Colors.redAccent,
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.error,
                   ),
                 ),
                 ListTile(
@@ -670,12 +677,12 @@ class _AdminOverviewScreenState extends State<AdminOverviewScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Dashboard Overview',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Colors.black,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 20),
@@ -786,9 +793,9 @@ class _AdminOverviewScreenState extends State<AdminOverviewScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -812,10 +819,10 @@ class _AdminOverviewScreenState extends State<AdminOverviewScreen> {
           const SizedBox(height: 8),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w800,
-              color: Colors.black,
+              color: Theme.of(context).colorScheme.onSurface,
               letterSpacing: -0.4,
             ),
           ),
@@ -825,7 +832,7 @@ class _AdminOverviewScreenState extends State<AdminOverviewScreen> {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Colors.grey.shade600,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
         ],
@@ -994,12 +1001,12 @@ class _AdminOverviewScreenState extends State<AdminOverviewScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.grey.shade100),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.05),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -1018,25 +1025,28 @@ class _AdminOverviewScreenState extends State<AdminOverviewScreen> {
         ),
         title: Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w800,
             fontSize: 15,
-            color: Color(0xFF1A1C1E),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
-        trailing:
-            Icon(Icons.chevron_right_rounded, color: Colors.grey.shade300),
+        trailing: Icon(Icons.chevron_right_rounded,
+            color: Theme.of(context)
+                .colorScheme
+                .onSurfaceVariant
+                .withOpacity(0.3)),
       ),
     );
   }
 
-  Widget _buildHeaderChip(IconData icon, String text) {
+  Widget _buildHeaderChip(BuildContext context, IconData icon, String text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -1051,16 +1061,17 @@ class _AdminOverviewScreenState extends State<AdminOverviewScreen> {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.grey.shade200,
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, size: 16, color: Colors.black87),
+            child: Icon(icon,
+                size: 16, color: Theme.of(context).colorScheme.onSurface),
           ),
           const SizedBox(width: 6),
           Text(
             text,
-            style: const TextStyle(
-              color: Colors.black87,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
               fontWeight: FontWeight.w700,
               fontSize: 13,
             ),

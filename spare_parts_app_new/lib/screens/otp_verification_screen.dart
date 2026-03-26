@@ -100,6 +100,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(24),
                     ),
+                    color: Theme.of(context).colorScheme.surface,
                     child: Padding(
                       padding: const EdgeInsets.all(32.0),
                       child: Form(
@@ -110,13 +111,16 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                             Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: Colors.green.withOpacity(0.1),
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .primary
+                                    .withOpacity(0.1),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.mark_email_read_outlined,
                                 size: 60,
-                                color: Colors.green,
+                                color: Theme.of(context).colorScheme.primary,
                               ),
                             ),
                             const SizedBox(height: 24),
@@ -309,8 +313,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                                         }
                                       },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green.shade600,
-                                  foregroundColor: Colors.white,
+                                  backgroundColor:
+                                      Theme.of(context).colorScheme.primary,
+                                  foregroundColor:
+                                      Theme.of(context).colorScheme.onPrimary,
                                   padding:
                                       const EdgeInsets.symmetric(vertical: 16),
                                   shape: RoundedRectangleBorder(
@@ -319,12 +325,14 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                                   elevation: 4,
                                 ),
                                 child: _isLoading
-                                    ? const SizedBox(
+                                    ? SizedBox(
                                         height: 20,
                                         width: 20,
                                         child: CircularProgressIndicator(
                                             strokeWidth: 2,
-                                            color: Colors.white))
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onPrimary))
                                     : const Text(
                                         'Verify & Continue',
                                         style: TextStyle(
@@ -451,7 +459,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
           children: [
             Icon(
               isError ? Icons.error_outlined : Icons.check_circle_outline,
-              color: Colors.white,
+              color: isError
+                  ? Theme.of(context).colorScheme.onError
+                  : Theme.of(context).colorScheme.onPrimary,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -462,7 +472,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             ),
           ],
         ),
-        backgroundColor: isError ? Colors.redAccent : Colors.green.shade600,
+        backgroundColor: isError
+            ? Theme.of(context).colorScheme.error
+            : Theme.of(context).colorScheme.primary,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),

@@ -15,41 +15,45 @@ class ProfileScreen extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade100),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: Theme.of(context).primaryColor.withOpacity(0.08),
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, color: Theme.of(context).primaryColor, size: 20),
+          child: Icon(icon,
+              color: Theme.of(context).colorScheme.primary, size: 20),
         ),
         title: Text(title,
             style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: Colors.grey.shade500,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 letterSpacing: 0.2)),
         subtitle: Text(value,
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w800,
-                color: Color(0xFF1A1C1E))),
+                color: Theme.of(context).colorScheme.onSurface)),
         trailing: trailing ??
             (isEditable
                 ? Container(
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
+                      color:
+                          Theme.of(context).colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: IconButton(
                         icon: Icon(Icons.edit_rounded,
-                            size: 18, color: Colors.grey.shade400),
+                            size: 18,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant),
                         onPressed: onEdit),
                   )
                 : null),
@@ -189,7 +193,7 @@ class ProfileScreen extends StatelessWidget {
     final user = authProvider.user;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         child: Column(
@@ -198,14 +202,15 @@ class ProfileScreen extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 40),
               decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor,
+                color: Theme.of(context).colorScheme.primary,
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(40),
                   bottomRight: Radius.circular(40),
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Theme.of(context).primaryColor.withOpacity(0.2),
+                    color:
+                        Theme.of(context).colorScheme.primary.withOpacity(0.2),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -218,26 +223,28 @@ class ProfileScreen extends StatelessWidget {
                     children: [
                       Container(
                         padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surface,
                           shape: BoxShape.circle,
                         ),
                         child: CircleAvatar(
                           radius: 65,
-                          backgroundColor: Colors.grey.shade100,
+                          backgroundColor: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
                           backgroundImage: user?.shopImagePath != null
                               ? FileImage(File(user!.shopImagePath!))
                               : null,
                           child: user?.shopImagePath == null
                               ? Icon(Icons.store_rounded,
                                   size: 60,
-                                  color: Theme.of(context).primaryColor)
+                                  color: Theme.of(context).colorScheme.primary)
                               : null,
                         ),
                       ),
                       Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.surface,
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
@@ -248,7 +255,8 @@ class ProfileScreen extends StatelessWidget {
                         ),
                         child: IconButton(
                           icon: Icon(Icons.camera_alt_rounded,
-                              size: 20, color: Theme.of(context).primaryColor),
+                              size: 20,
+                              color: Theme.of(context).colorScheme.primary),
                           onPressed: () =>
                               _pickShopImage(context, authProvider),
                         ),
@@ -258,10 +266,10 @@ class ProfileScreen extends StatelessWidget {
                   const SizedBox(height: 20),
                   Text(
                     user?.name ?? 'User',
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 26,
                         fontWeight: FontWeight.w900,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                         letterSpacing: -0.5),
                   ),
                   const SizedBox(height: 4),
@@ -269,15 +277,18 @@ class ProfileScreen extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onPrimary
+                          .withOpacity(0.15),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       user?.roles.join(' • ').toUpperCase() ?? '',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w900,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                         letterSpacing: 1.2,
                       ),
                     ),
@@ -288,7 +299,7 @@ class ProfileScreen extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.surface,
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
@@ -306,10 +317,10 @@ class ProfileScreen extends StatelessWidget {
                           const SizedBox(width: 8),
                           Text(
                             '${user.points} points available',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w900,
-                              color: Color(0xFF1A1C1E),
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                         ],
@@ -326,12 +337,12 @@ class ProfileScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'PROFILE INFORMATION',
                         style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w900,
-                            color: Color(0xFF1A1C1E),
+                            color: Theme.of(context).colorScheme.onSurface,
                             letterSpacing: 1.5),
                       ),
                       TextButton.icon(
@@ -398,12 +409,12 @@ class ProfileScreen extends StatelessWidget {
                     onEdit: () => _setCurrentLocation(context, authProvider),
                   ),
                   const SizedBox(height: 24),
-                  const Text(
+                  Text(
                     'SHOP VERIFICATION',
                     style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w900,
-                        color: Color(0xFF1A1C1E),
+                        color: Theme.of(context).colorScheme.onSurface,
                         letterSpacing: 1.5),
                   ),
                   const SizedBox(height: 16),
@@ -411,9 +422,10 @@ class ProfileScreen extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(28),
-                      border: Border.all(color: Colors.grey.shade100),
+                      border: Border.all(
+                          color: Theme.of(context).colorScheme.outlineVariant),
                     ),
                     child: Column(
                       children: [
@@ -432,20 +444,28 @@ class ProfileScreen extends StatelessWidget {
                             height: 120,
                             width: double.infinity,
                             decoration: BoxDecoration(
-                              color: Colors.grey.shade50,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(Icons.add_photo_alternate_outlined,
-                                    size: 40, color: Colors.grey.shade300),
+                                    size: 40,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant
+                                        .withOpacity(0.5)),
                                 const SizedBox(height: 8),
                                 Text('Upload Shop Photo for Faster Delivery',
                                     style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w700,
-                                        color: Colors.grey.shade400)),
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant)),
                               ],
                             ),
                           ),
@@ -461,7 +481,10 @@ class ProfileScreen extends StatelessWidget {
                                 ? 'UPDATE SHOP PHOTO'
                                 : 'UPLOAD SHOP PHOTO'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(context).primaryColor,
+                              backgroundColor:
+                                  Theme.of(context).colorScheme.primary,
+                              foregroundColor:
+                                  Theme.of(context).colorScheme.onPrimary,
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16)),
                             ),
@@ -484,8 +507,9 @@ class ProfileScreen extends StatelessWidget {
                       icon: const Icon(Icons.logout_rounded),
                       label: const Text('LOGOUT ACCOUNT'),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
+                        foregroundColor: Theme.of(context).colorScheme.error,
+                        side: BorderSide(
+                            color: Theme.of(context).colorScheme.error),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(18)),

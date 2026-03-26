@@ -228,20 +228,26 @@ public class AuthController {
         // Normalize
         final String email = identifier.contains("@") ? identifier.toLowerCase().trim() : identifier.trim();
 
-        List<Otp> storedOtps = otpRepository.findAllByEmailOrderByExpiryTimeDesc(email);
+        // ONLY allow the latest OTP (Fix per user request)
+        java.util.Optional<Otp> otpOptional = otpRepository.findTopByEmailOrderByExpiryTimeDesc(email);
         
-        Otp validOtp = null;
-        for (int i = 0; i < Math.min(storedOtps.size(), 2); i++) {
-            Otp candidate = storedOtps.get(i);
-            if (candidate.getOtp().equals(otp) && !candidate.isExpired()) {
-                validOtp = candidate;
-                break;
-            }
+        if (otpOptional.isEmpty()) {
+            System.out.println("OTP Verification Failed for " + email + ". No OTP found in DB.");
+            return ResponseEntity.badRequest().body(new MessageResponse("No OTP found. Please request a new one."));
         }
 
-        if (validOtp == null) {
-            System.out.println("OTP Verification Failed for " + email + ". Received: " + otp);
-            return ResponseEntity.badRequest().body(new MessageResponse("Invalid or expired OTP. Please use the latest code from your email."));
+        Otp latestOtp = otpOptional.get();
+        System.out.println("Received OTP: " + otp);
+        System.out.println("Stored OTP: " + latestOtp.getOtp());
+
+        if (!latestOtp.getOtp().equals(otp)) {
+            System.out.println("OTP Mismatch for " + email);
+            return ResponseEntity.badRequest().body(new MessageResponse("Invalid OTP. Please use the latest code."));
+        }
+
+        if (latestOtp.isExpired()) {
+            System.out.println("OTP Expired for " + email);
+            return ResponseEntity.badRequest().body(new MessageResponse("OTP expired. Please request a new one."));
         }
 
         // Find user
@@ -317,20 +323,26 @@ public class AuthController {
                 return ResponseEntity.status(401).body(new MessageResponse("Firebase verification failed: " + e.getMessage()));
             }
         } else {
-            // Traditional OTP verification from DB (allow last 2)
-            List<Otp> storedOtps = otpRepository.findAllByEmailOrderByExpiryTimeDesc(signUpRequest.getEmail());
-            Otp validOtp = null;
-            for (int i = 0; i < Math.min(storedOtps.size(), 2); i++) {
-                Otp candidate = storedOtps.get(i);
-                if (candidate.getOtp().equals(signUpRequest.getOtp()) && !candidate.isExpired()) {
-                    validOtp = candidate;
-                    break;
-                }
+            // ONLY allow the latest OTP (Fix per user request)
+            java.util.Optional<Otp> otpOptional = otpRepository.findTopByEmailOrderByExpiryTimeDesc(signUpRequest.getEmail());
+            
+            if (otpOptional.isEmpty()) {
+                System.out.println("Signup OTP Verification Failed for " + signUpRequest.getEmail() + ". No OTP found.");
+                return ResponseEntity.badRequest().body(new MessageResponse("No OTP found. Please request a new one."));
             }
 
-            if (validOtp == null) {
-                System.out.println("Signup OTP Verification Failed for " + signUpRequest.getEmail() + ". Received: " + signUpRequest.getOtp());
-                return ResponseEntity.badRequest().body(new MessageResponse("Invalid or expired OTP."));
+            Otp latestOtp = otpOptional.get();
+            System.out.println("Received OTP: " + signUpRequest.getOtp());
+            System.out.println("Stored OTP: " + latestOtp.getOtp());
+
+            if (!latestOtp.getOtp().equals(signUpRequest.getOtp())) {
+                System.out.println("Signup OTP Mismatch for " + signUpRequest.getEmail());
+                return ResponseEntity.badRequest().body(new MessageResponse("Invalid OTP."));
+            }
+
+            if (latestOtp.isExpired()) {
+                System.out.println("Signup OTP Expired for " + signUpRequest.getEmail());
+                return ResponseEntity.badRequest().body(new MessageResponse("OTP expired."));
             }
             
             // Remove OTP after use
@@ -414,18 +426,26 @@ public class AuthController {
         // Normalize
         final String email = identifier.contains("@") ? identifier.toLowerCase().trim() : identifier.trim();
 
-        List<Otp> storedOtps = otpRepository.findAllByEmailOrderByExpiryTimeDesc(email);
-        Otp validOtp = null;
-        for (int i = 0; i < Math.min(storedOtps.size(), 2); i++) {
-            Otp candidate = storedOtps.get(i);
-            if (candidate.getOtp().equals(otp) && !candidate.isExpired()) {
-                validOtp = candidate;
-                break;
-            }
+        // ONLY allow the latest OTP (Fix per user request)
+        java.util.Optional<Otp> otpOptional = otpRepository.findTopByEmailOrderByExpiryTimeDesc(email);
+        
+        if (otpOptional.isEmpty()) {
+            System.out.println("Reset Password OTP Verification Failed for " + email + ". No OTP found.");
+            return ResponseEntity.badRequest().body(new MessageResponse("No OTP found. Please request a new one."));
         }
 
-        if (validOtp == null) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Invalid or expired OTP."));
+        Otp latestOtp = otpOptional.get();
+        System.out.println("Received OTP: " + otp);
+        System.out.println("Stored OTP: " + latestOtp.getOtp());
+
+        if (!latestOtp.getOtp().equals(otp)) {
+            System.out.println("Reset Password OTP Mismatch for " + email);
+            return ResponseEntity.badRequest().body(new MessageResponse("Invalid OTP."));
+        }
+
+        if (latestOtp.isExpired()) {
+            System.out.println("Reset Password OTP Expired for " + email);
+            return ResponseEntity.badRequest().body(new MessageResponse("OTP expired."));
         }
 
         User user = userRepository.findByEmail(email)

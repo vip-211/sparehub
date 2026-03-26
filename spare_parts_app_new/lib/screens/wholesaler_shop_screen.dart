@@ -636,7 +636,7 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -648,13 +648,15 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                     Container(
                       width: 150,
                       height: 14,
-                      color: Colors.grey[300],
+                      color:
+                          Theme.of(context).colorScheme.surfaceContainerHighest,
                     ),
                     const SizedBox(height: 8),
                     Container(
                       width: 100,
                       height: 10,
-                      color: Colors.grey[300],
+                      color:
+                          Theme.of(context).colorScheme.surfaceContainerHighest,
                     ),
                   ],
                 ),
@@ -662,7 +664,7 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
               Container(
                 width: 60,
                 height: 20,
-                color: Colors.grey[300],
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
               ),
             ],
           ),
@@ -703,6 +705,7 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
         return Card(
           clipBehavior: Clip.antiAlias,
           elevation: 3,
+          color: Theme.of(context).colorScheme.surface,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: Column(
@@ -720,9 +723,15 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                           p.categoryImagePath),
                       fit: BoxFit.cover,
                       errorBuilder: (c, e, s) => Container(
-                        color: Colors.grey[200],
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest,
                         child: Icon(Icons.image_not_supported,
-                            size: 40, color: Colors.grey[400]),
+                            size: 40,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant
+                                .withOpacity(0.3)),
                       ),
                     ),
                     if (isOutOfStock)
@@ -745,13 +754,15 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: isOutOfStock ? Colors.red : Colors.green,
+                          color: isOutOfStock
+                              ? Theme.of(context).colorScheme.error
+                              : Theme.of(context).colorScheme.primary,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
                           isOutOfStock ? Icons.close : Icons.check,
                           size: 14,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                         ),
                       ),
                     ),
@@ -770,16 +781,18 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                         p.name,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 14),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: Theme.of(context).colorScheme.onSurface),
                       ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
                             '₹${price.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                              color: Colors.green,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary,
                               fontWeight: FontWeight.w900,
                               fontSize: 16,
                             ),
@@ -792,18 +805,22 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                                   SnackBar(
                                     content: Text('${p.name} added'),
                                     duration: const Duration(seconds: 1),
-                                    backgroundColor: Colors.green,
+                                    backgroundColor:
+                                        Theme.of(context).colorScheme.primary,
                                   ),
                                 );
                               },
                               child: Container(
                                 padding: const EdgeInsets.all(6),
                                 decoration: BoxDecoration(
-                                  color: Colors.green,
+                                  color: Theme.of(context).colorScheme.primary,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: const Icon(Icons.add_shopping_cart,
-                                    size: 20, color: Colors.white),
+                                child: Icon(Icons.add_shopping_cart,
+                                    size: 20,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onPrimary),
                               ),
                             ),
                         ],
@@ -865,7 +882,7 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                             icon: Icon(_isGridView
                                 ? Icons.view_list
                                 : Icons.grid_view),
-                            color: Colors.green,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ],
                       ),
@@ -880,18 +897,28 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                                 avatar: Icon(Icons.grid_view,
                                     size: 18,
                                     color: _selectedCategoryId == null
-                                        ? Colors.white
-                                        : Colors.green),
+                                        ? Theme.of(context)
+                                            .colorScheme
+                                            .onPrimary
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .primary),
                                 label: const Text('All'),
                                 selected: _selectedCategoryId == null,
                                 onSelected: (selected) =>
                                     _onCategorySelected(null),
-                                selectedColor: Colors.green,
+                                selectedColor:
+                                    Theme.of(context).colorScheme.primary,
                                 labelStyle: TextStyle(
                                     color: _selectedCategoryId == null
-                                        ? Colors.white
-                                        : Colors.black),
-                                checkmarkColor: Colors.white,
+                                        ? Theme.of(context)
+                                            .colorScheme
+                                            .onPrimary
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .onSurface),
+                                checkmarkColor:
+                                    Theme.of(context).colorScheme.onPrimary,
                               ),
                             ),
                             ..._categories.map((cat) {
@@ -904,18 +931,28 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                                   avatar: Icon(_getCategoryIcon(name),
                                       size: 18,
                                       color: isSelected
-                                          ? Colors.white
-                                          : Colors.green),
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .onPrimary
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .primary),
                                   label: Text(name),
                                   selected: isSelected,
                                   onSelected: (selected) =>
                                       _onCategorySelected(selected ? id : null),
-                                  selectedColor: Colors.green,
+                                  selectedColor:
+                                      Theme.of(context).colorScheme.primary,
                                   labelStyle: TextStyle(
                                       color: isSelected
-                                          ? Colors.white
-                                          : Colors.black),
-                                  checkmarkColor: Colors.white,
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .onPrimary
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .onSurface),
+                                  checkmarkColor:
+                                      Theme.of(context).colorScheme.onPrimary,
                                 ),
                               );
                             }).toList(),
