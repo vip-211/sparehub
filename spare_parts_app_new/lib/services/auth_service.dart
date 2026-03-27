@@ -762,7 +762,7 @@ class AuthService {
     final normalizedIdentifier =
         identifier.contains('@') ? identifier.toLowerCase() : identifier;
 
-    if (Constants.useRemote) {
+    if (Constants.useRemote && !Constants.forceLocalOtp) {
       final purpose =
           registrationData.containsKey('password') ? 'signup' : 'login';
       await _remote.postJson('/auth/send-otp', {

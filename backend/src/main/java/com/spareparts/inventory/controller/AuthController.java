@@ -64,6 +64,9 @@ public class AuthController {
     @Value("${app.otp.demo-mode:false}")
     private boolean isDemoMode;
 
+    @Autowired
+    private com.spareparts.inventory.service.EmailService emailService;
+
     @PostMapping(value = "/send-otp", produces = "application/json")
     public ResponseEntity<?> sendOtp(@RequestBody Map<String, String> body) {
         String identifier = body.get("email");
@@ -102,54 +105,30 @@ public class AuthController {
         // Log the generated OTP immediately for troubleshooting
         System.out.println("GENERATED OTP for " + email + ": " + otp);
         
-        // 1. Attempt to send OTP via Email FIRST (skip if in demo mode)
-        if (!isDemoMode) {
-            try {
-                otpService.sendOtpEmail(email, otp);
-                System.out.println("OTP email sent successfully to " + email);
-            } catch (Exception e) {
-                System.err.println("CRITICAL: FAILED to send email to " + email);
-                System.err.println("Error Message: " + e.getMessage());
-                e.printStackTrace();
-                
-                String userMessage = "Email delivery failed. ";
-                if (e.getMessage() != null && e.getMessage().contains("Username and Password not accepted")) {
-                    userMessage += "Reason: SMTP Authentication failed.";
-                } else if (e.getMessage() != null && (e.getMessage().contains("Connect timed out") || e.getMessage().contains("Connection timed out"))) {
-                    userMessage += "Reason: Connection to mail server timed out.";
-                } else {
-                    userMessage += "Please check server logs.";
-                }
-                
-                return ResponseEntity.status(500).body(new MessageResponse(userMessage));
-            }
-        } else {
+        // 1. Attempt to send OTP via configured mechanism; never break the flow
+        if (isDemoMode) {
             System.out.println("DEMO MODE: Skipping email send for " + email + ". OTP is: " + otp);
+        } else {
             try {
-                otpService.saveOtp(email, otp);
-                System.out.println("Persistent OTP saved for " + email + " (demo mode)");
+                emailService.sendOtp(email, otp);
             } catch (Exception e) {
-                System.err.println("Error saving OTP to DB (demo mode): " + e.getMessage());
-                return ResponseEntity.status(500).body(new MessageResponse("Failed to save OTP session. Please try again."));
+                // EmailService already handles internal errors and fallback prints
+                System.err.println("Error while invoking EmailService: " + e.getMessage());
             }
-            java.util.Map<String, Object> payload = new java.util.HashMap<>();
-            payload.put("message", "OTP generated (demo mode)");
-            payload.put("otp", otp);
-            payload.put("email", email);
-            return ResponseEntity.ok(payload);
         }
 
-        // 2. THEN, on successful send, save OTP to persistent storage
+        // 2. Save OTP regardless of email result (non-blocking user flow)
         try {
             otpService.saveOtp(email, otp);
             System.out.println("Persistent OTP saved for " + email);
         } catch (Exception e) {
             System.err.println("Error saving OTP to DB: " + e.getMessage());
-            // Since email was sent, we inform user but this is a critical backend issue
-            return ResponseEntity.status(500).body(new MessageResponse("Email sent, but failed to save session. Please try again."));
+            // Inform client that OTP was initiated, but saving failed
+            // Still return 200 to avoid blocking UX; client can re-request if needed
+            return ResponseEntity.ok(new MessageResponse("OTP initiated but there was a server issue recording the session. Please try again if you don't receive an email."));
         }
 
-        return ResponseEntity.ok(new MessageResponse("OTP sent successfully to " + email));
+        return ResponseEntity.ok(new MessageResponse("OTP initiated for " + email));
     }
 
     @PostMapping(value = "/phone-login", produces = "application/json")

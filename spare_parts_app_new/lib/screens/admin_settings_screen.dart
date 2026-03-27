@@ -69,6 +69,9 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
   ];
   bool _useGlobalThemeColor = false;
   bool _hideRegistration = false;
+  bool _enableEmailReg = true;
+  bool _enablePhoneReg = true;
+  bool _otpModeEmail = true;
   String? _lastOtpError;
   int? _lastOtpErrorAt;
   bool _loginBannerEnabled = false;
@@ -148,6 +151,12 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
         _useGlobalThemeColor =
             (remote['USE_GLOBAL_THEME_COLOR'] ?? 'false') == 'true';
         _hideRegistration = (remote['HIDE_REGISTRATION'] ?? 'false') == 'true';
+        _enableEmailReg =
+            (remote['ENABLE_EMAIL_REGISTRATION'] ?? 'true') == 'true';
+        _enablePhoneReg =
+            (remote['ENABLE_PHONE_REGISTRATION'] ?? 'true') == 'true';
+        _otpModeEmail =
+            (remote['OTP_MODE'] ?? 'EMAIL').toUpperCase() != 'LOCAL';
         _loaded = true;
         if (last != null) {
           _lastOtpError = last['message'] as String?;
@@ -182,6 +191,9 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       'FORCE_LOCAL_OTP': _localOtpGlobal ? 'true' : 'false',
       'USE_GLOBAL_THEME_COLOR': _useGlobalThemeColor ? 'true' : 'false',
       'HIDE_REGISTRATION': _hideRegistration ? 'true' : 'false',
+      'ENABLE_EMAIL_REGISTRATION': _enableEmailReg ? 'true' : 'false',
+      'ENABLE_PHONE_REGISTRATION': _enablePhoneReg ? 'true' : 'false',
+      'OTP_MODE': _otpModeEmail ? 'EMAIL' : 'LOCAL',
       'THEME_SEED_COLOR': _themeProvider.seedColor.value.toString(),
       'LOGO_URL': _logoUrlController.text,
       'SERVER_HOST': _serverHostController.text,
@@ -386,9 +398,34 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   onChanged: (v) => setState(() => _hideRegistration = v),
                 ),
                 SwitchListTile(
+                  title: const Text('Enable Email Registration'),
+                  subtitle: const Text('Show Email-only registration page'),
+                  value: _enableEmailReg,
+                  onChanged: (v) => setState(() => _enableEmailReg = v),
+                ),
+                SwitchListTile(
+                  title: const Text('Enable Phone Registration'),
+                  subtitle: const Text('Show Phone-only registration page'),
+                  value: _enablePhoneReg,
+                  onChanged: (v) => setState(() => _enablePhoneReg = v),
+                ),
+                SwitchListTile(
                   title: const Text('Enable AI Chatbot'),
                   value: _ai,
                   onChanged: (v) => setState(() => _ai = v),
+                ),
+                ListTile(
+                  title: const Text('OTP Delivery Mode'),
+                  subtitle: const Text(
+                      'EMAIL uses SendGrid; LOCAL prints OTP in server logs'),
+                  trailing: DropdownButton<bool>(
+                    value: _otpModeEmail,
+                    items: const [
+                      DropdownMenuItem(value: true, child: Text('EMAIL')),
+                      DropdownMenuItem(value: false, child: Text('LOCAL')),
+                    ],
+                    onChanged: (v) => setState(() => _otpModeEmail = v ?? true),
+                  ),
                 ),
                 SwitchListTile(
                   title: const Text('Enable WebSocket'),

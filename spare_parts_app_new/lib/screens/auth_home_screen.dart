@@ -53,13 +53,21 @@ class _AuthHomeScreenState extends State<AuthHomeScreen>
     final hideRegistration =
         SettingsService.getCachedRemoteSetting('HIDE_REGISTRATION', 'false') ==
             'true';
+    final enableEmail = SettingsService.getCachedRemoteSetting(
+            'ENABLE_EMAIL_REGISTRATION', 'true') ==
+        'true';
+    final enablePhone = SettingsService.getCachedRemoteSetting(
+            'ENABLE_PHONE_REGISTRATION', 'true') ==
+        'true';
     final tabs = <Tab>[
       const Tab(text: 'Login'),
-      if (!hideRegistration) const Tab(text: 'Register'),
+      if (!hideRegistration && (enableEmail || enablePhone))
+        const Tab(text: 'Register'),
     ];
     final views = <Widget>[
       const LoginScreen(showAppBar: false, minimal: true),
-      if (!hideRegistration) const RegisterScreen(showAppBar: false),
+      if (!hideRegistration && (enableEmail || enablePhone))
+        const RegisterScreen(showAppBar: false),
     ];
     return DefaultTabController(
       length: tabs.length,

@@ -1,25 +1,22 @@
-// ignore_for_file: use_build_context_synchronously
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import '../providers/auth_provider.dart';
 import '../utils/constants.dart';
-import 'otp_verification_screen.dart';
 import '../services/settings_service.dart';
+import 'otp_verification_screen.dart';
 import 'login_screen.dart';
-import 'mobile_otp_verification_screen.dart';
 
-class RegisterScreen extends StatefulWidget {
+class PhoneRegisterScreen extends StatefulWidget {
   final bool showAppBar;
-  const RegisterScreen({super.key, this.showAppBar = true});
+  const PhoneRegisterScreen({super.key, this.showAppBar = true});
 
   @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
+  State<PhoneRegisterScreen> createState() => _PhoneRegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _PhoneRegisterScreenState extends State<PhoneRegisterScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -31,10 +28,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
   double? _latitude;
   double? _longitude;
-
-  bool _emailMode = true;
-  bool _emailEnabled = true;
-  bool _phoneEnabled = true;
 
   List<String> _allowedRoles = [
     Constants.roleMechanic,
@@ -62,9 +55,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     try {
       final remote = await SettingsService.getRemoteSettings();
       final raw = remote['ALLOWED_REG_ROLES'];
-      _emailEnabled = (remote['ENABLE_EMAIL_REGISTRATION'] ?? 'true') == 'true';
-      _phoneEnabled = (remote['ENABLE_PHONE_REGISTRATION'] ?? 'true') == 'true';
-      if (!_emailEnabled && _phoneEnabled) _emailMode = false;
       if (raw != null && raw.isNotEmpty) {
         final parts = raw.split(',').map((e) => e.trim()).toList();
         setState(() {
@@ -74,10 +64,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           }
         });
       }
-      setState(() {});
-    } catch (_) {
-      setState(() {});
-    }
+    } catch (_) {}
   }
 
   void _showFeedback(String message, {bool isError = false}) {
@@ -155,7 +142,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _longitude = position.longitude;
       });
 
-      // Reverse Geocoding to get address
       try {
         List<Placemark> placemarks = await placemarkFromCoordinates(
           position.latitude,
@@ -183,9 +169,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             _addressController.text = address;
           });
         }
-      } catch (e) {
-        debugPrint('Reverse geocoding error: $e');
-      }
+      } catch (_) {}
 
       _showFeedback('Location captured successfully!');
     } catch (e) {
@@ -193,6 +177,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _startPhoneVerification(String phone) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    await authProvider.verifyPhone(
+      phone,
+      onCodeSent: (verId) {},
+      onError: (msg) {
+        _showFeedback(msg, isError: true);
+      },
+    );
   }
 
   void _handleRegister() async {
@@ -206,30 +201,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _showFeedback('Please fill in all required fields.', isError: true);
       return;
     }
-
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if (!emailRegex.hasMatch(email)) {
-      _showFeedback('Please enter a valid email address.', isError: true);
-      return;
-    }
-
     if (phone.length < 10) {
       _showFeedback('Please enter a valid mobile number.', isError: true);
       return;
     }
-
     if (password.length < 6) {
       _showFeedback('Password must be at least 6 characters.', isError: true);
       return;
     }
-
     if (!Constants.useRemote && (_latitude == null || _longitude == null)) {
       _showFeedback('Please capture your location to register.', isError: true);
       return;
     }
 
     setState(() => _isLoading = true);
-
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final fullPhone =
@@ -246,69 +231,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'longitude': _longitude,
       };
 
-      if (_emailMode) {
-        await authProvider.sendOtp(email, registrationData);
-        if (mounted) {
-          final otp = await Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => OtpVerificationScreen(
-                email: email,
-                isRegistration: true,
-                registrationData: registrationData,
-                isFirebase: false,
-              ),
+      await _startPhoneVerification(fullPhone);
+
+      if (mounted) {
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => OtpVerificationScreen(
+              email: email,
+              isRegistration: true,
+              registrationData: registrationData,
+              isFirebase: true,
             ),
-          );
-          if (otp != null) {
-            await authProvider.register(
-              name,
-              email,
-              password,
-              _selectedRole,
-              fullPhone,
-              address,
-              latitude: _latitude,
-              longitude: _longitude,
-              otp: otp,
-            );
-            _showFeedback('Registration successful!');
-            if (mounted) {
-              Navigator.of(context).pushReplacementNamed('/thank-you');
-            }
-          }
-        }
-      } else {
+          ),
+        );
         if (mounted) {
-          await authProvider.verifyPhone(
-            fullPhone,
-            onCodeSent: (_) {},
-            onError: (msg) => _showFeedback(msg, isError: true),
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
           );
-          await Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => OtpVerificationScreen(
-                email: email,
-                isRegistration: true,
-                registrationData: registrationData,
-                isFirebase: true,
-              ),
-            ),
-          );
-          if (mounted) {
-            Navigator.of(context).pushReplacementNamed('/thank-you');
-          }
         }
       }
     } catch (e) {
-      String msg = e.toString();
-      if (msg.startsWith('Exception: ')) {
-        msg = msg.replaceFirst('Exception: ', '');
-      }
-      _showFeedback('Failed to register: $msg', isError: true);
+      _showFeedback(e.toString(), isError: true);
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -336,7 +281,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 20),
-                  // Register Card
                   Card(
                     elevation: 8,
                     shape: RoundedRectangleBorder(
@@ -347,35 +291,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       padding: const EdgeInsets.all(32.0),
                       child: Column(
                         children: [
-                          if (_emailEnabled || _phoneEnabled)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 16.0),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  if (_emailEnabled)
-                                    ChoiceChip(
-                                      label: const Text('Email OTP'),
-                                      selected: _emailMode,
-                                      onSelected: (v) => setState(() {
-                                        if (_emailEnabled) _emailMode = true;
-                                      }),
-                                    ),
-                                  const SizedBox(width: 8),
-                                  if (_phoneEnabled)
-                                    ChoiceChip(
-                                      label: const Text('Phone OTP'),
-                                      selected: !_emailMode,
-                                      onSelected: (v) => setState(() {
-                                        if (_phoneEnabled) _emailMode = false;
-                                      }),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          // Header Text
                           Text(
-                            'Create Account',
+                            'Phone Registration',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 28,
@@ -383,18 +300,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Fill in your details to get started',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant),
-                          ),
                           const SizedBox(height: 24),
-
                           _buildTextField(
                             controller: _nameController,
                             label: 'Full Name*',
@@ -514,11 +420,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                           ),
                           const SizedBox(height: 16),
-
-                          // Role Dropdown
                           _buildDropdown(),
                           const SizedBox(height: 16),
-
                           _buildTextField(
                             controller: _addressController,
                             label: 'Shop Address (Optional)',
@@ -526,11 +429,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             maxLines: 2,
                           ),
                           const SizedBox(height: 24),
-
-                          // Location Capture Button
                           _buildLocationButton(),
                           const SizedBox(height: 32),
-
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
@@ -559,7 +459,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       ),
                                     )
                                   : const Text(
-                                      'Register',
+                                      'Register with Phone OTP',
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
@@ -572,8 +472,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                   const SizedBox(height: 32),
-
-                  // Login Link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
