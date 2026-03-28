@@ -105,76 +105,85 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
   }
 
   Future<void> _load() async {
-    // Theme is managed by ThemeProvider; no need to read here
-    final v = await SettingsService.isVoiceTrainingEnabled();
-    final a = await SettingsService.isAiChatbotEnabled();
-    final w = await SettingsService.isWebSocketEnabled();
-    final o = await SettingsService.isForceLocalOtp();
-    final remote = await SettingsService.getRemoteSettings();
-    final last = await SettingsService.getLastOtpFailure();
-    if (mounted) {
-      setState(() {
-        _voice = v;
-        _ai = a;
-        _ws = w;
-        _localOtp = o;
+    try {
+      // Theme is managed by ThemeProvider; no need to read here
+      final v = await SettingsService.isVoiceTrainingEnabled();
+      final a = await SettingsService.isAiChatbotEnabled();
+      final w = await SettingsService.isWebSocketEnabled();
+      final o = await SettingsService.isForceLocalOtp();
+      final remote = await SettingsService.getRemoteSettings();
+      final last = await SettingsService.getLastOtpFailure();
+      if (mounted) {
+        setState(() {
+          _voice = v;
+          _ai = a;
+          _ws = w;
+          _localOtp = o;
 
-        _notifInApp = remote['NOTIF_IN_APP_ENABLED'] == 'true';
-        _notifWhatsApp = remote['NOTIF_WHATSAPP_ENABLED'] == 'true';
+          _notifInApp = remote['NOTIF_IN_APP_ENABLED'] == 'true';
+          _notifWhatsApp = remote['NOTIF_WHATSAPP_ENABLED'] == 'true';
 
-        // Load Global Settings
-        _wsGlobal = (remote['WS_ENABLED'] ?? 'true') == 'true';
-        _localOtpGlobal = (remote['FORCE_LOCAL_OTP'] ?? 'false') == 'true';
-        _logoUrlController.text = remote['LOGO_URL'] ?? '';
-        _serverHostController.text =
-            remote['SERVER_HOST'] ?? 'sparehub-0t47.onrender.com';
-        _googleClientIdController.text = remote['GOOGLE_CLIENT_ID'] ?? '';
-        _resetPasswordPathController.text =
-            remote['RESET_PASSWORD_PATH'] ?? '/auth/reset-password';
-        _altResetPasswordPathController.text =
-            remote['ALT_RESET_PASSWORD_PATH'] ?? '/auth/password/reset';
-        _changePasswordPathController.text =
-            remote['CHANGE_PASSWORD_PATH'] ?? '/auth/change-password';
-        _otpLoginPathController.text =
-            remote['OTP_LOGIN_PATH'] ?? '/auth/otp-login';
-        _locationIdPathController.text =
-            remote['LOCATION_ID_PATH'] ?? '/admin/users/{id}/location';
-        _locationBodyPathController.text =
-            remote['LOCATION_BODY_PATH'] ?? '/admin/users/update-location';
-        _loyaltyPercentController.text = remote['LOYALTY_PERCENT'] ?? '1';
-        _minRedeemPointsController.text = remote['MIN_REDEEM_POINTS'] ?? '0';
+          // Load Global Settings
+          _wsGlobal = (remote['WS_ENABLED'] ?? 'true') == 'true';
+          _localOtpGlobal = (remote['FORCE_LOCAL_OTP'] ?? 'false') == 'true';
+          _logoUrlController.text = remote['LOGO_URL'] ?? '';
+          _serverHostController.text =
+              remote['SERVER_HOST'] ?? 'sparehub-0t47.onrender.com';
+          _googleClientIdController.text = remote['GOOGLE_CLIENT_ID'] ?? '';
+          _resetPasswordPathController.text =
+              remote['RESET_PASSWORD_PATH'] ?? '/auth/reset-password';
+          _altResetPasswordPathController.text =
+              remote['ALT_RESET_PASSWORD_PATH'] ?? '/auth/password/reset';
+          _changePasswordPathController.text =
+              remote['CHANGE_PASSWORD_PATH'] ?? '/auth/change-password';
+          _otpLoginPathController.text =
+              remote['OTP_LOGIN_PATH'] ?? '/auth/otp-login';
+          _locationIdPathController.text =
+              remote['LOCATION_ID_PATH'] ?? '/admin/users/{id}/location';
+          _locationBodyPathController.text =
+              remote['LOCATION_BODY_PATH'] ?? '/admin/users/update-location';
+          _loyaltyPercentController.text = remote['LOYALTY_PERCENT'] ?? '1';
+          _minRedeemPointsController.text = remote['MIN_REDEEM_POINTS'] ?? '0';
 
-        final allowedStr = remote['ALLOWED_REG_ROLES'] ??
-            '${Constants.roleMechanic},${Constants.roleRetailer},${Constants.roleWholesaler}';
-        final parts = allowedStr.split(',').map((e) => e.trim()).toSet();
-        _allowedRoles.updateAll((key, value) => parts.contains(key));
+          final allowedStr = remote['ALLOWED_REG_ROLES'] ??
+              '${Constants.roleMechanic},${Constants.roleRetailer},${Constants.roleWholesaler}';
+          final parts = allowedStr.split(',').map((e) => e.trim()).toSet();
+          _allowedRoles.updateAll((key, value) => parts.contains(key));
 
-        _useGlobalThemeColor =
-            (remote['USE_GLOBAL_THEME_COLOR'] ?? 'false') == 'true';
-        _hideRegistration = (remote['HIDE_REGISTRATION'] ?? 'false') == 'true';
-        _enableEmailReg =
-            (remote['ENABLE_EMAIL_REGISTRATION'] ?? 'true') == 'true';
-        _enablePhoneReg =
-            (remote['ENABLE_PHONE_REGISTRATION'] ?? 'true') == 'true';
-        _autoTranslateUi = (remote['AUTO_TRANSLATE_UI'] ?? 'false') == 'true';
-        _otpModeEmail =
-            (remote['OTP_MODE'] ?? 'EMAIL').toUpperCase() != 'LOCAL';
-        if (last != null) {
-          _lastOtpError = last['message'] as String?;
-          _lastOtpErrorAt = last['at'] as int?;
-        }
-        _loginBannerEnabled =
-            (remote['LOGIN_BANNER_ENABLED'] ?? 'false') == 'true';
-        _loginBannerTextController.text = remote['LOGIN_BANNER_TEXT'] ?? '';
-        _loginBannerImageUrlController.text =
-            remote['LOGIN_BANNER_IMAGE_URL'] ?? '';
-        _loginBannerShowButton =
-            (remote['LOGIN_BANNER_SHOW_BUTTON'] ?? 'false') == 'true';
-        _loginBannerButtonTextController.text =
-            remote['LOGIN_BANNER_BUTTON_TEXT'] ?? 'Check Offers';
-        _loginBannerCooldownController.text =
-            remote['LOGIN_BANNER_COOLDOWN_HOURS'] ?? '24';
-      });
+          _useGlobalThemeColor =
+              (remote['USE_GLOBAL_THEME_COLOR'] ?? 'false') == 'true';
+          _hideRegistration =
+              (remote['HIDE_REGISTRATION'] ?? 'false') == 'true';
+          _enableEmailReg =
+              (remote['ENABLE_EMAIL_REGISTRATION'] ?? 'true') == 'true';
+          _enablePhoneReg =
+              (remote['ENABLE_PHONE_REGISTRATION'] ?? 'true') == 'true';
+          _autoTranslateUi = (remote['AUTO_TRANSLATE_UI'] ?? 'false') == 'true';
+          _otpModeEmail =
+              (remote['OTP_MODE'] ?? 'EMAIL').toUpperCase() != 'LOCAL';
+          if (last != null) {
+            _lastOtpError = last['message'] as String?;
+            _lastOtpErrorAt = last['at'] as int?;
+          }
+          _loginBannerEnabled =
+              (remote['LOGIN_BANNER_ENABLED'] ?? 'false') == 'true';
+          _loginBannerTextController.text = remote['LOGIN_BANNER_TEXT'] ?? '';
+          _loginBannerImageUrlController.text =
+              remote['LOGIN_BANNER_IMAGE_URL'] ?? '';
+          _loginBannerShowButton =
+              (remote['LOGIN_BANNER_SHOW_BUTTON'] ?? 'false') == 'true';
+          _loginBannerButtonTextController.text =
+              remote['LOGIN_BANNER_BUTTON_TEXT'] ?? 'Check Offers';
+          _loginBannerCooldownController.text =
+              remote['LOGIN_BANNER_COOLDOWN_HOURS'] ?? '24';
+          _loaded = true;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading settings: $e');
+      if (mounted) {
+        setState(() => _loaded = true);
+      }
     }
   }
 
