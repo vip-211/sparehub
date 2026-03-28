@@ -49,7 +49,7 @@ const setFavicon = (href: string) => {
 ;(async () => {
   // Public fallback from env for unauthenticated pages
   try {
-    const publicLogo = (import.meta as any).env?.VITE_LOGO_URL as string | undefined
+    const publicLogo = import.meta.env.VITE_LOGO_URL as string | undefined
     if (publicLogo && (publicLogo.startsWith('http') || publicLogo.startsWith('/'))) {
       setFavicon(publicLogo)
     }
@@ -58,7 +58,7 @@ const setFavicon = (href: string) => {
   }
 
   try {
-    const res = await api.get('/admin/settings')
+    const res = await api.get('admin/settings')
     const settings: Array<{ settingKey: string; settingValue: string }> = res.data || []
     const logo = settings.find(s => s.settingKey === 'LOGO_URL')?.settingValue?.trim()
     if (logo && (logo.startsWith('http') || logo.startsWith('/'))) {

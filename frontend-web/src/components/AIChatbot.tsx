@@ -31,7 +31,7 @@ const AIChatbot: React.FC = () => {
 
   const handleFeedback = async (prompt: string, response: string, isPositive: boolean) => {
     try {
-      await api.post('/ai/feedback', { prompt, response, isPositive, timestamp: new Date().toISOString() });
+      await api.post('ai/feedback', { prompt, response, isPositive, timestamp: new Date().toISOString() });
       // In a real app, you might show a small toast/notification here
     } catch (error) {
       console.error('Feedback Error:', error);
@@ -41,7 +41,7 @@ const AIChatbot: React.FC = () => {
   const handleTrainSubmit = async () => {
     if (!correction.trim() || correction === originalResponse) return;
     try {
-      await api.post('/ai/train', {
+      await api.post('ai/train', {
         prompt: trainingPrompt,
         originalResponse: originalResponse,
         correctedResponse: correction,
@@ -92,7 +92,7 @@ const AIChatbot: React.FC = () => {
 
   const fetchMatches = async (query: string) => {
     try {
-      const res = await api.get('/products/search', { params: { query } });
+      const res = await api.get('products/search', { params: { query } });
       setMatches(res.data || []);
     } catch (e) {
       console.error('Product search error', e);
@@ -105,7 +105,7 @@ const AIChatbot: React.FC = () => {
     try {
       const form = new FormData();
       form.append('image', file);
-      const res = await api.post('/ai/search/photo', form, {
+      const res = await api.post('ai/search/photo', form, {
         headers: { 'Content-Type': 'multipart/form-data', 'X-AI-Provider': 'gemini' },
       });
       const botMessage = { text: res.data.response, isBot: true, prompt: `Search by photo: ${file.name}` };
@@ -124,7 +124,7 @@ const AIChatbot: React.FC = () => {
     try {
       const form = new FormData();
       form.append('audio', file);
-      const res = await api.post('/ai/search/voice', form, {
+      const res = await api.post('ai/search/voice', form, {
         headers: { 'Content-Type': 'multipart/form-data', 'X-AI-Provider': 'gemini' },
       });
       const botMessage = { text: res.data.response, isBot: true, prompt: `Search by voice: ${file.name}` };
@@ -330,7 +330,7 @@ const AIChatbot: React.FC = () => {
                           <button
                             onClick={async () => {
                               try {
-                                const res = await api.post('/ai/order', { productId: p.id, quantity: 1 });
+                                const res = await api.post('ai/order', { productId: p.id, quantity: 1 });
                                 const msg = `Order placed: #${res.data.orderId} • ₹${res.data.total}`;
                                 setMessages(prev => [...prev, { text: msg, isBot: true }]);
                               } catch (e) {

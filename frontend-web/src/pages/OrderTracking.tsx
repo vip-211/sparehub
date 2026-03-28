@@ -14,7 +14,7 @@ const OrderTracking: React.FC = () => {
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    const apiBase = (import.meta as any).env?.VITE_API_BASE as string | undefined;
+    const apiBase = import.meta.env.VITE_API_BASE as string | undefined;
     let url: string;
     if (apiBase && apiBase.length > 0) {
       try {

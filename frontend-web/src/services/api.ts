@@ -1,7 +1,24 @@
 
 import axios from 'axios';
 
-export const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE || 'https://partsmitra.onrender.com/api/';
+const VITE_API_BASE = import.meta.env.VITE_API_BASE;
+
+let base = VITE_API_BASE || 'https://partsmitra.onrender.com/api/';
+if (!base.endsWith('/')) {
+  base += '/';
+}
+// Ensure it has the /api/ prefix if it's missing
+if (!base.includes('/api/')) {
+  base += 'api/';
+}
+
+export const API_BASE_URL = base;
+
+// Log the API Base URL in production to help debug
+if (import.meta.env.PROD) {
+  console.log('API Base URL:', API_BASE_URL);
+}
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {

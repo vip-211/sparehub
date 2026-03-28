@@ -1575,7 +1575,7 @@ const AdminDashboard = () => {
                     if (selectedProductIds.length === 0) return;
                     if (!window.confirm(`Delete ${selectedProductIds.length} selected products?`)) return;
                     try {
-                      await api.post('/products/delete-bulk', selectedProductIds);
+                      await api.post('products/delete-bulk', selectedProductIds);
                       setSelectedProductIds([]);
                       setProductSelectionMode(false);
                       fetchProducts();
