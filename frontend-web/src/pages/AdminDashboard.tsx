@@ -116,6 +116,7 @@ const AdminDashboard = () => {
   const [billingUser, setBillingUser] = useState<any>(null);
   const [billingItems, setBillingItems] = useState<any[]>([]);
   const [billingDiscount, setBillingDiscount] = useState<number>(0);
+  const [billingDiscountType, setBillingDiscountType] = useState<'RS' | '%'>('RS');
   const [billingSearchTerm, setBillingSearchTerm] = useState('');
   const [billingSearchResults, setBillingSearchResults] = useState<any[]>([]);
 
@@ -145,10 +146,15 @@ const AdminDashboard = () => {
   const generateInvoice = async () => {
     if (!billingUser || billingItems.length === 0) return;
     try {
+      const subtotal = billingItems.reduce((acc, i) => acc + (i.sellingPrice * i.quantity), 0);
+      const calculatedDiscount = billingDiscountType === '%' 
+        ? (subtotal * (billingDiscount / 100)) 
+        : billingDiscount;
+
       const payload = {
         customerId: billingUser.id,
         sellerId: currentUser.id,
-        discountAmount: billingDiscount,
+        discountAmount: calculatedDiscount,
         items: billingItems.map(i => ({
           productId: i.id,
           productName: i.name,
@@ -161,6 +167,7 @@ const AdminDashboard = () => {
       setBillingUser(null);
       setBillingItems([]);
       setBillingDiscount(0);
+      setBillingDiscountType('RS');
       fetchOrders();
     } catch (err) {
       console.error(err);
@@ -2034,13 +2041,29 @@ const AdminDashboard = () => {
                 <span className="text-lg font-bold text-gray-700">₹{billingItems.reduce((acc, i) => acc + (i.sellingPrice * i.quantity), 0).toFixed(2)}</span>
               </div>
               
-              <div className="flex justify-between items-center bg-orange-50 p-3 rounded-xl border border-orange-100">
-                <div className="flex items-center gap-2">
-                  <Star size={16} className="text-orange-500" />
-                  <span className="text-orange-700 font-bold uppercase tracking-widest text-[10px]">Discount</span>
+              <div className="flex flex-col gap-2 bg-orange-50 p-3 rounded-xl border border-orange-100">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <Star size={16} className="text-orange-500" />
+                    <span className="text-orange-700 font-bold uppercase tracking-widest text-[10px]">Discount</span>
+                  </div>
+                  <div className="flex bg-white rounded-lg p-0.5 border border-orange-200">
+                    <button 
+                      onClick={() => setBillingDiscountType('RS')}
+                      className={`px-2 py-0.5 text-[10px] font-black rounded-md transition ${billingDiscountType === 'RS' ? 'bg-orange-500 text-white' : 'text-orange-400 hover:bg-orange-50'}`}
+                    >
+                      ₹
+                    </button>
+                    <button 
+                      onClick={() => setBillingDiscountType('%')}
+                      className={`px-2 py-0.5 text-[10px] font-black rounded-md transition ${billingDiscountType === '%' ? 'bg-orange-500 text-white' : 'text-orange-400 hover:bg-orange-50'}`}
+                    >
+                      %
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-orange-700 font-bold text-xs">₹</span>
+                <div className="flex items-center justify-end gap-2">
+                  <span className="text-orange-700 font-bold text-xs">{billingDiscountType === 'RS' ? '₹' : '%'}</span>
                   <input
                     type="number"
                     className="w-20 bg-white border border-orange-200 rounded-lg px-2 py-1 text-right text-sm font-bold text-orange-700 focus:ring-2 focus:ring-orange-500 outline-none"
@@ -2048,11 +2071,18 @@ const AdminDashboard = () => {
                     onChange={(e) => setBillingDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
                   />
                 </div>
+                {billingDiscountType === '%' && billingDiscount > 0 && (
+                  <div className="text-[10px] text-right text-orange-400 font-bold">
+                    ≈ ₹{(billingItems.reduce((acc, i) => acc + (i.sellingPrice * i.quantity), 0) * (billingDiscount / 100)).toFixed(2)} off
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-between items-center mb-4">
                 <span className="text-gray-500 font-black uppercase tracking-widest text-xs">Total Payable</span>
-                <span className="text-2xl font-black text-primary-600">₹{Math.max(0, billingItems.reduce((acc, i) => acc + (i.sellingPrice * i.quantity), 0) - billingDiscount).toFixed(2)}</span>
+                <span className="text-2xl font-black text-primary-600">
+                  ₹{Math.max(0, billingItems.reduce((acc, i) => acc + (i.sellingPrice * i.quantity), 0) - (billingDiscountType === '%' ? (billingItems.reduce((acc, i) => acc + (i.sellingPrice * i.quantity), 0) * (billingDiscount / 100)) : billingDiscount)).toFixed(2)}
+                </span>
               </div>
               <button
                 disabled={!billingUser || billingItems.length === 0}
