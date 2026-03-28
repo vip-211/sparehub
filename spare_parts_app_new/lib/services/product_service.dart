@@ -65,7 +65,10 @@ class ProductService {
         fileField: 'file',
         fileName: 'products.xlsx',
         bytes: bytes,
-        fields: categoryId != null ? {'categoryId': categoryId.toString()} : null,
+        contentType:
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        fields:
+            categoryId != null ? {'categoryId': categoryId.toString()} : null,
       );
     } catch (e) {
       debugPrint('Excel upload error: $e');

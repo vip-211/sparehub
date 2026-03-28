@@ -69,7 +69,7 @@ public class ExcelHelper {
 
     public static List<Product> excelToProducts(InputStream is, User wholesaler) {
         try {
-            Workbook workbook = new XSSFWorkbook(is);
+            Workbook workbook = WorkbookFactory.create(is);
             Sheet sheet = workbook.getSheet(SHEET);
             if (sheet == null) {
                 sheet = workbook.getSheetAt(0);

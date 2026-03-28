@@ -100,6 +100,7 @@ class RemoteClient {
     required String fileField,
     required String fileName,
     required List<int> bytes,
+    String? contentType,
   }) async {
     final authHeaders = await _getHeaders(headers);
     authHeaders.remove('Content-Type');
@@ -109,8 +110,17 @@ class RemoteClient {
     if (fields != null) {
       req.fields.addAll(fields);
     }
+
+    http.MediaType? mediaType;
+    if (contentType != null) {
+      final parts = contentType.split('/');
+      if (parts.length == 2) {
+        mediaType = http.MediaType(parts[0], parts[1]);
+      }
+    }
+
     req.files.add(
-        http.MultipartFile.fromBytes(fileField, bytes, filename: fileName));
+        http.MultipartFile.fromBytes(fileField, bytes, filename: fileName, contentType: mediaType));
 
     // For multipart, we can't easily use _requestWithRetry because of the stream
     // but we can add a timeout to the send() call.

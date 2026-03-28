@@ -424,18 +424,22 @@ const AdminDashboard = () => {
   useEffect(() => {
     // WebSocket setup for new orders and notifications
     let stompClient: any = null;
-    const socketBaseUrl = API_BASE_URL.endsWith('/api/')
-      ? API_BASE_URL.substring(0, API_BASE_URL.length - 5)
-      : API_BASE_URL.endsWith('/api')
-        ? API_BASE_URL.substring(0, API_BASE_URL.length - 4)
-        : API_BASE_URL.endsWith('/')
-          ? API_BASE_URL.substring(0, API_BASE_URL.length - 1)
-          : API_BASE_URL;
+    const getSocketUrl = () => {
+      let baseUrl = API_BASE_URL.endsWith('/api/') 
+        ? API_BASE_URL.substring(0, API_BASE_URL.length - 5) 
+        : API_BASE_URL.endsWith('/api') 
+          ? API_BASE_URL.substring(0, API_BASE_URL.length - 4) 
+          : API_BASE_URL.endsWith('/')
+            ? API_BASE_URL.substring(0, API_BASE_URL.length - 1)
+            : API_BASE_URL;
+      return `${baseUrl}/ws`;
+    };
 
     try {
-      const socket = new SockJS(`${socketBaseUrl}/ws`);
+      const socket = new SockJS(getSocketUrl());
       stompClient = Stomp.over(socket);
       stompClient.debug = () => {}; // Disable debug logs
+      stompClient.reconnect_delay = 5000; // Auto-reconnect
 
       stompClient.connect({}, () => {
         console.log('WebSocket connected successfully');
@@ -907,6 +911,16 @@ const AdminDashboard = () => {
 
   const logoUrl = getImageUrl(getSetting('LOGO_URL', ''));
 
+  // Group orders by customer name for list/grid views
+  const groupedOrdersMap: Record<string, any[]> = useMemo(() => {
+    return (orders || []).reduce((acc: Record<string, any[]>, order: any) => {
+      const key = order.customerName || `User ${order.customerId}`;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(order);
+      return acc;
+    }, {});
+  }, [orders]);
+
   if (loading) return (
     <div className="container mx-auto p-4 md:p-6">
       <div className="flex justify-between items-center mb-8">
@@ -923,16 +937,6 @@ const AdminDashboard = () => {
       {renderTableSkeletons(4)}
     </div>
   );
-
-  // Group orders by customer name for list/grid views
-  const groupedOrdersMap: Record<string, any[]> = useMemo(() => {
-    return (orders || []).reduce((acc: Record<string, any[]>, order: any) => {
-      const key = order.customerName || `User ${order.customerId}`;
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(order);
-      return acc;
-    }, {});
-  }, [orders]);
 
   return (
     <div className={`container mx-auto p-4 md:p-6 ${isSuperManager ? 'bg-purple-50 min-h-screen' : ''}`}>

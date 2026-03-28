@@ -197,26 +197,16 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
 
   void _importExcel() async {
     try {
-      if (!kIsWeb && Platform.isAndroid) {
-        var status = await Permission.storage.request();
-        if (status.isDenied) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Storage permission denied')),
-          );
-          return;
-        }
-      }
-
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['xlsx'],
+        allowedExtensions: ['xlsx', 'xls'],
         withData: true,
       );
       if (result != null) {
         int? selectedCategoryId;
 
         if (mounted) {
-          selectedCategoryId = await showDialog<int>(
+          final dialogResult = await showDialog<int>(
             context: context,
             builder: (ctx) => StatefulBuilder(
               builder: (context, setDialogState) => AlertDialog(
@@ -261,9 +251,10 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
               ),
             ),
           );
-        }
 
-        if (selectedCategoryId == -1) return;
+          if (dialogResult == -1) return;
+          selectedCategoryId = dialogResult;
+        }
 
         setState(() => _isLoading = true);
         Uint8List? bytes = result.files.first.bytes;

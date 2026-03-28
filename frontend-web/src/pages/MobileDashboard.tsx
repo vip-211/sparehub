@@ -80,18 +80,26 @@ const MobileDashboard = () => {
 
   useEffect(() => {
     let stompClient: any = null;
-    const socketBaseUrl = API_BASE_URL.endsWith('/api/') 
-      ? API_BASE_URL.substring(0, API_BASE_URL.length - 5) 
-      : API_BASE_URL.endsWith('/api') 
-        ? API_BASE_URL.substring(0, API_BASE_URL.length - 4) 
-        : API_BASE_URL.endsWith('/')
-          ? API_BASE_URL.substring(0, API_BASE_URL.length - 1)
-          : API_BASE_URL;
+    const getSocketUrl = () => {
+      let baseUrl = API_BASE_URL.endsWith('/api/') 
+        ? API_BASE_URL.substring(0, API_BASE_URL.length - 5) 
+        : API_BASE_URL.endsWith('/api') 
+          ? API_BASE_URL.substring(0, API_BASE_URL.length - 4) 
+          : API_BASE_URL.endsWith('/')
+            ? API_BASE_URL.substring(0, API_BASE_URL.length - 1)
+            : API_BASE_URL;
+      
+      // If using https, we should use wss for pure WebSocket
+      // SockJS handles this automatically, but for pure WS we'd use:
+      // baseUrl.replace('http', 'ws') + '/ws'
+      return `${baseUrl}/ws`;
+    };
     
     try {
-      const socket = new SockJS(`${socketBaseUrl}/ws`);
+      const socket = new SockJS(getSocketUrl());
       stompClient = Stomp.over(socket);
       stompClient.debug = () => {};
+      stompClient.reconnect_delay = 5000; // Auto-reconnect
 
       stompClient.connect({}, () => {
         stompClient.subscribe('/topic/orders', (message: any) => {
@@ -205,8 +213,8 @@ const MobileDashboard = () => {
             <option value="MONTHLY">Monthly</option>
           </select>
         </div>
-        <div className="h-64 w-full relative" style={{ minHeight: '256px' }}>
-          <ResponsiveContainer width="99%" height="100%">
+        <div className="h-64 w-full" style={{ minHeight: '256px', position: 'relative' }}>
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
