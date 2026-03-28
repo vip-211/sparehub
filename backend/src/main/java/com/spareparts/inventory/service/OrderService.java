@@ -9,6 +9,8 @@ import com.spareparts.inventory.repository.OrderRequestRepository;
 import com.spareparts.inventory.repository.ProductRepository;
 import com.spareparts.inventory.repository.UserRepository;
 import com.spareparts.inventory.repository.SystemSettingRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class OrderService {
+    private static final Logger log = LoggerFactory.getLogger(OrderService.class);
     @Autowired
     private OrderRepository orderRepository;
 

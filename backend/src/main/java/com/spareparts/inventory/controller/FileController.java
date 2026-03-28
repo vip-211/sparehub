@@ -1,5 +1,7 @@
 package com.spareparts.inventory.controller;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -21,6 +23,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/files")
 public class FileController {
+    private static final Logger log = LoggerFactory.getLogger(FileController.class);
 
     @Value("${app.upload.dir:uploads/}")
     private String uploadDir;

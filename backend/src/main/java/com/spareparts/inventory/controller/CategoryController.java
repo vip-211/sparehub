@@ -6,6 +6,8 @@ import com.spareparts.inventory.dto.ProductDto;
 import com.spareparts.inventory.entity.Product;
 import com.spareparts.inventory.repository.CategoryRepository;
 import com.spareparts.inventory.repository.ProductRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -19,6 +21,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/categories")
 public class CategoryController {
+    private static final Logger log = LoggerFactory.getLogger(CategoryController.class);
     @Autowired
     private CategoryRepository categoryRepository;
     @Autowired

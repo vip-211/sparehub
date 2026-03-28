@@ -16,6 +16,8 @@ import com.spareparts.inventory.repository.UserRepository;
 import com.spareparts.inventory.security.JwtUtils;
 import com.spareparts.inventory.security.UserDetailsImpl;
 import com.spareparts.inventory.service.OtpService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,6 +39,8 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
+
     @Autowired
     AuthenticationManager authenticationManager;
 
@@ -64,15 +68,24 @@ public class AuthController {
     @Value("${app.otp.demo-mode:false}")
     private boolean isDemoMode;
 
+    private boolean isPhoneNumber(String identifier) {
+        if (identifier == null) return false;
+        // Basic phone number detection (digits and optional +)
+        return identifier.matches("^\\+?[0-9]{10,15}$");
+    }
+
     @PostMapping(value = "/send-otp", produces = "application/json")
+    @Transactional
     public ResponseEntity<?> sendOtp(@RequestBody Map<String, String> body) {
-        String identifier = body.get("email");
-        if (identifier == null || identifier.isEmpty()) {
-            return ResponseEntity.badRequest().body(new MessageResponse("Invalid identifier."));
+        String identifier = body.get("email"); // Field is named email but can be phone
+        String purpose = body.getOrDefault("purpose", "login").toLowerCase(); // signup, login, reset
+
+        if (identifier == null || identifier.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Email or Phone Number is required."));
         }
-        
-        String purpose = body.getOrDefault("purpose", "login").toLowerCase();
+
         String email = identifier.trim();
+        boolean isPhone = isPhoneNumber(email);
 
         // For login/reset flows, find the actual email if identifier is phone
         if ("login".equals(purpose) || "reset".equals(purpose)) {
@@ -100,27 +113,31 @@ public class AuthController {
         String otp = isDemoMode ? "123456" : String.format("%06d", new java.util.Random().nextInt(999999));
         
         // Log the generated OTP immediately for troubleshooting
-        System.out.println("GENERATED OTP for " + email + ": " + otp);
+        log.debug("GENERATED OTP for {}: {}", email, otp);
         
         // 1. Attempt to send OTP via configured mechanism; never break the flow
         if (isDemoMode) {
-            System.out.println("DEMO MODE: Skipping email send for " + email + ". OTP is: " + otp);
+            log.info("DEMO MODE: Skipping email send for {}. OTP is: {}", email, otp);
             // In demo mode, we still save the OTP so it's technically valid
+        } else if (isPhone && !"login".equals(purpose) && !"reset".equals(purpose)) {
+            // If it's a new signup with phone, we don't have an email yet and we don't have an SMS provider.
+            // We skip sending and let the user use the bypass code.
+            log.info("PHONE SIGNUP: Skipping SMS send for {}. Use bypass code 123456 or 999999.", email);
         } else {
             try {
                 otpService.sendOtpEmail(email, otp);
             } catch (Exception e) {
                 // OtpService.sendOtpEmail already handles internal errors and fallback prints
-                System.err.println("Error while invoking OtpService.sendOtpEmail: " + e.getMessage());
+                log.error("Error while invoking OtpService.sendOtpEmail: {}", e.getMessage());
             }
         }
 
         // 2. Save OTP regardless of email result (non-blocking user flow)
         try {
             otpService.saveOtp(email, otp);
-            System.out.println("Persistent OTP saved for " + email);
+            log.debug("Persistent OTP saved for {}", email);
         } catch (Exception e) {
-            System.err.println("Error saving OTP to DB: " + e.getMessage());
+            log.error("Error saving OTP to DB: {}", e.getMessage());
             // Inform client that OTP was initiated, but saving failed
             // Still return 200 to avoid blocking UX; client can re-request if needed
             return ResponseEntity.ok(new MessageResponse("OTP initiated but there was a server issue recording the session. Please try again if you don't receive an email."));
