@@ -3,16 +3,16 @@ import axios from 'axios';
 
 const VITE_API_BASE = import.meta.env.VITE_API_BASE;
 
-let base = VITE_API_BASE || 'https://sparehub-production.up.railway.app/api/';
-if (!base.endsWith('/')) {
-  base += '/';
+let base = VITE_API_BASE || 'https://sparehub-production.up.railway.app/api';
+if (base.endsWith('/')) {
+  base = base.substring(0, base.length - 1);
 }
-// Ensure it has the /api/ prefix if it's missing
-if (!base.includes('/api/')) {
-  base += 'api/';
+// Ensure it has the /api prefix if it's missing
+if (!base.endsWith('/api') && !base.includes('/api/')) {
+  base += '/api';
 }
 
-export const API_BASE_URL = base;
+export const API_BASE_URL = base + '/';
 
 // Log the API Base URL in production to help debug
 if (import.meta.env.PROD) {

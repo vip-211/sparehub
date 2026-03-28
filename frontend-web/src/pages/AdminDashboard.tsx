@@ -423,44 +423,55 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     // WebSocket setup for new orders and notifications
-    const socketBaseUrl = API_BASE_URL.endsWith('/api')
-      ? API_BASE_URL.substring(0, API_BASE_URL.length - 4)
-      : API_BASE_URL;
+    let stompClient: any = null;
+    const socketBaseUrl = API_BASE_URL.endsWith('/api/')
+      ? API_BASE_URL.substring(0, API_BASE_URL.length - 5)
+      : API_BASE_URL.endsWith('/api')
+        ? API_BASE_URL.substring(0, API_BASE_URL.length - 4)
+        : API_BASE_URL.endsWith('/')
+          ? API_BASE_URL.substring(0, API_BASE_URL.length - 1)
+          : API_BASE_URL;
 
-    const socket = new SockJS(`${socketBaseUrl}/ws`);
-    const stompClient = Stomp.over(socket);
-    stompClient.debug = () => {}; // Disable debug logs
+    try {
+      const socket = new SockJS(`${socketBaseUrl}/ws`);
+      stompClient = Stomp.over(socket);
+      stompClient.debug = () => {}; // Disable debug logs
 
-    stompClient.connect({}, () => {
-      console.log('WebSocket connected successfully');
-      // 1. Subscribe to admin order updates
-      stompClient.subscribe('/topic/admin/orders', () => {
-        playNotification();
-        fetchOrders();
-      });
-
-      // 2. Subscribe to role-specific notifications for the current user
-      if (currentUser?.roles) {
-        currentUser.roles.forEach((role: string) => {
-          stompClient.subscribe(`/topic/notifications/${role}`, (frame: any) => {
-            if (frame.body) {
-              const data = JSON.parse(frame.body);
-              console.log('Received notification for role:', role, data);
-              playNotification();
-            }
-          });
+      stompClient.connect({}, () => {
+        console.log('WebSocket connected successfully');
+        // 1. Subscribe to admin order updates
+        stompClient.subscribe('/topic/admin/orders', () => {
+          playNotification();
+          fetchOrders();
         });
-      }
-    }, (error) => {
-      // SockJS/Stomp will automatically attempt to reconnect in many cases,
-      // but we should log it for debugging.
-      if (import.meta.env.DEV) {
-        console.warn('WebSocket connection failed. This is expected if the server is waking up or doesn\'t support WS on this path.', error);
-      }
-    });
+
+        // 2. Subscribe to role-specific notifications for the current user
+        if (currentUser?.roles) {
+          currentUser.roles.forEach((role: string) => {
+            stompClient.subscribe(`/topic/notifications/${role}`, (frame: any) => {
+              if (frame.body) {
+                try {
+                  const data = JSON.parse(frame.body);
+                  console.log('Received notification for role:', role, data);
+                  playNotification();
+                } catch (e) {
+                  console.error('Error parsing role notification:', e);
+                }
+              }
+            });
+          });
+        }
+      }, (error: any) => {
+        if (import.meta.env.DEV) {
+          console.warn('WebSocket connection failed. This is expected if the server is waking up or doesn\'t support WS on this path.', error);
+        }
+      });
+    } catch (e) {
+      console.error('Socket initialization error:', e);
+    }
 
     return () => {
-      if (stompClient.connected) {
+      if (stompClient && stompClient.connected) {
         stompClient.disconnect(() => {});
       }
     };

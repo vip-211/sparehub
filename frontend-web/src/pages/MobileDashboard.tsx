@@ -79,28 +79,41 @@ const MobileDashboard = () => {
   }, [fetchDashboardData]);
 
   useEffect(() => {
-    const socketBaseUrl = API_BASE_URL.endsWith('/api') 
-      ? API_BASE_URL.substring(0, API_BASE_URL.length - 4) 
-      : API_BASE_URL;
+    let stompClient: any = null;
+    const socketBaseUrl = API_BASE_URL.endsWith('/api/') 
+      ? API_BASE_URL.substring(0, API_BASE_URL.length - 5) 
+      : API_BASE_URL.endsWith('/api') 
+        ? API_BASE_URL.substring(0, API_BASE_URL.length - 4) 
+        : API_BASE_URL.endsWith('/')
+          ? API_BASE_URL.substring(0, API_BASE_URL.length - 1)
+          : API_BASE_URL;
     
-    const socket = new SockJS(`${socketBaseUrl}/ws`);
-    const stompClient = Stomp.over(socket);
-    stompClient.debug = () => {};
+    try {
+      const socket = new SockJS(`${socketBaseUrl}/ws`);
+      stompClient = Stomp.over(socket);
+      stompClient.debug = () => {};
 
-    stompClient.connect({}, () => {
-      stompClient.subscribe('/topic/orders', (message) => {
-        const orderData = JSON.parse(message.body);
-        if (orderData.status === 'PENDING') {
-          playNotification();
-          fetchDashboardData();
-        }
+      stompClient.connect({}, () => {
+        stompClient.subscribe('/topic/orders', (message: any) => {
+          try {
+            const orderData = JSON.parse(message.body);
+            if (orderData.status === 'PENDING') {
+              playNotification();
+              fetchDashboardData();
+            }
+          } catch (e) {
+            console.error('Error parsing socket message:', e);
+          }
+        });
+      }, (error: any) => {
+        if (import.meta.env.DEV) console.warn('WebSocket connection error:', error);
       });
-    }, (error) => {
-      console.error('WebSocket error:', error);
-    });
+    } catch (e) {
+      console.error('Socket initialization error:', e);
+    }
 
     return () => {
-      if (stompClient.connected) {
+      if (stompClient && stompClient.connected) {
         stompClient.disconnect(() => {});
       }
     };
@@ -192,9 +205,9 @@ const MobileDashboard = () => {
             <option value="MONTHLY">Monthly</option>
           </select>
         </div>
-        <div className="h-64 w-full" style={{ minHeight: '256px' }}>
-          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-            <AreaChart data={chartData}>
+        <div className="h-64 w-full relative" style={{ minHeight: '256px' }}>
+          <ResponsiveContainer width="99%" height="100%">
+            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.1}/>
