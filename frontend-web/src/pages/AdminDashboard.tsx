@@ -163,22 +163,30 @@ const AdminDashboard = () => {
 
   const handleBillSearch = async (term: string) => {
     setBillingSearchTerm(term);
-    if (term.length >= 2) {
+    if (term.length >= 3) { // Increased to 3 for better auto-search performance
       try {
-        // Fetch products matching the search term from the server
         const res = await api.get(`/products/search?query=${term}&page=0&size=10&sortBy=id&direction=desc`);
         setBillingSearchResults(res.data.content || []);
       } catch (err) {
         console.error('Invoicing search error:', err);
-        // Fallback to local filtering if server search fails
         const results = products.filter(p => 
           p.name.toLowerCase().includes(term.toLowerCase()) || 
           p.partNumber.toLowerCase().includes(term.toLowerCase())
         );
         setBillingSearchResults(results.slice(0, 5));
       }
-    } else {
+    } else if (term.length === 0) {
       setBillingSearchResults([]);
+    }
+  };
+
+  const handleManualBillSearch = async () => {
+    if (!billingSearchTerm) return;
+    try {
+      const res = await api.get(`/products/search?query=${billingSearchTerm}&page=0&size=20&sortBy=id&direction=desc`);
+      setBillingSearchResults(res.data.content || []);
+    } catch (err) {
+      console.error('Manual invoicing search error:', err);
     }
   };
 
@@ -1869,46 +1877,84 @@ const AdminDashboard = () => {
           <div className="space-y-6">
             <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
               <h3 className="font-bold text-gray-900 mb-4 uppercase tracking-widest text-xs">1. Select Customer</h3>
-              <select 
-                className="w-full border border-gray-200 rounded-xl p-3 font-bold text-gray-700 outline-none focus:ring-2 focus:ring-primary-500 bg-gray-50"
-                value={billingUser?.id || ''}
-                onChange={(e) => setBillingUser(users.find(u => u.id === parseInt(e.target.value)))}
-              >
-                <option value="">Choose a customer...</option>
-                {users.map(u => (
-                  <option key={u.id} value={u.id}>{u.name} ({u.roles?.join(', ') || 'User'})</option>
-                ))}
-              </select>
+              <div className="space-y-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                  <input
+                    type="text"
+                    placeholder="Type name to filter users..."
+                    className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition text-sm"
+                    onChange={(e) => {
+                      const term = e.target.value.toLowerCase();
+                      const select = document.getElementById('customer-select') as HTMLSelectElement;
+                      if (!select) return;
+                      const options = select.options;
+                      for (let i = 0; i < options.length; i++) {
+                        const option = options[i];
+                        if (option.text.toLowerCase().includes(term) || option.value === "") {
+                          option.style.display = "";
+                        } else {
+                          option.style.display = "none";
+                        }
+                      }
+                    }}
+                  />
+                </div>
+                <select 
+                  id="customer-select"
+                  className="w-full border border-gray-200 rounded-xl p-3 font-bold text-gray-700 outline-none focus:ring-2 focus:ring-primary-500 bg-gray-50"
+                  value={billingUser?.id || ''}
+                  onChange={(e) => setBillingUser(users.find(u => u.id === parseInt(e.target.value)))}
+                >
+                  <option value="">Choose a customer...</option>
+                  {users.map(u => (
+                    <option key={u.id} value={u.id}>{u.name} ({u.roles?.join(', ') || 'User'})</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
               <h3 className="font-bold text-gray-900 mb-4 uppercase tracking-widest text-xs">2. Add Products</h3>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <input
-                  type="text"
-                  placeholder="Search products by name or part #..."
-                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition"
-                  value={billingSearchTerm}
-                  onChange={(e) => handleBillSearch(e.target.value)}
-                />
-                {billingSearchResults.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-10 overflow-hidden">
-                    {billingSearchResults.map(p => (
-                      <div 
-                        key={p.id} 
-                        className="p-3 hover:bg-gray-50 cursor-pointer flex justify-between items-center"
-                        onClick={() => addProductToBill(p)}
-                      >
-                        <div>
-                          <div className="font-bold text-sm text-gray-900">{p.name}</div>
-                          <div className="text-[10px] text-gray-500">{p.partNumber}</div>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <input
+                    type="text"
+                    placeholder="Search products by name or part #..."
+                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition"
+                    value={billingSearchTerm}
+                    onChange={(e) => handleBillSearch(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleManualBillSearch();
+                      }
+                    }}
+                  />
+                  {billingSearchResults.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-10 overflow-hidden">
+                      {billingSearchResults.map(p => (
+                        <div 
+                          key={p.id} 
+                          className="p-3 hover:bg-gray-50 cursor-pointer flex justify-between items-center border-b border-gray-50 last:border-0"
+                          onClick={() => addProductToBill(p)}
+                        >
+                          <div>
+                            <div className="font-bold text-sm text-gray-900">{p.name}</div>
+                            <div className="text-[10px] text-gray-500">{p.partNumber}</div>
+                          </div>
+                          <div className="font-black text-primary-600 text-sm">₹{p.sellingPrice}</div>
                         </div>
-                        <div className="font-black text-primary-600 text-sm">₹{p.sellingPrice}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={handleManualBillSearch}
+                  className="bg-primary-600 text-white p-3 rounded-xl hover:bg-primary-700 transition shadow-lg shadow-primary-100"
+                >
+                  <Search size={20} />
+                </button>
               </div>
             </div>
           </div>
