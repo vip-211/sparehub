@@ -33,7 +33,7 @@ const register = async (name: string, email: string, password: string, role: str
   else if (roleLower.includes('supermanager') || roleLower.includes('super_manager')) finalRole = ROLE_SUPER_MANAGER;
 
   try {
-    const response = await api.post('/auth/signup', {
+    const response = await api.post('auth/signup', {
       name,
       email: normalizedEmail,
       password,
@@ -52,12 +52,12 @@ const register = async (name: string, email: string, password: string, role: str
 };
 
 const sendOtp = (email: string, purpose: string = 'login') => {
-  return api.post('/auth/send-otp', { email: email.toLowerCase().trim(), purpose });
+  return api.post('auth/send-otp', { email: email.toLowerCase().trim(), purpose });
 };
 
 const login = async (email: string, password: string) => {
   const normalizedEmail = email.toLowerCase().trim();
-  const response = await api.post('/auth/signin', {
+  const response = await api.post('auth/signin', {
     email: normalizedEmail,
     password,
   });
@@ -70,7 +70,7 @@ const login = async (email: string, password: string) => {
 
 const loginWithOtp = async (email: string, otp: string) => {
   const normalizedEmail = email.toLowerCase().trim();
-  const response = await api.post('/auth/otp-login', {
+  const response = await api.post('auth/otp-login', {
     email: normalizedEmail,
     otp,
   });
@@ -86,7 +86,7 @@ const logout = () => {
 };
 
 const googleLogin = async (email: string, name: string) => {
-  const response = await api.post('/auth/google', { email, name });
+  const response = await api.post('auth/google', { email, name });
   if (response.data.token) {
     response.data.roles = normalizeRoles(response.data.roles);
     localStorage.setItem('user', JSON.stringify(response.data));
@@ -95,7 +95,7 @@ const googleLogin = async (email: string, name: string) => {
 };
 
 const resetPassword = async (email: string, otp: string, newPassword: string) => {
-  return api.post('/auth/reset-password', { email, otp, newPassword });
+  return api.post('auth/reset-password', { email, otp, newPassword });
 };
 
 const getRoles = () => {
