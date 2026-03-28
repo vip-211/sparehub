@@ -64,9 +64,6 @@ public class AuthController {
     @Value("${app.otp.demo-mode:false}")
     private boolean isDemoMode;
 
-    @Autowired
-    private com.spareparts.inventory.service.EmailService emailService;
-
     @PostMapping(value = "/send-otp", produces = "application/json")
     public ResponseEntity<?> sendOtp(@RequestBody Map<String, String> body) {
         String identifier = body.get("email");
@@ -108,12 +105,13 @@ public class AuthController {
         // 1. Attempt to send OTP via configured mechanism; never break the flow
         if (isDemoMode) {
             System.out.println("DEMO MODE: Skipping email send for " + email + ". OTP is: " + otp);
+            // In demo mode, we still save the OTP so it's technically valid
         } else {
             try {
-                emailService.sendOtp(email, otp);
+                otpService.sendOtpEmail(email, otp);
             } catch (Exception e) {
-                // EmailService already handles internal errors and fallback prints
-                System.err.println("Error while invoking EmailService: " + e.getMessage());
+                // OtpService.sendOtpEmail already handles internal errors and fallback prints
+                System.err.println("Error while invoking OtpService.sendOtpEmail: " + e.getMessage());
             }
         }
 

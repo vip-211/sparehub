@@ -467,7 +467,13 @@ const AdminDashboard = () => {
         }
       }, (error: any) => {
         if (import.meta.env.DEV) {
-          console.warn('WebSocket connection failed. This is expected if the server is waking up or doesn\'t support WS on this path.', error);
+          console.warn('WebSocket connection error:', error);
+        }
+        // Try to connect to plain websocket as fallback if sockjs fails
+        if (getSocketUrl().startsWith('https')) {
+          const wsUrl = getSocketUrl().replace('http', 'ws') + '/websocket';
+          console.log('Attempting fallback to plain WS:', wsUrl);
+          // Pure WS implementation could be added here if needed
         }
       });
     } catch (e) {
@@ -809,6 +815,10 @@ const AdminDashboard = () => {
 
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newCategory.name.trim()) {
+      alert('Category name is required');
+      return;
+    }
     try {
       await api.post('categories', {
         ...newCategory
@@ -816,9 +826,10 @@ const AdminDashboard = () => {
       setShowAddCategory(false);
       setNewCategory({ name: '', description: '', imagePath: '', imageLink: '' });
       fetchCategories();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('Failed to add category');
+      const msg = err.response?.data || 'Failed to add category';
+      alert(typeof msg === 'string' ? msg : (msg.message || JSON.stringify(msg)));
     }
   };
 

@@ -29,9 +29,9 @@ public class AuthTokenFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        // Skip auth filter for public paths to avoid potential issues
+        // Skip auth filter only for public login/signup/reset paths
         String path = request.getServletPath();
-        if (path.startsWith("/api/auth") || path.startsWith("/api/test") || path.startsWith("/api/files/display") || path.startsWith("/api/categories") || path.startsWith("/api/settings/public") || path.startsWith("/ws")) {
+        if (path.startsWith("/api/auth") || path.startsWith("/api/test") || path.startsWith("/api/settings/public") || path.startsWith("/ws")) {
             filterChain.doFilter(request, response);
             return;
         }
