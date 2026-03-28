@@ -161,14 +161,22 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleBillSearch = (term: string) => {
+  const handleBillSearch = async (term: string) => {
     setBillingSearchTerm(term);
     if (term.length >= 2) {
-      const results = products.filter(p => 
-        p.name.toLowerCase().includes(term.toLowerCase()) || 
-        p.partNumber.toLowerCase().includes(term.toLowerCase())
-      );
-      setBillingSearchResults(results.slice(0, 5));
+      try {
+        // Fetch products matching the search term from the server
+        const res = await api.get(`/products/search?query=${term}&page=0&size=10&sortBy=id&direction=desc`);
+        setBillingSearchResults(res.data.content || []);
+      } catch (err) {
+        console.error('Invoicing search error:', err);
+        // Fallback to local filtering if server search fails
+        const results = products.filter(p => 
+          p.name.toLowerCase().includes(term.toLowerCase()) || 
+          p.partNumber.toLowerCase().includes(term.toLowerCase())
+        );
+        setBillingSearchResults(results.slice(0, 5));
+      }
     } else {
       setBillingSearchResults([]);
     }
