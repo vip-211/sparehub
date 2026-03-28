@@ -216,9 +216,9 @@ const Login: React.FC = () => {
                     <Mail size={18} />
                   </div>
                   <input
-                    type="email"
+                    type="text"
                     className="block w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-100 text-gray-900 text-sm rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-transparent focus:bg-white transition-all outline-none font-medium"
-                    placeholder="name@company.com"
+                    placeholder="Email or Mobile Number"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required

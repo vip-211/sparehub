@@ -16,6 +16,26 @@ const normalizeRoles = (roles: string[] | undefined) => {
   });
 };
 
+const normalizeIdentifier = (identifier: string) => {
+  const trimmed = identifier.trim();
+  if (trimmed.includes('@')) {
+    return trimmed.toLowerCase();
+  }
+  // If it's a phone number (only digits, or starting with +)
+  const digitsOnly = trimmed.replace(/\D/g, '');
+  if (digitsOnly.length >= 10) {
+    // If it doesn't already have a country code (+), assume +91 (standard for this app)
+    if (!trimmed.startsWith('+')) {
+      // If it starts with country code without +, add +
+      if (digitsOnly.length > 10 && (digitsOnly.startsWith('91'))) {
+         return '+' + digitsOnly;
+      }
+      return '+91' + digitsOnly;
+    }
+  }
+  return trimmed;
+};
+
 const register = async (name: string, email: string, password: string, role: string, phone: string, countryCode: string, otp: string, address: string) => {
   const normalizedEmail = email.toLowerCase().trim();
   console.log('AuthService.register called with:', { name, email: normalizedEmail, role, phone, otp });
@@ -52,11 +72,11 @@ const register = async (name: string, email: string, password: string, role: str
 };
 
 const sendOtp = (email: string, purpose: string = 'login') => {
-  return api.post('auth/send-otp', { email: email.toLowerCase().trim(), purpose });
+  return api.post('auth/send-otp', { email: normalizeIdentifier(email), purpose });
 };
 
 const login = async (email: string, password: string) => {
-  const normalizedEmail = email.toLowerCase().trim();
+  const normalizedEmail = normalizeIdentifier(email);
   const response = await api.post('auth/signin', {
     email: normalizedEmail,
     password,
@@ -69,7 +89,7 @@ const login = async (email: string, password: string) => {
 };
 
 const loginWithOtp = async (email: string, otp: string) => {
-  const normalizedEmail = email.toLowerCase().trim();
+  const normalizedEmail = normalizeIdentifier(email);
   const response = await api.post('auth/otp-login', {
     email: normalizedEmail,
     otp,
@@ -86,7 +106,7 @@ const logout = () => {
 };
 
 const googleLogin = async (email: string, name: string) => {
-  const response = await api.post('auth/google', { email, name });
+  const response = await api.post('auth/google', { email: normalizeIdentifier(email), name });
   if (response.data.token) {
     response.data.roles = normalizeRoles(response.data.roles);
     localStorage.setItem('user', JSON.stringify(response.data));
@@ -95,7 +115,7 @@ const googleLogin = async (email: string, name: string) => {
 };
 
 const resetPassword = async (email: string, otp: string, newPassword: string) => {
-  return api.post('auth/reset-password', { email, otp, newPassword });
+  return api.post('auth/reset-password', { email: normalizeIdentifier(email), otp, newPassword });
 };
 
 const getRoles = () => {

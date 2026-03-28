@@ -14,7 +14,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Auth
     'login.title': 'Login',
     'login.welcome': 'Welcome to Parts Mitra',
-    'login.email': 'Email Address',
+    'login.email': 'Email or Mobile Number',
     'login.password': 'Password',
     'login.otp': 'OTP',
     'login.button': 'Login',
@@ -122,7 +122,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Auth
     'login.title': 'लॉगिन',
     'login.welcome': 'पार्ट्स मित्रा में आपका स्वागत है',
-    'login.email': 'ईमेल पता',
+    'login.email': 'ईमेल या मोबाइल नंबर',
     'login.password': 'पासवर्ड',
     'login.otp': 'ओटीपी (OTP)',
     'login.button': 'लॉगिन करें',
