@@ -15,11 +15,11 @@ const OrderStatus: React.FC = () => {
       setLoading(true);
       setError('');
       try {
-        const res = await api.get(`/orders/${id}`);
+        const res = await api.get(`orders/${id}`);
         setOrder(res.data);
       } catch (e) {
         try {
-          const res2 = await api.get('/orders/seller-orders');
+          const res2 = await api.get('orders/seller-orders');
           const found = Array.isArray(res2.data) ? res2.data.find((o: any) => String(o.id) === String(id)) : null;
           if (found) {
             setOrder(found);

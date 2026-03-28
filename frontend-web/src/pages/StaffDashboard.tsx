@@ -21,7 +21,7 @@ const StaffDashboard = () => {
     try {
       // Reusing admin orders endpoint or staff-specific if it exists. 
       // Assuming admin orders works for staff too for now.
-      const res = await api.get('/admin/orders');
+      const res = await api.get('admin/orders');
       setOrders(res.data);
     } catch (err) {
       console.error('Error fetching orders:', err);
@@ -32,7 +32,7 @@ const StaffDashboard = () => {
 
   const fetchUsers = async () => {
     try {
-      const res = await api.get('/admin/users');
+      const res = await api.get('admin/users');
       setUsers(res.data);
     } catch (err) {
       console.error('Error fetching users:', err);
@@ -41,7 +41,7 @@ const StaffDashboard = () => {
 
   const updateOrderStatus = async (orderId: number, status: string) => {
     try {
-      await api.put(`/orders/${orderId}/status?status=${status}`);
+      await api.put(`orders/${orderId}/status?status=${status}`);
       fetchOrders();
     } catch (err) {
       console.error('Error updating status:', err);

@@ -78,7 +78,7 @@ const AIChatbot: React.FC = () => {
     setLoading(true);
 
     try {
-      const res = await api.post('/ai/chat', { prompt: input }, { headers: { 'X-AI-Provider': 'local' } });
+      const res = await api.post('ai/chat', { prompt: input }, { headers: { 'X-AI-Provider': 'local' } });
       const botMessage = { text: res.data.response, isBot: true, prompt: input };
       setMessages(prev => [...prev, botMessage]);
     } catch (error) {

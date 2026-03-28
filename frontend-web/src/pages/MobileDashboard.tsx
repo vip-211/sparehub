@@ -48,10 +48,10 @@ const MobileDashboard = () => {
     try {
       setLoading(true);
       const [ordersRes, usersRes, productsRes, salesRes] = await Promise.all([
-        api.get('/admin/orders'),
-        api.get('/admin/users'),
-        api.get('/products'),
-        api.get('/admin/sales', { params: { type: period } })
+        api.get('admin/orders'),
+        api.get('admin/users'),
+        api.get('products'),
+        api.get('admin/sales', { params: { type: period } })
       ]);
 
       const orders = ordersRes.data || [];

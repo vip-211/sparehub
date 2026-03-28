@@ -66,7 +66,7 @@ const Shop: React.FC = () => {
         // load categories if not already loaded or once
         if (categories.length === 0) {
           try {
-            const cats = await api.get('/categories');
+            const cats = await api.get('categories');
             setCategories(cats.data || []);
           } catch (err) {
             console.warn('Categories load failed', err);
@@ -77,11 +77,11 @@ const Shop: React.FC = () => {
         const isWholesaler = currentUser?.roles?.includes(ROLE_WHOLESALER);
         
         if (isWholesaler) {
-          res = await api.get('/products/wholesaler');
+          res = await api.get('products/wholesaler');
         } else {
           const params: any = {};
           if (categoryId) params.categoryId = categoryId;
-          res = await api.get('/products', { params });
+          res = await api.get('products', { params });
         }
 
         const data = res.data || [];

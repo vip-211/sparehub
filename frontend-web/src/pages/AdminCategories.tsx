@@ -25,7 +25,7 @@ const AdminCategories: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await api.get('/categories');
+      const res = await api.get('categories');
       setCategories(res.data || []);
     } catch (e: any) {
       setError('Failed to load categories');
@@ -49,9 +49,9 @@ const AdminCategories: React.FC = () => {
       };
       
       if (editing) {
-        await api.put(`/categories/${editing.id}`, payload);
+        await api.put(`categories/${editing.id}`, payload);
       } else {
-        await api.post('/categories', payload);
+        await api.post('categories', payload);
       }
       resetForm();
       await load();
@@ -75,7 +75,7 @@ const AdminCategories: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      await api.delete(`/categories/${id}`);
+      await api.delete(`categories/${id}`);
       await load();
     } catch {
       setError('Delete failed');

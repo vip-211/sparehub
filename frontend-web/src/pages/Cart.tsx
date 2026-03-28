@@ -53,14 +53,14 @@ const Cart: React.FC = () => {
             price: i.price || 0,
           })),
         };
-        return api.post('/orders', payload);
+        return api.post('orders', payload);
       });
 
       const responses = await Promise.all(orderPromises);
       
       // Refresh user points
       try {
-        const profileRes = await api.get('/users/profile');
+        const profileRes = await api.get('users/profile');
         const updatedUser = { ...currentUser, ...profileRes.data };
         setCurrentUser(updatedUser);
         localStorage.setItem('user', JSON.stringify(updatedUser));

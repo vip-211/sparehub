@@ -164,7 +164,7 @@ const AdminDashboard = () => {
           price: i.sellingPrice
         }))
       };
-      await api.post(`/admin/orders`, payload);
+      await api.post(`admin/orders`, payload);
       alert('Invoice generated and reflected in customer orders!');
       setBillingUser(null);
       setBillingItems([]);
@@ -181,7 +181,7 @@ const AdminDashboard = () => {
     setBillingSearchTerm(term);
     if (term.length >= 3) { // Increased to 3 for better auto-search performance
       try {
-        const res = await api.get(`/products/search?query=${term}&page=0&size=10&sortBy=id&direction=desc`);
+        const res = await api.get(`products/search?query=${term}&page=0&size=10&sortBy=id&direction=desc`);
         setBillingSearchResults(res.data.content || []);
       } catch (err) {
         console.error('Invoicing search error:', err);
@@ -199,7 +199,7 @@ const AdminDashboard = () => {
   const handleManualBillSearch = async () => {
     if (!billingSearchTerm) return;
     try {
-      const res = await api.get(`/products/search?query=${billingSearchTerm}&page=0&size=20&sortBy=id&direction=desc`);
+      const res = await api.get(`products/search?query=${billingSearchTerm}&page=0&size=20&sortBy=id&direction=desc`);
       setBillingSearchResults(res.data.content || []);
     } catch (err) {
       console.error('Manual invoicing search error:', err);
@@ -231,7 +231,7 @@ const AdminDashboard = () => {
   const fetchOrderRequests = async () => {
     try {
       setFetchingRequests(true);
-      const res = await api.get('/orders/custom-requests');
+      const res = await api.get('orders/custom-requests');
       setOrderRequests(res.data);
     } catch (err) {
       console.error(err);
@@ -242,7 +242,7 @@ const AdminDashboard = () => {
 
   const updateRequestStatus = async (requestId: number, status: string) => {
     try {
-      await api.put(`/orders/custom-requests/${requestId}/status?status=${status}`);
+      await api.put(`orders/custom-requests/${requestId}/status?status=${status}`);
       fetchOrderRequests();
     } catch (err) {
       console.error(err);
@@ -252,7 +252,7 @@ const AdminDashboard = () => {
 
   const assignRequestToStaff = async (requestId: number, staffId: number) => {
     try {
-      await api.put(`/orders/custom-requests/${requestId}/status?status=PROCESSING&staffId=${staffId}`);
+      await api.put(`orders/custom-requests/${requestId}/status?status=PROCESSING&staffId=${staffId}`);
       fetchOrderRequests();
     } catch (err) {
       console.error(err);
@@ -263,7 +263,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchSales = async () => {
       try {
-        const res = await api.get(`/admin/sales`, { params: { type: salesPeriod } });
+        const res = await api.get(`admin/sales`, { params: { type: salesPeriod } });
         const ts = res.data?.totalSales;
         const to = res.data?.totalOrders;
         setSalesReport({
@@ -287,7 +287,7 @@ const AdminDashboard = () => {
 
   const fetchSettings = async () => {
     try {
-      const res = await api.get('/admin/settings');
+      const res = await api.get('admin/settings');
       setSettings(res.data);
     } catch (err) {
       console.error(err);
@@ -297,7 +297,7 @@ const AdminDashboard = () => {
   const updateSetting = async (key: string, value: string) => {
     try {
       setSavingSettings(true);
-      await api.post('/admin/settings', { settingKey: key, settingValue: value });
+      await api.post('admin/settings', { settingKey: key, settingValue: value });
       fetchSettings();
     } catch (err) {
       console.error(err);
@@ -314,11 +314,11 @@ const AdminDashboard = () => {
 
   const fetchDeletedItems = async () => {
     try {
-      const usersRes = await api.get('/admin/recycle-bin/users');
+      const usersRes = await api.get('admin/recycle-bin/users');
       setDeletedUsers(usersRes.data);
-      const ordersRes = await api.get('/admin/recycle-bin/orders');
+      const ordersRes = await api.get('admin/recycle-bin/orders');
       setDeletedOrders(ordersRes.data);
-      const productsRes = await api.get('/admin/recycle-bin/products');
+      const productsRes = await api.get('admin/recycle-bin/products');
       setDeletedProducts(productsRes.data);
     } catch (err) {
       console.error(err);
@@ -327,7 +327,7 @@ const AdminDashboard = () => {
 
   const restoreUser = async (userId: number) => {
     try {
-      await api.post(`/admin/recycle-bin/users/${userId}/restore`);
+      await api.post(`admin/recycle-bin/users/${userId}/restore`);
       fetchUsers();
       fetchDeletedItems();
     } catch (err) {
@@ -338,7 +338,7 @@ const AdminDashboard = () => {
 
   const restoreOrder = async (orderId: number) => {
     try {
-      await api.post(`/admin/recycle-bin/orders/${orderId}/restore`);
+      await api.post(`admin/recycle-bin/orders/${orderId}/restore`);
       fetchOrders();
       fetchDeletedItems();
     } catch (err) {
@@ -349,7 +349,7 @@ const AdminDashboard = () => {
 
   const restoreProduct = async (productId: number) => {
     try {
-      await api.post(`/admin/recycle-bin/products/${productId}/restore`);
+      await api.post(`admin/recycle-bin/products/${productId}/restore`);
       fetchProducts();
       fetchDeletedItems();
     } catch (err) {
@@ -361,7 +361,7 @@ const AdminDashboard = () => {
   const permanentDeleteUser = async (userId: number) => {
     if (!window.confirm('Are you sure you want to permanently delete this user? This cannot be undone.')) return;
     try {
-      await api.delete(`/admin/recycle-bin/users/${userId}/permanent`);
+      await api.delete(`admin/recycle-bin/users/${userId}/permanent`);
       fetchDeletedItems();
     } catch (err) {
       console.error(err);
@@ -372,7 +372,7 @@ const AdminDashboard = () => {
   const permanentDeleteOrder = async (orderId: number) => {
     if (!window.confirm('Are you sure you want to permanently delete this order? This cannot be undone.')) return;
     try {
-      await api.delete(`/admin/recycle-bin/orders/${orderId}/permanent`);
+      await api.delete(`admin/recycle-bin/orders/${orderId}/permanent`);
       fetchDeletedItems();
     } catch (err) {
       console.error(err);
@@ -383,7 +383,7 @@ const AdminDashboard = () => {
   const permanentDeleteProduct = async (productId: number) => {
     if (!window.confirm('Are you sure you want to permanently delete this product? This cannot be undone.')) return;
     try {
-      await api.delete(`/admin/recycle-bin/products/${productId}/permanent`);
+      await api.delete(`admin/recycle-bin/products/${productId}/permanent`);
       fetchDeletedItems();
     } catch (err) {
       console.error(err);
@@ -394,7 +394,7 @@ const AdminDashboard = () => {
   const handleEmptyRecycleBin = async () => {
     if (!window.confirm('Are you sure you want to empty the Recycle Bin? All deleted products will be permanently removed. This action cannot be undone.')) return;
     try {
-      await api.delete('/products/empty-recycle-bin');
+      await api.delete('products/empty-recycle-bin');
       fetchDeletedItems();
       alert('Recycle bin emptied successfully');
     } catch (err) {
@@ -405,7 +405,7 @@ const AdminDashboard = () => {
 
   const fetchUsers = async () => {
     try {
-      const res = await api.get('/admin/users');
+      const res = await api.get('admin/users');
       setUsers(res.data);
     } catch (err) {
       console.error(err);
@@ -414,7 +414,7 @@ const AdminDashboard = () => {
 
   const fetchOrders = useCallback(async () => {
     try {
-      const res = await api.get('/admin/orders');
+      const res = await api.get('admin/orders');
       setOrders(res.data);
     } catch (err) {
       console.error(err);
@@ -468,7 +468,7 @@ const AdminDashboard = () => {
 
   const fetchCategories = async () => {
     try {
-      const res = await api.get('/categories');
+      const res = await api.get('categories');
       setCategories(res.data || []);
     } catch (err) {
       console.error(err);
@@ -486,7 +486,7 @@ const AdminDashboard = () => {
     }
 
     try {
-      await api.post('/excel/upload', formData, {
+      await api.post('excel/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -501,7 +501,7 @@ const AdminDashboard = () => {
 
   const handleExcelDownload = async () => {
     try {
-      const response = await api.get('/excel/download', {
+      const response = await api.get('excel/download', {
         responseType: 'blob',
       });
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -520,8 +520,8 @@ const AdminDashboard = () => {
   const fetchProducts = async (page = 0) => {
     try {
       const endpoint = productSearchTerm
-        ? `/products/search?query=${productSearchTerm}&page=${page}&size=10&sortBy=id&direction=desc`
-        : `/products?page=${page}&size=10&sortBy=id&direction=desc`;
+        ? `products/search?query=${productSearchTerm}&page=${page}&size=10&sortBy=id&direction=desc`
+        : `products?page=${page}&size=10&sortBy=id&direction=desc`;
       const res = await api.get(endpoint);
       setProducts(res.data.content);
       setPagination({
@@ -550,7 +550,7 @@ const AdminDashboard = () => {
 
   const handleEditOrder = async (orderId: number, items: any[]) => {
     try {
-      await api.put(`/admin/orders/${orderId}/items`, items);
+      await api.put(`admin/orders/${orderId}/items`, items);
       setShowEditOrder(false);
       setEditingOrder(null);
       fetchOrders();
@@ -569,7 +569,7 @@ const AdminDashboard = () => {
     formData.append('file', file);
 
     try {
-      const res = await api.post('/files/upload', formData, {
+      const res = await api.post('files/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setNewProduct({ ...newProduct, imagePath: res.data.url });
@@ -583,7 +583,7 @@ const AdminDashboard = () => {
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await api.post('/products', {
+      const res = await api.post('products', {
         ...newProduct,
         mrp: parseFloat(String(newProduct.mrp)) || 0,
         sellingPrice: parseFloat(String(newProduct.sellingPrice)) || 0,
@@ -616,7 +616,7 @@ const AdminDashboard = () => {
     formData.append('file', file);
 
     try {
-      const res = await api.post('/files/upload', formData, {
+      const res = await api.post('files/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setEditingProduct({ ...editingProduct, imagePath: res.data.url });
@@ -630,7 +630,7 @@ const AdminDashboard = () => {
   const handleUpdateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.put(`/products/${editingProduct.id}`, {
+      await api.put(`products/${editingProduct.id}`, {
         ...editingProduct,
         mrp: parseFloat(String(editingProduct.mrp)) || 0,
         sellingPrice: parseFloat(String(editingProduct.sellingPrice)) || 0,
@@ -663,14 +663,14 @@ const AdminDashboard = () => {
         newUser.address
       );
       try {
-        const res = await api.get('/admin/users');
+        const res = await api.get('admin/users');
         const created = res.data.find((u: any) => u.email.toLowerCase() === newUser.email.toLowerCase());
         if (created) {
           const payload: any = {};
           if (newUser.latitude) payload.latitude = parseFloat(String(newUser.latitude));
           if (newUser.longitude) payload.longitude = parseFloat(String(newUser.longitude));
           if (Object.keys(payload).length > 0) {
-            await api.put(`/admin/users/${created.id}/profile`, payload);
+            await api.put(`admin/users/${created.id}/profile`, payload);
           }
         }
       } catch {}
@@ -726,7 +726,7 @@ const AdminDashboard = () => {
       if (editPoints !== (editingUserData.points || 0)) payload.points = editPoints;
       if (editLatitude !== (editingUserData.latitude ?? '')) payload.latitude = editLatitude === '' ? null : editLatitude;
       if (editLongitude !== (editingUserData.longitude ?? '')) payload.longitude = editLongitude === '' ? null : editLongitude;
-      await api.put(`/admin/users/${editingUserData.id}/profile`, payload);
+      await api.put(`admin/users/${editingUserData.id}/profile`, payload);
       setShowEditUser(false);
       setEditingUserData(null);
       fetchUsers();
@@ -738,7 +738,7 @@ const AdminDashboard = () => {
 
   const updateOrderStatus = async (orderId: number, status: string) => {
     try {
-      await api.put(`/orders/${orderId}/status?status=${status}`);
+      await api.put(`orders/${orderId}/status?status=${status}`);
       fetchOrders();
     } catch (err) {
       console.error(err);
@@ -748,7 +748,7 @@ const AdminDashboard = () => {
 
   const updateUserStatus = async (userId: number, status: string) => {
     try {
-      await api.put(`/admin/users/${userId}/status?status=${status}`);
+      await api.put(`admin/users/${userId}/status?status=${status}`);
       fetchUsers();
     } catch (err) {
       console.error(err);
@@ -757,7 +757,7 @@ const AdminDashboard = () => {
 
   const updateUserRole = async (userId: number, role: string) => {
     try {
-      await api.put(`/admin/users/${userId}/role?roleName=${role}`);
+      await api.put(`admin/users/${userId}/role?roleName=${role}`);
       fetchUsers();
     } catch (err) {
       console.error(err);
@@ -768,7 +768,7 @@ const AdminDashboard = () => {
   const deleteUser = async (userId: number) => {
     if (!window.confirm('Are you sure you want to delete this user?')) return;
     try {
-      await api.delete(`/admin/users/${userId}`);
+      await api.delete(`admin/users/${userId}`);
       fetchUsers();
       fetchDeletedItems();
     } catch (err) {
@@ -780,7 +780,7 @@ const AdminDashboard = () => {
   const adjustUserPoints = async () => {
     if (!pointsUser) return;
     try {
-      await api.put(`/admin/users/${pointsUser.id}/points?points=${pointsAmount}&operation=${pointsOperation}`, {});
+      await api.put(`admin/users/${pointsUser.id}/points?points=${pointsAmount}&operation=${pointsOperation}`, {});
       setShowPointsDialog(false);
       setPointsUser(null);
       setPointsAmount(0);
@@ -795,7 +795,7 @@ const AdminDashboard = () => {
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/categories', {
+      await api.post('categories', {
         ...newCategory
       });
       setShowAddCategory(false);
@@ -811,7 +811,7 @@ const AdminDashboard = () => {
     e.preventDefault();
     if (!editingCategory) return;
     try {
-      await api.put(`/categories/${editingCategory.id}`, {
+      await api.put(`categories/${editingCategory.id}`, {
         ...editingCategory
       });
       setShowEditCategory(false);
@@ -832,7 +832,7 @@ const AdminDashboard = () => {
     formData.append('file', file);
 
     try {
-      const res = await api.post('/files/upload', formData, {
+      const res = await api.post('files/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setEditingCategory({ ...editingCategory, imagePath: res.data.url });
@@ -852,7 +852,7 @@ const AdminDashboard = () => {
     formData.append('file', file);
 
     try {
-      const res = await api.post('/files/upload', formData, {
+      const res = await api.post('files/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setNewCategory({ ...newCategory, imagePath: res.data.url });

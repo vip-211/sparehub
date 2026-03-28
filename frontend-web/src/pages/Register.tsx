@@ -42,7 +42,7 @@ const Register = () => {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const res = await api.get('/admin/settings');
+        const res = await api.get('admin/settings');
         const s = res.data as Array<{ settingKey: string; settingValue: string }>;
         const allowed = s.find(x => x.settingKey === 'ALLOWED_REG_ROLES')?.settingValue;
         if (allowed) {

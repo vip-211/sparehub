@@ -36,19 +36,19 @@ const WholesalerDashboard = () => {
 
   const fetchCategories = async () => {
     try {
-      const res = await api.get('/categories');
+      const res = await api.get('categories');
       setCategories(res.data || []);
     } catch (err) {
-      console.error(err);
+      console.error('Error fetching categories:', err);
     }
   };
 
   const fetchProducts = async () => {
     try {
-      const res = await api.get('/products/wholesaler');
+      const res = await api.get('products/wholesaler');
       setProducts(res.data);
     } catch (err) {
-      console.error(err);
+      console.error('Error fetching products:', err);
     } finally {
       setLoading(false);
     }
@@ -56,10 +56,10 @@ const WholesalerDashboard = () => {
 
   const fetchOrders = async () => {
     try {
-      const res = await api.get('/orders/seller-orders');
+      const res = await api.get('orders/seller-orders');
       setOrders(res.data);
     } catch (err) {
-      console.error(err);
+      console.error('Error fetching orders:', err);
     }
   };
 
@@ -75,7 +75,7 @@ const WholesalerDashboard = () => {
     setPlacing(true);
     setOrderMsg('');
     try {
-      await api.post('/orders', {
+      await api.post('orders', {
         sellerId: selectedProduct.wholesalerId,
         items: [
           {
@@ -108,7 +108,7 @@ const WholesalerDashboard = () => {
 
     try {
       setUploadStatus('Uploading...');
-      await api.post('/excel/upload', formData, {
+      await api.post('excel/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -122,10 +122,10 @@ const WholesalerDashboard = () => {
 
   const updateOrderStatus = async (orderId: number, status: string) => {
     try {
-      await api.put(`/orders/${orderId}/status?status=${status}`);
+      await api.put(`orders/${orderId}/status?status=${status}`);
       fetchOrders();
     } catch (err) {
-      console.error(err);
+      console.error('Error updating status:', err);
     }
   };
 
