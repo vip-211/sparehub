@@ -225,22 +225,21 @@ class NotificationService {
 
   static Future<void> updateTokenOnServer(int userId, String token) async {
     try {
-      await _remote.postJson(
-        '/auth/update-fcm-token',
-        {"userId": userId, "token": token},
-      );
-      if (kDebugMode) debugPrint("FCM Token updated on server");
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('pending_fcm_user');
-      await prefs.remove('pending_fcm_token');
+      if (kDebugMode)
+        debugPrint('NotificationService: Updating FCM token for user $userId');
+      final res = await _remote.postJson('/auth/update-fcm-token', {
+        'userId': userId,
+        'token': token,
+      });
+      if (res != null) {
+        if (kDebugMode)
+          debugPrint('NotificationService: FCM token updated successfully');
+      } else {
+        debugPrint(
+            'NotificationService: Failed to update FCM token (null response)');
+      }
     } catch (e) {
-      debugPrint("Failed to update FCM token on server: $e");
-      // Persist for retry when network returns
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt('pending_fcm_user', userId);
-        await prefs.setString('pending_fcm_token', token);
-      } catch (_) {}
+      debugPrint('NotificationService: Error updating FCM token: $e');
     }
   }
 
@@ -447,7 +446,16 @@ class NotificationService {
       await _fcm.subscribeToTopic('all-users');
       for (final r in roles) {
         if (r.isNotEmpty) {
+          // Normalize role name: remove ROLE_ prefix if present and convert to uppercase for consistency
+          String topicName = r.replaceAll('ROLE_', '').toUpperCase();
+
+          // Subscribe to both formats just in case backend uses different ones
           await _fcm.subscribeToTopic('role-$r');
+          await _fcm.subscribeToTopic('role-$topicName');
+
+          if (kDebugMode) {
+            debugPrint('Subscribed to topics: role-$r and role-$topicName');
+          }
         }
       }
     } catch (e) {

@@ -123,8 +123,12 @@ public class AuthController {
             log.info("DEMO MODE: Skipping real send for {}. OTP is: {}", email, otp);
             // In demo mode, we still save the OTP so it's technically valid
         } else {
-            // Send to both Email and WhatsApp (if available)
-            otpService.sendOtpToBoth(email, phone, otp);
+            try {
+                otpService.sendOtp(email, otp);
+            } catch (Exception e) {
+                // OtpService handles internal errors and fallback prints
+                log.error("Error while invoking OtpService.sendOtp: {}", e.getMessage());
+            }
         }
 
         // 2. Save OTP regardless of email result (non-blocking user flow)
@@ -185,18 +189,16 @@ public class AuthController {
                 user.setEmail(syntheticEmail);
                 user.setPassword(encoder.encode(java.util.UUID.randomUUID().toString()));
                 user.setPhone(normalized);
-                user.setStatus(User.UserStatus.ACTIVE);
+                user.setStatus(User.UserStatus.PENDING);
                 Role role = roleRepository.findByName(RoleName.ROLE_MECHANIC)
                         .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
                 user.setRole(role);
                 userRepository.save(user);
             }
 
-            /*
             if (user.getStatus() != User.UserStatus.ACTIVE) {
-                return ResponseEntity.status(403).body(new MessageResponse("Your account is not active. Status: " + user.getStatus()));
+                return ResponseEntity.status(403).body(new MessageResponse("Your account is pending admin approval. Current status: " + user.getStatus()));
             }
-            */
 
             // 3. Generate JWT
             String jwt = jwtUtils.generateJwtTokenFromUsername(user.getEmail());
@@ -234,6 +236,10 @@ public class AuthController {
             return ResponseEntity.status(404).body(new MessageResponse("User not found. Please register first."));
         }
         User user = userOptional.get();
+        if (user.getStatus() != User.UserStatus.ACTIVE) {
+            return ResponseEntity.status(403).body(new MessageResponse("Your account is pending admin approval. Current status: " + user.getStatus()));
+        }
+        
         String email = user.getEmail();
 
         // Allow matching against the last 2 valid OTPs to handle race conditions (Fix per latest log review)
@@ -293,6 +299,10 @@ public class AuthController {
                 .collect(Collectors.toList());
 
         User user = userRepository.findById(userDetails.getId()).orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getStatus() != User.UserStatus.ACTIVE) {
+            return ResponseEntity.status(403).body(new MessageResponse("Your account is pending admin approval. Current status: " + user.getStatus()));
+        }
 
         return ResponseEntity.ok(new JwtResponse(jwt,
                 userDetails.getId(),
@@ -496,6 +506,11 @@ public class AuthController {
         });
 
         String jwt = jwtUtils.generateJwtTokenFromUsername(user.getEmail());
+        
+        if (user.getStatus() != User.UserStatus.ACTIVE) {
+            return ResponseEntity.status(403).body(new MessageResponse("Your account is pending admin approval. Current status: " + user.getStatus()));
+        }
+
         List<String> roles = List.of(user.getRole().getName().name());
 
         return ResponseEntity.ok(new JwtResponse(jwt,

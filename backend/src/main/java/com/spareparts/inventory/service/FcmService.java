@@ -10,6 +10,7 @@ import com.spareparts.inventory.entity.Notification;
 import com.spareparts.inventory.entity.User;
 import com.spareparts.inventory.repository.NotificationRepository;
 import com.spareparts.inventory.repository.UserRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class FcmService {
 
     @Autowired
@@ -32,6 +34,7 @@ public class FcmService {
     private SimpMessagingTemplate messagingTemplate;
 
     public void sendToUser(Long userId, String title, String message, String offerType, String imageUrl) {
+        log.info("FcmService: Preparing to send notification to user {}: {}", userId, title);
         // Always save for in-app notifications
         Notification notification = saveNotification(userId, title, message, false, null);
 
@@ -44,7 +47,7 @@ public class FcmService {
         messagingTemplate.convertAndSendToUser(userId.toString(), "/queue/notifications", payload);
 
         if (FirebaseApp.getApps().isEmpty()) {
-            System.out.println("FcmService: Firebase not initialized, skipping FCM notification for user " + userId);
+            log.warn("FcmService: Firebase not initialized, skipping FCM notification for user {}", userId);
             return;
         }
         userRepository.findById(userId).ifPresentOrElse(user -> {
@@ -74,18 +77,19 @@ public class FcmService {
                         .build();
 
                 try {
-                    FirebaseMessaging.getInstance().send(fcmMessage);
-                    System.out.println("FcmService: Successfully sent FCM to user " + userId);
+                    String response = FirebaseMessaging.getInstance().send(fcmMessage);
+                    log.info("FcmService: Successfully sent FCM to user {}. Response: {}", userId, response);
                 } catch (FirebaseMessagingException e) {
-                    System.err.println("FcmService: Error sending FCM message to user " + userId + ": " + e.getMessage());
+                    log.error("FcmService: Error sending FCM message to user {}: {}", userId, e.getMessage());
                 }
             } else {
-                System.out.println("FcmService: No FCM token for user " + userId);
+                log.warn("FcmService: No FCM token for user {}", userId);
             }
-        }, () -> System.out.println("FcmService: User not found: " + userId));
+        }, () -> log.error("FcmService: User not found: {}", userId));
     }
 
     public void sendBroadcast(String title, String message, String offerType, String imageUrl) {
+        log.info("FcmService: Preparing broadcast notification: {}", title);
         // Always save for in-app notifications
         Notification notification = saveNotification(null, title, message, true, "ALL");
 
@@ -98,7 +102,7 @@ public class FcmService {
         messagingTemplate.convertAndSend("/topic/notifications", payload);
 
         if (FirebaseApp.getApps().isEmpty()) {
-            System.out.println("FcmService: Firebase not initialized, skipping FCM broadcast.");
+            log.warn("FcmService: Firebase not initialized, skipping FCM broadcast.");
             return;
         }
         com.google.firebase.messaging.Notification fcmNotification = com.google.firebase.messaging.Notification.builder()
@@ -125,14 +129,15 @@ public class FcmService {
                 .build();
 
         try {
-            FirebaseMessaging.getInstance().send(fcmMessage);
-            System.out.println("FcmService: Successfully sent FCM broadcast to all-users topic");
+            String response = FirebaseMessaging.getInstance().send(fcmMessage);
+            log.info("FcmService: Successfully sent FCM broadcast to all-users topic. Response: {}", response);
         } catch (FirebaseMessagingException e) {
-            System.err.println("FcmService: Error sending FCM broadcast: " + e.getMessage());
+            log.error("FcmService: Error sending FCM broadcast: {}", e.getMessage());
         }
     }
 
     public void sendToRole(String role, String title, String message, String offerType, String imageUrl) {
+        log.info("FcmService: Preparing notification for role {}: {}", role, title);
         // Always save for in-app notifications
         Notification notification = saveNotification(null, title, message, false, role);
 
@@ -145,7 +150,7 @@ public class FcmService {
         messagingTemplate.convertAndSend("/topic/notifications/" + role, payload);
 
         if (FirebaseApp.getApps().isEmpty()) {
-            System.out.println("FcmService: Firebase not initialized, skipping FCM role notification.");
+            log.warn("FcmService: Firebase not initialized, skipping FCM role notification.");
             return;
         }
         // Alternatively, use topics per role
@@ -170,13 +175,15 @@ public class FcmService {
                 .build();
 
         try {
-            FirebaseMessaging.getInstance().send(fcmMessage);
+            String response = FirebaseMessaging.getInstance().send(fcmMessage);
+            log.info("FcmService: Successfully sent FCM role message to topic role-{}. Response: {}", role, response);
         } catch (FirebaseMessagingException e) {
-            System.err.println("FcmService: Error sending FCM role message: " + e.getMessage());
+            log.error("FcmService: Error sending FCM role message: {}", e.getMessage());
         }
     }
 
     public void sendOrderStatusToUser(Long userId, Long orderId, String title, String message) {
+        log.info("FcmService: Preparing order status notification for user {}: {}", userId, title);
         // Save for in-app log
         saveNotification(userId, title, message, false, null);
         // WebSocket to user queue
@@ -187,9 +194,10 @@ public class FcmService {
         messagingTemplate.convertAndSendToUser(userId.toString(), "/queue/orders", payload);
 
         if (FirebaseApp.getApps().isEmpty()) {
+            log.warn("FcmService: Firebase not initialized, skipping order status FCM.");
             return;
         }
-        userRepository.findById(userId).ifPresent(user -> {
+        userRepository.findById(userId).ifPresentOrElse(user -> {
             if (user.getFcmToken() != null && !user.getFcmToken().isEmpty()) {
                 String roleName = "ROLE_MECHANIC";
                 if (user.getRole() != null && user.getRole().getName() != null) {
@@ -214,12 +222,15 @@ public class FcmService {
                         .putData("message", message != null ? message : "")
                         .build();
                 try {
-                    FirebaseMessaging.getInstance().send(msg);
+                    String response = FirebaseMessaging.getInstance().send(msg);
+                    log.info("FcmService: Successfully sent order status FCM to user {}. Response: {}", userId, response);
                 } catch (FirebaseMessagingException e) {
-                    System.err.println("FcmService: Error sending order status FCM: " + e.getMessage());
+                    log.error("FcmService: Error sending order status FCM to user {}: {}", userId, e.getMessage());
                 }
+            } else {
+                log.warn("FcmService: No FCM token for user {}", userId);
             }
-        });
+        }, () -> log.error("FcmService: User not found for order status: {}", userId));
     }
 
     public void sendToAdminAndSuperManager(String title, String message, Map<String, String> data) {
@@ -232,6 +243,7 @@ public class FcmService {
     }
     
     public void sendOrderStatusToStaff(Long orderId, String title, String message) {
+        log.info("FcmService: Preparing order status notification for staff: {}", title);
         // Broadcast to all staff via topic and role channel, include route so notifications are clickable
         // Save log as role-targeted message
         saveNotification(null, title, message, false, "ROLE_STAFF");
@@ -243,6 +255,7 @@ public class FcmService {
         messagingTemplate.convertAndSend("/topic/notifications/ROLE_STAFF", payload);
         
         if (FirebaseApp.getApps().isEmpty()) {
+            log.warn("FcmService: Firebase not initialized, skipping staff notification.");
             return;
         }
         Message msg = Message.builder()
@@ -264,9 +277,10 @@ public class FcmService {
                 .putData("message", message != null ? message : "")
                 .build();
         try {
-            FirebaseMessaging.getInstance().send(msg);
+            String response = FirebaseMessaging.getInstance().send(msg);
+            log.info("FcmService: Successfully sent staff order status FCM. Response: {}", response);
         } catch (FirebaseMessagingException e) {
-            System.err.println("FcmService: Error sending staff order status FCM: " + e.getMessage());
+            log.error("FcmService: Error sending staff order status FCM: {}", e.getMessage());
         }
     }
 

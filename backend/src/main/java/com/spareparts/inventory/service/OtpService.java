@@ -34,17 +34,11 @@ public class OtpService {
     @Autowired
     private SystemSettingRepository systemSettingRepository;
 
-    @Autowired
-    private WhatsAppService whatsAppService;
-
     @Value("${spring.mail.username}")
     private String mailFrom;
 
     @Value("${mail.provider:SMTP}")
     private String mailProvider;
-
-    @Value("${otp.mode:EMAIL}")
-    private String otpMode;
 
     @Value("${sendgrid.api.key:}")
     private String sendgridApiKey;
@@ -88,34 +82,8 @@ public class OtpService {
             log.info("Sending OTP via Email to {}", identifier);
             sendOtpEmail(identifier, otp);
         } else {
-            // It's likely a phone number, send WhatsApp
-            log.info("Sending OTP via WhatsApp to {}", identifier);
-            whatsAppService.sendOtp(identifier, otp);
-        }
-    }
-
-    /**
-     * Enhanced method to send OTP to both email and phone if available
-     */
-    public void sendOtpToBoth(String email, String phone, String otp) {
-        // 1. Always send Email (User said it's working fine, don't disturb)
-        if (email != null && email.contains("@")) {
-            try {
-                log.info("Sending OTP via Email to {}", email);
-                sendOtpEmail(email, otp);
-            } catch (Exception e) {
-                log.error("Failed to send Email OTP to {}: {}", email, e.getMessage());
-            }
-        }
-
-        // 2. Also send WhatsApp if phone is available
-        if (phone != null && !phone.isEmpty()) {
-            try {
-                log.info("Sending OTP via WhatsApp to {}", phone);
-                whatsAppService.sendOtp(phone, otp);
-            } catch (Exception e) {
-                log.error("Failed to send WhatsApp OTP to {}: {}", phone, e.getMessage());
-            }
+            // It's likely a phone number, which is now handled by Firebase client-side
+            log.info("Phone identifier {} detected. Backend skipping OTP send (delegated to Firebase).", identifier);
         }
     }
 
