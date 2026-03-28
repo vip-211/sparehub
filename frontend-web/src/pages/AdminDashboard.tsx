@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import api, { API_BASE_URL } from '../services/api';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
-import { Users, ShoppingBag, BarChart2, CheckCircle, XCircle, Plus, Package, UserPlus, Upload, Truck, Trash2, RotateCcw, Settings, Bell, MessageSquare, Search, Star, FileText } from 'lucide-react';
+import { Users, ShoppingBag, BarChart2, CheckCircle, XCircle, Plus, Package, UserPlus, Upload, Truck, Trash2, RotateCcw, Settings, Bell, MessageSquare, Search, Star, FileText, List, LayoutGrid, Store } from 'lucide-react';
 import { ROLE_SUPER_MANAGER, ROLE_ADMIN, ROLE_MECHANIC, ROLE_RETAILER, ROLE_WHOLESALER, ROLE_STAFF } from '../services/constants';
 import AuthService from '../services/auth.service';
 import Skeleton from '../components/Skeleton';
@@ -114,6 +114,8 @@ const AdminDashboard = () => {
   const [fetchingRequests, setFetchingRequests] = useState(false);
 
   const [billingUser, setBillingUser] = useState<any>(null);
+  const [orderListView, setOrderListView] = useState<'list' | 'grid'>('list');
+  const [orderQuery, setOrderQuery] = useState('');
   const [billingItems, setBillingItems] = useState<any[]>([]);
   const [billingDiscount, setBillingDiscount] = useState<number>(0);
   const [billingDiscountType, setBillingDiscountType] = useState<'RS' | '%'>('RS');
@@ -911,6 +913,14 @@ const AdminDashboard = () => {
     </div>
   );
 
+  // Group orders by customer name for list/grid views
+  const groupedOrders: Record<string, any[]> = orders.reduce((acc: Record<string, any[]>, order: any) => {
+    const key = order.customerName || `User ${order.customerId}`;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(order);
+    return acc;
+  }, {});
+
   return (
     <div className={`container mx-auto p-4 md:p-6 ${isSuperManager ? 'bg-purple-50 min-h-screen' : ''}`}>
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
@@ -1339,87 +1349,169 @@ const AdminDashboard = () => {
       )}
 
       {activeTab === 'orders' && (
-        <div className="space-y-8">
-          {Object.keys(groupedOrders).map((userName) => (
-            <div key={userName} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
-                <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
-                  <Users size={20} className="text-primary-600" />
-                  Orders for {userName}
-                </h3>
-                <span className="text-xs font-bold text-gray-500 bg-white px-3 py-1 rounded-full border border-gray-100">
-                  {groupedOrders[userName].length} Orders
-                </span>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-100">
-                  <thead className="bg-gray-50/30">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Order Info</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Amount</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-100">
-                    {groupedOrders[userName].map((order: any) => (
-                      <tr key={order.id} className="hover:bg-gray-50/50 transition">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-xs font-black text-primary-700 bg-primary-50 px-2 py-1 rounded-md">#{order.id}</span>
-                          <div className="text-[10px] text-gray-400 mt-1 font-bold">{new Date(order.createdAt).toLocaleDateString()}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-black text-gray-900">₹{order.totalAmount.toLocaleString()}</div>
-                      {order.discountAmount > 0 && (
-                        <div className="text-[10px] font-black text-orange-600 mt-1">
-                          Discount: ₹{order.discountAmount.toLocaleString()}
+        <div className="space-y-6">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-2">
+            <div className="relative w-full md:max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <input
+                type="text"
+                placeholder="Filter by customer name..."
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none transition shadow-sm"
+                value={orderQuery}
+                onChange={(e) => setOrderQuery(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-gray-200 shadow-sm">
+              <button
+                onClick={() => setOrderListView('list')}
+                className={`px-4 py-2 rounded-lg text-xs font-black transition flex items-center gap-2 ${orderListView === 'list' ? 'bg-primary-600 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}
+              >
+                <List size={16} />
+                List
+              </button>
+              <button
+                onClick={() => setOrderListView('grid')}
+                className={`px-4 py-2 rounded-lg text-xs font-black transition flex items-center gap-2 ${orderListView === 'grid' ? 'bg-primary-600 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}
+              >
+                <LayoutGrid size={16} />
+                Grid
+              </button>
+            </div>
+          </div>
+
+          {orderListView === 'grid' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {Object.keys(groupedOrders)
+                .filter(name => name.toLowerCase().includes(orderQuery.toLowerCase()))
+                .map((userName) => {
+                  const userOrders = groupedOrders[userName];
+                  const firstOrder = userOrders[0];
+                  // Try to find the user in our users list to get their shop image
+                  const user = users.find(u => u.name === userName || u.id === firstOrder.customerId);
+                  
+                  return (
+                    <div key={userName} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl transition group cursor-pointer" onClick={() => setOrderQuery(userName)}>
+                      <div className="aspect-video relative overflow-hidden bg-gray-100">
+                        {user?.shopImagePath ? (
+                          <img src={getImageUrl(user.shopImagePath)} alt={userName} className="w-full h-full object-cover group-hover:scale-110 transition duration-500" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Store size={48} className="text-gray-300" />
+                          </div>
+                        )}
+                        <div className="absolute top-3 right-3">
+                          <span className="bg-primary-600 text-white text-[10px] font-black px-2 py-1 rounded-full shadow-lg">
+                            {userOrders.length} Orders
+                          </span>
                         </div>
-                      )}
-                      {order.pointsRedeemed > 0 && (
-                        <div className="text-[10px] font-black text-amber-600 mt-1">
-                          Redeemed: {order.pointsRedeemed} pts (₹{order.pointsRedeemed})
-                        </div>
-                      )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-3 py-1 text-[10px] font-black tracking-widest uppercase rounded-lg ${
-                            order.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
-                            order.status === 'APPROVED' ? 'bg-blue-100 text-blue-700' :
-                            order.status === 'DELIVERED' ? 'bg-green-100 text-green-700' :
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-black text-gray-900 truncate">{userName}</h3>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">
+                          {user?.address || 'No address provided'}
+                        </p>
+                        <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between">
+                          <div className="text-xs font-bold text-gray-500 uppercase tracking-widest">Recent Status</div>
+                          <span className={`px-2 py-0.5 text-[8px] font-black tracking-widest uppercase rounded-md ${
+                            firstOrder.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
+                            firstOrder.status === 'APPROVED' ? 'bg-blue-100 text-blue-700' :
+                            firstOrder.status === 'DELIVERED' ? 'bg-green-100 text-green-700' :
                             'bg-gray-100 text-gray-700'
                           }`}>
-                            {order.status}
+                            {firstOrder.status}
                           </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              onClick={() => { setEditingOrder(order); setShowEditOrder(true); }}
-                              className="px-3 py-1.5 bg-gray-50 text-primary-600 rounded-lg text-xs font-bold hover:bg-primary-50 transition"
-                            >
-                              Edit
-                            </button>
-                            <select
-                              value={order.status}
-                              onChange={(e) => updateOrderStatus(order.id, e.target.value)}
-                              className="bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 text-[10px] font-black text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 transition uppercase"
-                            >
-                              <option value="PENDING">PENDING</option>
-                              <option value="APPROVED">APPROVED</option>
-                              <option value="PACKED">PACKED</option>
-                              <option value="OUT_FOR_DELIVERY">OUT_FOR_DELIVERY</option>
-                              <option value="DELIVERED">DELIVERED</option>
-                              <option value="CANCELLED">CANCELLED</option>
-                            </select>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
-          ))}
+          ) : (
+            <div className="space-y-8">
+              {Object.keys(groupedOrders)
+                .filter(name => name.toLowerCase().includes(orderQuery.toLowerCase()))
+                .map((userName) => (
+                <div key={userName} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+                    <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                      <Users size={20} className="text-primary-600" />
+                      Orders for {userName}
+                    </h3>
+                    <span className="text-xs font-bold text-gray-500 bg-white px-3 py-1 rounded-full border border-gray-100">
+                      {groupedOrders[userName].length} Orders
+                    </span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-100">
+                      <thead className="bg-gray-50/30">
+                        <tr>
+                          <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Order Info</th>
+                          <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Amount</th>
+                          <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                          <th className="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-100">
+                        {groupedOrders[userName].map((order: any) => (
+                          <tr key={order.id} className="hover:bg-gray-50/50 transition">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="text-xs font-black text-primary-700 bg-primary-50 px-2 py-1 rounded-md">#{order.id}</span>
+                              <div className="text-[10px] text-gray-400 mt-1 font-bold">{new Date(order.createdAt).toLocaleDateString()}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-black text-gray-900">₹{order.totalAmount.toLocaleString()}</div>
+                          {order.discountAmount > 0 && (
+                            <div className="text-[10px] font-black text-orange-600 mt-1">
+                              Discount: ₹{order.discountAmount.toLocaleString()}
+                            </div>
+                          )}
+                          {order.pointsRedeemed > 0 && (
+                            <div className="text-[10px] font-black text-amber-600 mt-1">
+                              Redeemed: {order.pointsRedeemed} pts (₹{order.pointsRedeemed})
+                            </div>
+                          )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`px-3 py-1 text-[10px] font-black tracking-widest uppercase rounded-lg ${
+                                order.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
+                                order.status === 'APPROVED' ? 'bg-blue-100 text-blue-700' :
+                                order.status === 'DELIVERED' ? 'bg-green-100 text-green-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {order.status}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-center">
+                              <div className="flex items-center justify-center gap-2">
+                                <button
+                                  onClick={() => { setEditingOrder(order); setShowEditOrder(true); }}
+                                  className="px-3 py-1.5 bg-gray-50 text-primary-600 rounded-lg text-xs font-bold hover:bg-primary-50 transition"
+                                >
+                                  Edit
+                                </button>
+                                <select
+                                  value={order.status}
+                                  onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                                  className="bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 text-[10px] font-black text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 transition uppercase"
+                                >
+                                  <option value="PENDING">PENDING</option>
+                                  <option value="APPROVED">APPROVED</option>
+                                  <option value="PACKED">PACKED</option>
+                                  <option value="OUT_FOR_DELIVERY">OUT_FOR_DELIVERY</option>
+                                  <option value="DELIVERED">DELIVERED</option>
+                                  <option value="CANCELLED">CANCELLED</option>
+                                </select>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
           {orders.length === 0 && (
             <div className="bg-white rounded-2xl p-10 text-center border border-dashed border-gray-200">
               <ShoppingBag size={48} className="mx-auto text-gray-200 mb-4" />
