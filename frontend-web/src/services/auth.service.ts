@@ -2,17 +2,19 @@
 import api from './api';
 import { ROLE_MECHANIC, ROLE_RETAILER, ROLE_WHOLESALER, ROLE_ADMIN, ROLE_STAFF, ROLE_SUPER_MANAGER } from './constants';
 
-const normalizeRoles = (roles: string[] | undefined) => {
+const normalizeRoles = (roles: any[] | undefined) => {
   if (!roles) return [];
   return roles.map(r => {
-    const roleLower = r.toLowerCase();
-    if (roleLower === 'mechanic') return ROLE_MECHANIC;
-    if (roleLower === 'retailer') return ROLE_RETAILER;
-    if (roleLower === 'wholesaler') return ROLE_WHOLESALER;
-    if (roleLower === 'admin') return ROLE_ADMIN;
-    if (roleLower === 'staff') return ROLE_STAFF;
-    if (roleLower === 'supermanager') return ROLE_SUPER_MANAGER;
-    return r;
+    // Handle both string roles and object roles (Spring Security)
+    const roleStr = typeof r === 'string' ? r : (r.authority || r.name || String(r));
+    const roleLower = roleStr.toLowerCase();
+    if (roleLower === 'mechanic' || roleLower === 'role_mechanic') return ROLE_MECHANIC;
+    if (roleLower === 'retailer' || roleLower === 'role_retailer') return ROLE_RETAILER;
+    if (roleLower === 'wholesaler' || roleLower === 'role_wholesaler') return ROLE_WHOLESALER;
+    if (roleLower === 'admin' || roleLower === 'role_admin') return ROLE_ADMIN;
+    if (roleLower === 'staff' || roleLower === 'role_staff') return ROLE_STAFF;
+    if (roleLower === 'supermanager' || roleLower === 'role_super_manager' || roleLower === 'super_manager') return ROLE_SUPER_MANAGER;
+    return roleStr;
   });
 };
 

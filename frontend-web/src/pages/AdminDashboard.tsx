@@ -16,6 +16,11 @@ const AdminDashboard = () => {
   const currentUser = AuthService.getCurrentUser();
   const isSuperManager = currentUser?.roles?.includes(ROLE_SUPER_MANAGER);
 
+  if (!currentUser) {
+    window.location.href = '/login';
+    return null;
+  }
+
   // Sound hook - using a public notification sound URL
   const [playNotification] = useSound('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
@@ -445,7 +450,9 @@ const AdminDashboard = () => {
         console.log('WebSocket connected successfully');
         // 1. Subscribe to admin order updates
         stompClient.subscribe('/topic/admin/orders', () => {
-          playNotification();
+          if (audioEnabled) {
+            playNotification();
+          }
           fetchOrders();
         });
 
@@ -457,7 +464,9 @@ const AdminDashboard = () => {
                 try {
                   const data = JSON.parse(frame.body);
                   console.log('Received notification for role:', role, data);
-                  playNotification();
+                  if (audioEnabled) {
+                    playNotification();
+                  }
                 } catch (e) {
                   console.error('Error parsing role notification:', e);
                 }
@@ -544,30 +553,19 @@ const AdminDashboard = () => {
         ? `products/search?query=${productSearchTerm}&page=${page}&size=10&sortBy=id&direction=desc`
         : `products?page=${page}&size=10&sortBy=id&direction=desc`;
       const res = await api.get(endpoint);
-      setProducts(res.data.content);
+      setProducts(res.data.content || []);
       setPagination({
-        pageNumber: res.data.pageNumber,
-        pageSize: res.data.pageSize,
-        totalElements: res.data.totalElements,
-        totalPages: res.data.totalPages,
-        last: res.data.last
+        pageNumber: res.data.pageNumber || 0,
+        pageSize: res.data.pageSize || 10,
+        totalElements: res.data.totalElements || 0,
+        totalPages: res.data.totalPages || 0,
+        last: res.data.last ?? true
       });
     } catch (err) {
       console.error(err);
+      setProducts([]);
     }
   };
-
-  const getGroupedOrders = () => {
-    const grouped = (orders || []).reduce((acc: any, order) => {
-      const name = order.customerName || 'Unknown User';
-      if (!acc[name]) acc[name] = [];
-      acc[name].push(order);
-      return acc;
-    }, {});
-    return grouped;
-  };
-
-  const groupedOrders = getGroupedOrders();
 
   const handleEditOrder = async (orderId: number, items: any[]) => {
     try {
@@ -757,13 +755,16 @@ const AdminDashboard = () => {
     }
   };
 
+  const [audioEnabled, setAudioEnabled] = useState(false);
+
   const updateOrderStatus = async (orderId: number, status: string) => {
     try {
       await api.put(`orders/${orderId}/status?status=${status}`);
       fetchOrders();
-    } catch (err) {
-      console.error(err);
-      alert('Failed to update order status');
+    } catch (err: any) {
+      console.error('Order status update failed:', err);
+      const msg = err.response?.data?.message || err.response?.data || 'Failed to update order status';
+      alert(typeof msg === 'string' ? msg : JSON.stringify(msg));
     }
   };
 
@@ -922,6 +923,15 @@ const AdminDashboard = () => {
 
   const logoUrl = getImageUrl(getSetting('LOGO_URL', ''));
 
+  const handleLogoError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    const img = e.currentTarget;
+    if (logoUrl && img.src !== logoUrl) {
+      img.src = logoUrl;
+    } else if (img.src !== '/logo.png') {
+      img.src = '/logo.png';
+    }
+  };
+
   // Group orders by customer name for list/grid views
   const groupedOrdersMap: Record<string, any[]> = useMemo(() => {
     return (orders || []).reduce((acc: Record<string, any[]>, order: any) => {
@@ -955,13 +965,30 @@ const AdminDashboard = () => {
         <div className="flex items-center gap-3">
           <img
             src="/logo.png"
-            onError={(e) => { (e.currentTarget as HTMLImageElement).src = logoUrl; }}
+            onError={handleLogoError}
             alt="Logo"
             className="h-10 w-auto rounded-xl border border-gray-200 bg-white p-1 shadow-sm"
           />
           <h1 className={`text-2xl md:text-3xl font-black ${isSuperManager ? 'text-purple-800' : 'text-gray-900'}`}>
             {isSuperManager ? 'Super Manager Panel' : 'Admin Panel'}
           </h1>
+          <button
+            onClick={() => {
+              setAudioEnabled(!audioEnabled);
+              if (!audioEnabled) {
+                playNotification(); // Play once to satisfy browser interaction requirement
+              }
+            }}
+            className={`p-2 rounded-xl transition-all shadow-sm flex items-center gap-2 text-xs font-bold ${
+              audioEnabled 
+                ? 'bg-green-100 text-green-700 border border-green-200' 
+                : 'bg-gray-100 text-gray-500 border border-gray-200'
+            }`}
+            title={audioEnabled ? 'Audio notifications enabled' : 'Click to enable audio notifications'}
+          >
+            <Bell size={18} className={audioEnabled ? 'animate-bounce' : ''} />
+            <span className="hidden md:inline">{audioEnabled ? 'Audio ON' : 'Enable Audio'}</span>
+          </button>
         </div>
         <div className="flex flex-wrap gap-3">
           <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-1.5 shadow-sm">
@@ -1028,7 +1055,7 @@ const AdminDashboard = () => {
                 onChange={e => setSelectedExcelCategory(e.target.value)}
               >
                 <option value="">Auto-categorize</option>
-                {categories.map((c: any) => (
+                {categories?.map((c: any) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
@@ -1591,7 +1618,7 @@ const AdminDashboard = () => {
                   Cancel
                 </button>
                 <button
-                  onClick={() => setSelectedProductIds(products.map((p: any) => p.id))}
+                  onClick={() => setSelectedProductIds((products || []).map((p: any) => p.id))}
                   className="px-3 py-1.5 bg-gray-50 text-primary-700 rounded-lg text-xs font-bold hover:bg-primary-50 transition"
                 >
                   Select All
@@ -2965,7 +2992,7 @@ const AdminDashboard = () => {
                   onChange={e => setNewProduct({ ...newProduct, categoryId: e.target.value })}
                 >
                   <option value="">Select category</option>
-                  {categories.map((c: any) => (
+                  {(categories || []).map((c: any) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
@@ -3138,7 +3165,7 @@ const AdminDashboard = () => {
                   onChange={e => setEditingProduct({ ...editingProduct, categoryId: e.target.value })}
                 >
                   <option value="">Select category</option>
-                  {categories.map((c: any) => (
+                  {(categories || []).map((c: any) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
