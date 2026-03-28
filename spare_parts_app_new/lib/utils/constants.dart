@@ -2,7 +2,7 @@ import '../services/settings_service.dart';
 
 class Constants {
   static String get serverHost => SettingsService.getCachedRemoteSetting(
-      'SERVER_HOST', 'partsmitra.onrender.com');
+      'SERVER_HOST', 'sparehub-production.up.railway.app');
 
   static String get defaultBase => 'https://$serverHost/api';
   static const String baseOverride =
@@ -81,8 +81,8 @@ class Constants {
   static String get changePasswordPath =>
       SettingsService.getCachedRemoteSetting(
           'CHANGE_PASSWORD_PATH', '/auth/change-password');
-  static String get otpLoginPath =>
-      SettingsService.getCachedRemoteSetting('OTP_LOGIN_PATH', '/auth/otp-login');
+  static String get otpLoginPath => SettingsService.getCachedRemoteSetting(
+      'OTP_LOGIN_PATH', '/auth/otp-login');
 
   static String get locationIdPath => SettingsService.getCachedRemoteSetting(
       'LOCATION_ID_PATH', '/admin/users/{id}/location');

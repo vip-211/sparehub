@@ -47,7 +47,12 @@ public class ExcelService {
                       e.setName(p.getName());
                       e.setMrp(p.getMrp());
                       e.setSellingPrice(p.getSellingPrice());
+                      e.setWholesalerPrice(p.getWholesalerPrice());
+                      e.setRetailerPrice(p.getRetailerPrice());
+                      e.setMechanicPrice(p.getMechanicPrice());
                       e.setStock(p.getStock());
+                      e.setRackNumber(p.getRackNumber());
+                      e.setDescription(p.getDescription());
                       if (category != null) e.setCategory(category);
                       productRepository.save(e);
                   } else {

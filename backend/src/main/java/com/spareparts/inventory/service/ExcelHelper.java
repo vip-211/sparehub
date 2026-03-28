@@ -213,8 +213,10 @@ public class ExcelHelper {
                             break;
                     }
                 }
-                if (product.getName() != null && !product.getName().isEmpty()) {
+                if (product.getName() != null && !product.getName().isEmpty() && product.getPartNumber() != null && !product.getPartNumber().isEmpty()) {
                     products.add(product);
+                } else {
+                    System.out.println("Skipping invalid row " + rowNumber + ": Name=" + product.getName() + ", PartNumber=" + product.getPartNumber());
                 }
             }
             workbook.close();
