@@ -55,10 +55,45 @@ public class EmailService {
         try {
             SendGrid sg = new SendGrid(apiKey);
             log.info("Sending OTP email via SendGrid. FROM: {}, TO: {}", fromEmail, email);
+            
+            String logoUrl = systemSettingRepository != null 
+                ? systemSettingRepository.getSettingValue("LOGO_URL", "https://partsmitra.app/logo.png")
+                : "https://partsmitra.app/logo.png";
+                
+            String subject = "Your OTP for Parts Mitra";
+            
+            String plainText = "Hello,\n\n"
+                    + "Your One-Time Password (OTP) for Parts Mitra is: " + otp + "\n\n"
+                    + "This code is valid for 5 minutes. For security reasons, please do not share this OTP with anyone.\n\n"
+                    + "If you did not request this code, please ignore this email.\n\n"
+                    + "Best regards,\n"
+                    + "Parts Mitra Team";
+
+            String htmlContent = "<html><body style='font-family: Arial, sans-serif; color: #333; line-height: 1.6;'>"
+                    + "<div style='max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;'>"
+                    + "<div style='text-align: center; margin-bottom: 20px;'>"
+                    + "<img src='" + logoUrl + "' alt='Parts Mitra Logo' style='max-width: 150px; height: auto;' />"
+                    + "</div>"
+                    + "<h2 style='color: #4f46e5; text-align: center;'>Your One-Time Password</h2>"
+                    + "<p>Hello,</p>"
+                    + "<p>Your One-Time Password (OTP) for Parts Mitra is:</p>"
+                    + "<div style='text-align: center; margin: 30px 0;'>"
+                    + "<span style='font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #4f46e5; padding: 10px 20px; background: #f3f4f6; border-radius: 5px;'>" + otp + "</span>"
+                    + "</div>"
+                    + "<p>This code is valid for <strong>5 minutes</strong>. For security reasons, please do not share this OTP with anyone.</p>"
+                    + "<p>If you did not request this code, please ignore this email.</p>"
+                    + "<hr style='border: none; border-top: 1px solid #eee; margin: 20px 0;' />"
+                    + "<p style='font-size: 12px; color: #999; text-align: center;'>Best regards,<br />Parts Mitra Team</p>"
+                    + "</div>"
+                    + "</body></html>";
+
             String body = "{\"personalizations\":[{\"to\":[{\"email\":\"" + email + "\"}]}]," +
                     "\"from\":{\"email\":\"" + fromEmail + "\"}," +
-                    "\"subject\":\"Your OTP for Parts Mitra\"," +
-                    "\"content\":[{\"type\":\"text/plain\",\"value\":\"Your OTP is: " + otp + "\\nValid for 5 minutes.\"}]}";
+                    "\"subject\":\"" + subject + "\"," +
+                    "\"content\":[" +
+                    "{\"type\":\"text/plain\",\"value\":\"" + plainText.replace("\n", "\\n") + "\"}," +
+                    "{\"type\":\"text/html\",\"value\":\"" + htmlContent.replace("\"", "\\\"").replace("\n", "") + "\"}" +
+                    "]}";
             Request request = new Request();
             request.setMethod(Method.POST);
             request.setEndpoint("mail/send");
