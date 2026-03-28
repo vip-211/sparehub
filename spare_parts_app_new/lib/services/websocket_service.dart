@@ -30,6 +30,7 @@ class WebSocketService {
           // request heartbeats: 10s outgoing, 10s incoming
           'heart-beat': '10000,10000',
         },
+        reconnectDelay: const Duration(seconds: 5), // Auto-reconnect after 5s
         onConnect: (frame) {
           if (kDebugMode) {
             debugPrint('WebSocket Connected: ${frame.headers}');
@@ -107,7 +108,13 @@ class WebSocketService {
             );
           }
         },
-        onWebSocketError: (error) => debugPrint('WebSocket Error: $error'),
+        onWebSocketError: (error) {
+          debugPrint('WebSocket Error: $error');
+          if (error.toString().contains('Failed host lookup')) {
+            debugPrint(
+                'Check your internet connection and the host URL: $wsUrl');
+          }
+        },
         onStompError: (frame) => debugPrint('STOMP Error: ${frame.body}'),
         onDisconnect: (frame) => debugPrint('WebSocket Disconnected'),
       ),

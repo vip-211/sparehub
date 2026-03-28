@@ -148,14 +148,56 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  bool _showingExpiredDialog = false;
 
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
 
+    return _buildAuthFlow(context, authProvider);
+  }
+
+  Widget _buildAuthFlow(BuildContext context, AuthProvider authProvider) {
     if (authProvider.user == null) {
+      // Clear notification connection state on logout
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final np = Provider.of<NotificationProvider>(context, listen: false);
+        if (np.isConnected) {
+          np.disconnect();
+        }
+
+        // Check if we just logged out due to session expiration
+        if (authProvider.sessionWasExpired && !_showingExpiredDialog) {
+          _showingExpiredDialog = true;
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Session Expired'),
+              content: const Text(
+                  'Your session has expired. Please log in again to continue.'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    authProvider.clearExpiredFlag();
+                    _showingExpiredDialog = false;
+                    Navigator.of(ctx).pop();
+                  },
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        }
+      });
       return const AuthHomeScreen();
     }
 

@@ -9,9 +9,10 @@ class Constants {
       String.fromEnvironment('BASE_URL', defaultValue: '');
   static String get baseUrl {
     final raw = baseOverride.isNotEmpty ? baseOverride : defaultBase;
-    final trimmed = raw.trim();
+    // Remove all whitespace characters (newlines, spaces, etc.) which might come from terminal wrapping
+    final cleaned = raw.replaceAll(RegExp(r'\s+'), '').trim();
     final unquoted =
-        trimmed.replaceAll(RegExp(r'''^[`'"]+|[`'"]+$'''), '').trim();
+        cleaned.replaceAll(RegExp(r'''^[`'"]+|[`'"]+$'''), '').trim();
     final withoutTrailingSlash = unquoted.endsWith('/')
         ? unquoted.substring(0, unquoted.length - 1)
         : unquoted;

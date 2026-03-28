@@ -11,12 +11,14 @@ class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   User? _user;
   bool _isLoading = false;
+  bool _sessionWasExpired = false;
 
   User? get user => _user;
   bool get isLoading => _isLoading;
+  bool get sessionWasExpired => _sessionWasExpired;
 
   AuthProvider() {
-    RemoteClient.onUnauthorized = logout;
+    RemoteClient.onUnauthorized = handleUnauthorized;
     _isLoading = true;
     _loadUser();
   }
@@ -138,6 +140,19 @@ class AuthProvider with ChangeNotifier {
   Future<void> logout() async {
     await _authService.logout();
     _user = null;
+    notifyListeners();
+  }
+
+  void handleUnauthorized() {
+    if (_user != null) {
+      debugPrint('AuthProvider: Handling 401 Unauthorized - logging out');
+      _sessionWasExpired = true;
+      logout();
+    }
+  }
+
+  void clearExpiredFlag() {
+    _sessionWasExpired = false;
     notifyListeners();
   }
 

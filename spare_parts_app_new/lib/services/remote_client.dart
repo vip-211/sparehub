@@ -35,10 +35,14 @@ class RemoteClient {
   Future<dynamic> _requestWithRetry(
     Future<http.Response> Function() requestFn, {
     bool isList = false,
+    String? path,
   }) async {
     int attempts = 0;
     while (attempts < _maxRetries) {
       try {
+        if (kDebugMode && path != null) {
+          debugPrint('RemoteClient: Requesting $baseUrl$path');
+        }
         final res = await requestFn().timeout(_timeout);
         if (res.statusCode >= 200 && res.statusCode < 300) {
           if (res.body.isEmpty) return isList ? [] : null;
@@ -51,11 +55,16 @@ class RemoteClient {
           throw TokenExpiredException();
         }
 
-        // If it's a 503 or 502, it might be Render waking up/restarting
-        if (res.statusCode == 502 || res.statusCode == 503) {
+        // If it's a 503, 502, or 429 (Rate Limit), it might be Railway waking up or rate limiting
+        if (res.statusCode == 502 ||
+            res.statusCode == 503 ||
+            res.statusCode == 429) {
           attempts++;
           if (attempts < _maxRetries) {
-            await Future.delayed(_retryDelay * attempts);
+            final delay = _retryDelay * attempts;
+            debugPrint(
+                'RemoteClient: HTTP ${res.statusCode} (attempt $attempts). Retrying in ${delay.inSeconds}s...');
+            await Future.delayed(delay);
             continue;
           }
         }
@@ -86,11 +95,14 @@ class RemoteClient {
     final authHeaders = await _getHeaders(headers);
     final uri =
         Uri.parse('$baseUrl$path').replace(queryParameters: queryParameters);
-    return _requestWithRetry(() => http.post(
-          uri,
-          headers: authHeaders,
-          body: body != null ? jsonEncode(body) : null,
-        ));
+    return _requestWithRetry(
+      () => http.post(
+        uri,
+        headers: authHeaders,
+        body: body != null ? jsonEncode(body) : null,
+      ),
+      path: path,
+    );
   }
 
   Future<dynamic> postMultipart(
@@ -119,8 +131,8 @@ class RemoteClient {
       }
     }
 
-    req.files.add(
-        http.MultipartFile.fromBytes(fileField, bytes, filename: fileName, contentType: mediaType));
+    req.files.add(http.MultipartFile.fromBytes(fileField, bytes,
+        filename: fileName, contentType: mediaType));
 
     // For multipart, we can't easily use _requestWithRetry because of the stream
     // but we can add a timeout to the send() call.
@@ -138,10 +150,13 @@ class RemoteClient {
     Map<String, String>? headers,
   }) async {
     final authHeaders = await _getHeaders(headers);
-    return _requestWithRetry(() => http.get(
-          Uri.parse('$baseUrl$path'),
-          headers: authHeaders,
-        ));
+    return _requestWithRetry(
+      () => http.get(
+        Uri.parse('$baseUrl$path'),
+        headers: authHeaders,
+      ),
+      path: path,
+    );
   }
 
   Future<List<dynamic>> getList(
@@ -155,6 +170,7 @@ class RemoteClient {
         headers: authHeaders,
       ),
       isList: true,
+      path: path,
     );
     return res as List<dynamic>;
   }
@@ -165,18 +181,24 @@ class RemoteClient {
     Map<String, String>? headers,
   }) async {
     final authHeaders = await _getHeaders(headers);
-    return _requestWithRetry(() => http.put(
-          Uri.parse('$baseUrl$path'),
-          headers: authHeaders,
-          body: jsonEncode(body),
-        ));
+    return _requestWithRetry(
+      () => http.put(
+        Uri.parse('$baseUrl$path'),
+        headers: authHeaders,
+        body: jsonEncode(body),
+      ),
+      path: path,
+    );
   }
 
   Future<void> delete(String path, {Map<String, String>? headers}) async {
     final authHeaders = await _getHeaders(headers);
-    await _requestWithRetry(() => http.delete(
-          Uri.parse('$baseUrl$path'),
-          headers: authHeaders,
-        ));
+    await _requestWithRetry(
+      () => http.delete(
+        Uri.parse('$baseUrl$path'),
+        headers: authHeaders,
+      ),
+      path: path,
+    );
   }
 }

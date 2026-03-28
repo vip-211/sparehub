@@ -2,6 +2,8 @@ package com.spareparts.inventory.service;
 
 import com.spareparts.inventory.entity.Otp;
 import com.spareparts.inventory.repository.OtpRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
@@ -21,6 +23,7 @@ import java.util.Base64;
 
 @Service
 public class OtpService {
+    private static final Logger log = LoggerFactory.getLogger(OtpService.class);
 
     @Autowired
     private OtpRepository otpRepository;
@@ -31,11 +34,17 @@ public class OtpService {
     @Autowired
     private SystemSettingRepository systemSettingRepository;
 
+    @Autowired
+    private WhatsAppService whatsAppService;
+
     @Value("${spring.mail.username}")
     private String mailFrom;
 
     @Value("${mail.provider:SMTP}")
     private String mailProvider;
+
+    @Value("${otp.mode:EMAIL}")
+    private String otpMode;
 
     @Value("${sendgrid.api.key:}")
     private String sendgridApiKey;
@@ -68,6 +77,46 @@ public class OtpService {
             }
         }
         otpRepository.save(new Otp(email, otp, 5));
+    }
+
+    public void sendOtp(String identifier, String otp) throws Exception {
+        // If identifier is provided, we try to detect if it's email or phone
+        if (identifier == null || identifier.isEmpty()) return;
+
+        if (identifier.contains("@")) {
+            // It's an email, send email
+            log.info("Sending OTP via Email to {}", identifier);
+            sendOtpEmail(identifier, otp);
+        } else {
+            // It's likely a phone number, send WhatsApp
+            log.info("Sending OTP via WhatsApp to {}", identifier);
+            whatsAppService.sendOtp(identifier, otp);
+        }
+    }
+
+    /**
+     * Enhanced method to send OTP to both email and phone if available
+     */
+    public void sendOtpToBoth(String email, String phone, String otp) {
+        // 1. Always send Email (User said it's working fine, don't disturb)
+        if (email != null && email.contains("@")) {
+            try {
+                log.info("Sending OTP via Email to {}", email);
+                sendOtpEmail(email, otp);
+            } catch (Exception e) {
+                log.error("Failed to send Email OTP to {}: {}", email, e.getMessage());
+            }
+        }
+
+        // 2. Also send WhatsApp if phone is available
+        if (phone != null && !phone.isEmpty()) {
+            try {
+                log.info("Sending OTP via WhatsApp to {}", phone);
+                whatsAppService.sendOtp(phone, otp);
+            } catch (Exception e) {
+                log.error("Failed to send WhatsApp OTP to {}: {}", phone, e.getMessage());
+            }
+        }
     }
 
     public void sendOtpEmail(String email, String otp) throws Exception {

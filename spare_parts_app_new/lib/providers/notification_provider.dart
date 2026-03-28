@@ -100,6 +100,13 @@ class NotificationProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  void disconnect() {
+    _wsService.disconnect();
+    _isConnected = false;
+    _initialBannerShown = false;
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _wsService.disconnect();

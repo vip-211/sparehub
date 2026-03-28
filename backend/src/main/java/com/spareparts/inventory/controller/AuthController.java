@@ -18,7 +18,7 @@ import com.spareparts.inventory.security.UserDetailsImpl;
 import com.spareparts.inventory.service.OtpService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import jakarta.validation.Valid;
+import jakarta.validation.Valid;      
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -86,6 +86,7 @@ public class AuthController {
 
         String email = identifier.trim();
         boolean isPhone = isPhoneNumber(email);
+        String phone = isPhone ? email : null;
 
         // For login/reset flows, find the actual email if identifier is phone
         if ("login".equals(purpose) || "reset".equals(purpose)) {
@@ -93,7 +94,9 @@ public class AuthController {
             if (userOpt.isEmpty()) {
                 return ResponseEntity.status(404).body(new MessageResponse("User does not exist."));
             }
-            email = userOpt.get().getEmail();
+            User user = userOpt.get();
+            email = user.getEmail();
+            phone = user.getPhone();
         } else if ("signup".equals(purpose)) {
             // Normalize signup email
             email = email.toLowerCase();
@@ -117,19 +120,11 @@ public class AuthController {
         
         // 1. Attempt to send OTP via configured mechanism; never break the flow
         if (isDemoMode) {
-            log.info("DEMO MODE: Skipping email send for {}. OTP is: {}", email, otp);
+            log.info("DEMO MODE: Skipping real send for {}. OTP is: {}", email, otp);
             // In demo mode, we still save the OTP so it's technically valid
-        } else if (isPhone && !"login".equals(purpose) && !"reset".equals(purpose)) {
-            // If it's a new signup with phone, we don't have an email yet and we don't have an SMS provider.
-            // We skip sending and let the user use the bypass code.
-            log.info("PHONE SIGNUP: Skipping SMS send for {}. Use bypass code 123456 or 999999.", email);
         } else {
-            try {
-                otpService.sendOtpEmail(email, otp);
-            } catch (Exception e) {
-                // OtpService.sendOtpEmail already handles internal errors and fallback prints
-                log.error("Error while invoking OtpService.sendOtpEmail: {}", e.getMessage());
-            }
+            // Send to both Email and WhatsApp (if available)
+            otpService.sendOtpToBoth(email, phone, otp);
         }
 
         // 2. Save OTP regardless of email result (non-blocking user flow)
