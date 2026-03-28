@@ -162,7 +162,7 @@ const MobileDashboard = () => {
           <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/10 rounded-full group-hover:scale-150 transition-transform duration-700"></div>
           <TrendingUp className="mb-3 opacity-80" size={24} />
           <p className="text-xs font-bold uppercase tracking-wider opacity-70">Revenue</p>
-          <p className="text-2xl font-black">₹{stats?.totalRevenue?.toLocaleString()}</p>
+          <p className="text-2xl font-black">₹{(stats?.totalRevenue || 0).toLocaleString()}</p>
         </div>
         <div className="bg-amber-400 p-5 rounded-[2rem] text-white shadow-xl shadow-amber-100 relative overflow-hidden group">
           <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/10 rounded-full group-hover:scale-150 transition-transform duration-700"></div>
@@ -250,7 +250,7 @@ const MobileDashboard = () => {
                 </div>
               </div>
               <div className="text-right">
-                <p className="font-black text-gray-900 text-sm">₹{order.totalAmount?.toLocaleString()}</p>
+                <p className="font-black text-gray-900 text-sm">₹{(order.totalAmount || 0).toLocaleString()}</p>
                 <div className="flex items-center justify-end text-primary-600 group-hover:translate-x-1 transition-transform">
                   <ChevronRight size={16} />
                 </div>

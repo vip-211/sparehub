@@ -227,8 +227,8 @@ const WholesalerDashboard = () => {
                               }}
                             />
                           ) : (
-                            <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center border border-gray-100">
-                              <Package size={20} className="text-gray-300" />
+                            <div className="w-10 h-10 rounded-xl bg-primary-100 text-primary-700 flex items-center justify-center font-black text-sm uppercase">
+                              {(product.name || 'P').charAt(0)}
                             </div>
                           )}
                           <div className="text-sm font-bold text-gray-900">{tp(product.name)}</div>
@@ -323,7 +323,7 @@ const WholesalerDashboard = () => {
                       <span className="text-xs font-black text-primary-700 bg-primary-50 px-2 py-1 rounded-md">#{order.id}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">{order.customerName}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-gray-900">₹{order.totalAmount.toLocaleString()}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-gray-900">₹{(order.totalAmount || 0).toLocaleString()}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-3 py-1 text-[10px] font-black tracking-widest uppercase rounded-lg ${
                         order.status === 'DELIVERED' ? 'bg-green-100 text-green-700' :
@@ -373,7 +373,7 @@ const WholesalerDashboard = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-lg font-black text-gray-900 leading-tight">₹{order.totalAmount.toLocaleString()}</div>
+                    <div className="text-lg font-black text-gray-900 leading-tight">₹{(order.totalAmount || 0).toLocaleString()}</div>
                     <span className={`inline-block mt-1 px-2.5 py-0.5 text-[9px] font-black tracking-widest uppercase rounded-md ${
                       order.status === 'DELIVERED' ? 'bg-green-100 text-green-700' :
                       order.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :

@@ -1024,7 +1024,7 @@ const AdminDashboard = () => {
           </div>
           <div>
             <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">Total Users</p>
-            <p className="text-2xl font-black text-gray-900">{users.length}</p>
+            <p className="text-2xl font-black text-gray-900">{(users || []).length}</p>
           </div>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition">
@@ -1033,7 +1033,7 @@ const AdminDashboard = () => {
           </div>
           <div>
             <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">Total Orders</p>
-            <p className="text-2xl font-black text-gray-900">{salesReport?.totalOrders ?? orders.length}</p>
+            <p className="text-2xl font-black text-gray-900">{salesReport?.totalOrders ?? (orders || []).length}</p>
           </div>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition">
@@ -1051,7 +1051,7 @@ const AdminDashboard = () => {
           </div>
           <div>
             <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">Products</p>
-            <p className="text-2xl font-black text-gray-900">{products.length}</p>
+            <p className="text-2xl font-black text-gray-900">{(products || []).length}</p>
           </div>
         </div>
       </div>
@@ -1170,9 +1170,9 @@ const AdminDashboard = () => {
             <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase">
               <Users size={16} />
               <span>{(users || []).filter(u =>
-                u.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-                u.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-                (u.role?.name || u.role).toLowerCase().includes(userSearchTerm.toLowerCase())
+                (u.name || '').toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+                (u.email || '').toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+                (u.role?.name || u.role || '').toString().toLowerCase().includes(userSearchTerm.toLowerCase())
               ).length} Users Found</span>
             </div>
           </div>
@@ -1189,9 +1189,9 @@ const AdminDashboard = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
                 {(users || []).filter(u =>
-                  u.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-                  u.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-                  (u.role?.name || u.role).toLowerCase().includes(userSearchTerm.toLowerCase())
+                  (u.name || '').toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+                  (u.email || '').toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+                  (u.role?.name || u.role || '').toString().toLowerCase().includes(userSearchTerm.toLowerCase())
                 ).map((user) => (
                   <tr key={user.id} className="hover:bg-gray-50/50 transition">
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -1282,9 +1282,9 @@ const AdminDashboard = () => {
 
           <div className="md:hidden space-y-4">
             {(users || []).filter(u =>
-              u.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-              u.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-              (u.role?.name || u.role).toLowerCase().includes(userSearchTerm.toLowerCase())
+              (u.name || '').toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+              (u.email || '').toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+              (u.role?.name || u.role || '').toString().toLowerCase().includes(userSearchTerm.toLowerCase())
             ).map((user) => (
               <div key={user.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-4">
                 <div className="flex items-center justify-between">
@@ -1386,10 +1386,12 @@ const AdminDashboard = () => {
               {Object.keys(groupedOrdersMap)
                 .filter(name => name.toLowerCase().includes(orderQuery.toLowerCase()))
                 .map((userName) => {
-                  const userOrders = groupedOrdersMap[userName];
+                  const userOrders = groupedOrdersMap[userName] || [];
                   const firstOrder = userOrders[0];
+                  if (!firstOrder) return null;
+                  
                   // Try to find the user in our users list to get their shop image
-                  const user = users.find(u => u.name === userName || u.id === firstOrder.customerId);
+                  const user = (users || []).find(u => u.name === userName || u.id === firstOrder.customerId);
                   
                   return (
                     <div key={userName} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl transition group cursor-pointer" onClick={() => setOrderQuery(userName)}>
@@ -1440,7 +1442,7 @@ const AdminDashboard = () => {
                       Orders for {userName}
                     </h3>
                     <span className="text-xs font-bold text-gray-500 bg-white px-3 py-1 rounded-full border border-gray-100">
-                      {groupedOrdersMap[userName].length} Orders
+                      {(groupedOrdersMap[userName] || []).length} Orders
                     </span>
                   </div>
                   <div className="overflow-x-auto">
@@ -1454,17 +1456,17 @@ const AdminDashboard = () => {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-100">
-                        {groupedOrdersMap[userName].map((order: any) => (
+                        {(groupedOrdersMap[userName] || []).map((order: any) => (
                           <tr key={order.id} className="hover:bg-gray-50/50 transition">
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span className="text-xs font-black text-primary-700 bg-primary-50 px-2 py-1 rounded-md">#{order.id}</span>
-                              <div className="text-[10px] text-gray-400 mt-1 font-bold">{new Date(order.createdAt).toLocaleDateString()}</div>
+                              <div className="text-[10px] text-gray-400 mt-1 font-bold">{order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-black text-gray-900">₹{order.totalAmount.toLocaleString()}</div>
-                          {order.discountAmount > 0 && (
+                              <div className="text-sm font-black text-gray-900">₹{(order.totalAmount || 0).toLocaleString()}</div>
+                          {(order.discountAmount || 0) > 0 && (
                             <div className="text-[10px] font-black text-orange-600 mt-1">
-                              Discount: ₹{order.discountAmount.toLocaleString()}
+                              Discount: ₹{(order.discountAmount || 0).toLocaleString()}
                             </div>
                           )}
                           {order.pointsRedeemed > 0 && (
@@ -1514,7 +1516,7 @@ const AdminDashboard = () => {
               ))}
             </div>
           )}
-          {orders.length === 0 && (
+          {(orders || []).length === 0 && (
             <div className="bg-white rounded-2xl p-10 text-center border border-dashed border-gray-200">
               <ShoppingBag size={48} className="mx-auto text-gray-200 mb-4" />
               <p className="text-gray-400 font-bold">No orders found</p>
@@ -1597,10 +1599,10 @@ const AdminDashboard = () => {
                   <th className="px-4 py-4">
                     <input
                       type="checkbox"
-                      checked={selectedProductIds.length === products.length && products.length > 0}
+                      checked={(selectedProductIds || []).length === (products || []).length && (products || []).length > 0}
                       onChange={(e) => {
                         if (e.target.checked) {
-                          setSelectedProductIds(products.map((p: any) => p.id));
+                          setSelectedProductIds((products || []).map((p: any) => p.id));
                         } else {
                           setSelectedProductIds([]);
                         }
@@ -1616,7 +1618,7 @@ const AdminDashboard = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
-              {products.map((product: any) => (
+              {(products || []).map((product: any) => (
                 <tr key={product.id} className="hover:bg-gray-50/50 transition">
                   {productSelectionMode && (
                     <td className="px-4 py-4">
@@ -1711,7 +1713,7 @@ const AdminDashboard = () => {
           {pagination.totalPages > 1 && (
             <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-100 flex items-center justify-between">
               <div className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                Showing {products.length} of {pagination.totalElements} products
+                Showing {(products || []).length} of {pagination.totalElements} products
               </div>
               <div className="flex gap-2">
                 <button
@@ -1867,7 +1869,7 @@ const AdminDashboard = () => {
                 <Package size={20} className="text-primary-600" />
                 Deleted Products
               </h3>
-              {deletedProducts.length > 0 && (
+              {(deletedProducts || []).length > 0 && (
                 <button
                   onClick={handleEmptyRecycleBin}
                   className="px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition shadow-lg shadow-red-100 font-bold text-xs flex items-center gap-2"
@@ -1952,7 +1954,7 @@ const AdminDashboard = () => {
                         <div className="text-sm font-bold text-gray-900">{order.customerName}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-black text-gray-900">₹{order.totalAmount.toLocaleString()}</div>
+                        <div className="text-sm font-black text-gray-900">₹{(order.totalAmount || 0).toLocaleString()}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         <div className="flex items-center justify-center gap-2">
@@ -2218,7 +2220,7 @@ const AdminDashboard = () => {
                       {req.photoPath && (
                         <a href={getImageUrl(req.photoPath)} target="_blank" rel="noreferrer" className="text-xs text-primary-600 hover:underline">View Photo</a>
                       )}
-                      <div className="text-[10px] text-gray-400">{new Date(req.createdAt).toLocaleString()}</div>
+                      <div className="text-[10px] text-gray-400">{req.createdAt ? new Date(req.createdAt).toLocaleString() : 'N/A'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{req.customerName}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -2358,7 +2360,7 @@ const AdminDashboard = () => {
                           </div>
                         </td>
                       </tr>
-                      {userOrders.length > 0 && (
+                      {(userOrders || []).length > 0 && (
                         <tr>
                           <td colSpan={3} className="px-8 py-4 bg-gray-50/30">
                             <div className="space-y-2">
@@ -2366,7 +2368,7 @@ const AdminDashboard = () => {
                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                                 {userOrders.slice(0, 5).map((order: any) => (
                                   <div key={order.id} className="bg-white p-2 rounded-lg border border-gray-100 flex justify-between items-center">
-                                    <span className="text-[10px] font-bold text-gray-400">#{order.id} • {new Date(order.createdAt).toLocaleDateString()}</span>
+                                    <span className="text-[10px] font-bold text-gray-400">#{order.id} • {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'}</span>
                                     <div className="flex gap-2">
                                       {order.pointsEarned > 0 && <span className="text-[10px] font-black text-green-600">+{order.pointsEarned} pts</span>}
                                       {order.pointsRedeemed > 0 && <span className="text-[10px] font-black text-red-600">-{order.pointsRedeemed} pts</span>}
