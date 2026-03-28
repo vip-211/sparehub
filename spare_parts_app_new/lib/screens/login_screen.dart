@@ -802,7 +802,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                   ),
                                   child: Text(_canResend
-                                      ? (_otpSent ? 'Resend' : 'Send')
+                                      ? (_otpSent ? lp.t('Resend') : lp.t('Send'))
                                       : '${_secondsRemaining}s'),
                                 ),
                               ],
@@ -833,10 +833,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
 
                           // Forgot Password & Toggle Login Mode
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          Wrap(
+                            alignment: WrapAlignment.spaceBetween,
+                            runSpacing: 8,
                             children: [
-                              Flexible(
+                              ConstrainedBox(
+                                constraints: const BoxConstraints(minWidth: 160),
                                 child: TextButton(
                                   onPressed: () {
                                     setState(() {
@@ -861,7 +863,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ),
                               if (!_isOtpLogin)
-                                Flexible(
+                                ConstrainedBox(
+                                  constraints:
+                                      const BoxConstraints(minWidth: 160),
                                   child: TextButton(
                                     onPressed: () {
                                       Navigator.push(
@@ -920,7 +924,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     )
                                   : Text(
                                       _isOtpLogin
-                                          ? 'Verify & Login'
+                                      ? lp.t('Verify & Login')
                                           : lp.translate('login_button'),
                                       style: const TextStyle(
                                         fontSize: 16,
@@ -942,7 +946,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
-                          'OR CONTINUE WITH',
+                          lp.t('OR CONTINUE WITH'),
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.9),
                             fontSize: 12,
@@ -966,9 +970,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text(
-                        'Don\'t have an account? ',
-                        style: TextStyle(color: Colors.white),
+                      Text(
+                        lp.t("Don't have an account? "),
+                        style: const TextStyle(color: Colors.white),
                       ),
                       TextButton(
                         onPressed: () {
@@ -979,9 +983,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           );
                         },
-                        child: const Text(
-                          'Register',
-                          style: TextStyle(
+                        child: Text(
+                          lp.t('Register'),
+                          style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                             decoration: TextDecoration.underline,

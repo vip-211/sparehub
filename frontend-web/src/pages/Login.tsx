@@ -103,7 +103,6 @@ const Login: React.FC = () => {
           const from = (location.state as any)?.from?.pathname || '/dashboard';
           navigate(from, { replace: true });
         }
-        window.location.reload();
       },
       (error) => {
         const resMessage =

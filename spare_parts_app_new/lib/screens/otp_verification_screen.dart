@@ -118,7 +118,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
-                                Icons.mark_email_read_outlined,
+                                widget.isFirebase
+                                    ? Icons.sms_outlined
+                                    : Icons.mark_email_read_outlined,
                                 size: 60,
                                 color: Theme.of(context).colorScheme.primary,
                               ),
@@ -137,7 +139,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Enter the latest 6-digit code sent to\n${widget.email}',
+                              widget.isFirebase
+                                  ? 'Enter the latest 6-digit code sent to\n${widget.email}'
+                                  : 'Enter the latest 6-digit code sent to\n${widget.email}',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                   fontSize: 14,

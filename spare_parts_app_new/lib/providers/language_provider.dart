@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:translator/translator.dart';
+import '../services/settings_service.dart';
 
 class LanguageProvider with ChangeNotifier {
   Locale _currentLocale = const Locale('en');
+  bool _autoTranslate = false;
+  final GoogleTranslator _translator = GoogleTranslator();
+  final Map<String, String> _cache = {};
 
   LanguageProvider() {
     _loadLanguage();
+    _loadAutoSetting();
   }
 
   Locale get currentLocale => _currentLocale;
   bool get isHindi => _currentLocale.languageCode == 'hi';
+  bool get autoTranslateEnabled => _autoTranslate;
 
   void toggleLanguage() async {
     if (_currentLocale.languageCode == 'en') {
@@ -30,11 +37,30 @@ class LanguageProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  void _loadAutoSetting() async {
+    await SettingsService.preloadRemoteSettings();
+    _autoTranslate =
+        SettingsService.getCachedRemoteSetting('AUTO_TRANSLATE_UI', 'false') ==
+            'true';
+    notifyListeners();
+  }
+
   String translate(String key) {
     if (_currentLocale.languageCode == 'hi') {
       return _hindiTranslations[key] ?? _englishTranslations[key] ?? key;
     }
     return _englishTranslations[key] ?? key;
+  }
+
+  String t(String text) {
+    if (!isHindi || !_autoTranslate) return text;
+    final cached = _cache[text];
+    if (cached != null) return cached;
+    _translator.translate(text, to: 'hi').then((v) {
+      _cache[text] = v.text;
+      notifyListeners();
+    }).catchError((_) {});
+    return text;
   }
 
   static final Map<String, String> _englishTranslations = {

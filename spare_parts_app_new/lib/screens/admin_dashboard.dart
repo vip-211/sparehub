@@ -4110,26 +4110,62 @@ class _InvoicingScreenState extends State<InvoicingScreen> {
                   color: Colors.red.shade50,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Total: $_totalAmount',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    ElevatedButton.icon(
-                      onPressed: _generatePDF,
-                      icon: const Icon(Icons.picture_as_pdf),
-                      label: const Text('Generate Bill'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.redAccent,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ],
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isTight = constraints.maxWidth < 360;
+                    if (isTight) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            'Total: $_totalAmount',
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: ElevatedButton.icon(
+                              onPressed: _generatePDF,
+                              icon: const Icon(Icons.picture_as_pdf),
+                              label: const Text('Generate Bill'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.redAccent,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Total: $_totalAmount',
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: _generatePDF,
+                          icon: const Icon(Icons.picture_as_pdf),
+                          label: const Text('Generate Bill'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.redAccent,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
           ],
@@ -4479,6 +4515,8 @@ class _AllUsersScreenState extends State<AllUsersScreen> {
     final passwordController = TextEditingController();
     final phoneController = TextEditingController();
     final addressController = TextEditingController();
+    final latController = TextEditingController();
+    final lngController = TextEditingController();
     String selectedRole = Constants.roleMechanic;
     showDialog(
       context: context,
@@ -4512,6 +4550,67 @@ class _AllUsersScreenState extends State<AllUsersScreen> {
                     labelText: 'Business Address',
                   ),
                   maxLines: 2,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: latController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        decoration: const InputDecoration(
+                          labelText: 'Latitude',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: lngController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        decoration: const InputDecoration(
+                          labelText: 'Longitude',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.my_location, size: 18),
+                    label: const Text('Use Current Location'),
+                    onPressed: () async {
+                      try {
+                        final hasPerm = await Geolocator.checkPermission();
+                        if (hasPerm == LocationPermission.denied ||
+                            hasPerm == LocationPermission.deniedForever) {
+                          final req = await Geolocator.requestPermission();
+                          if (req == LocationPermission.denied ||
+                              req == LocationPermission.deniedForever) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Location permission denied')),
+                            );
+                            return;
+                          }
+                        }
+                        final pos = await Geolocator.getCurrentPosition(
+                            desiredAccuracy: LocationAccuracy.high);
+                        setDialogState(() {
+                          latController.text = pos.latitude.toStringAsFixed(6);
+                          lngController.text = pos.longitude.toStringAsFixed(6);
+                        });
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to get location: $e')),
+                        );
+                      }
+                    },
+                  ),
                 ),
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
@@ -4565,6 +4664,24 @@ class _AllUsersScreenState extends State<AllUsersScreen> {
                     addressController.text,
                   );
                   if (success) {
+                    // If lat/lon provided, update the created user profile
+                    try {
+                      final all = await _authService.getAllUsers();
+                      final created = all.firstWhere(
+                          (u) =>
+                              u.email.toLowerCase() ==
+                              emailController.text.toLowerCase(),
+                          orElse: () => throw 'not found');
+                      double? lat = double.tryParse(latController.text);
+                      double? lng = double.tryParse(lngController.text);
+                      if (lat != null || lng != null) {
+                        await _authService.adminUpdateUserProfile(
+                          created.id,
+                          latitude: lat,
+                          longitude: lng,
+                        );
+                      }
+                    } catch (_) {}
                     Navigator.pop(ctx);
                     _fetchUsers();
                   }
@@ -4575,6 +4692,170 @@ class _AllUsersScreenState extends State<AllUsersScreen> {
                 }
               },
               child: const Text('Create Profile'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditUserDialog(Map<String, dynamic> user) {
+    final nameController = TextEditingController(text: user['name'] ?? '');
+    final emailController = TextEditingController(text: user['email'] ?? '');
+    final phoneController = TextEditingController(text: user['phone'] ?? '');
+    final addressController =
+        TextEditingController(text: user['address'] ?? '');
+    final pointsController =
+        TextEditingController(text: (user['points'] ?? 0).toString());
+    final latController = TextEditingController(
+        text: user['latitude'] != null ? '${user['latitude']}' : '');
+    final lngController = TextEditingController(
+        text: user['longitude'] != null ? '${user['longitude']}' : '');
+    String status = user['status'] ?? 'PENDING';
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Edit User Profile'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'Full Name'),
+                ),
+                TextField(
+                  controller: emailController,
+                  decoration: const InputDecoration(labelText: 'Email Address'),
+                ),
+                TextField(
+                  controller: phoneController,
+                  decoration: const InputDecoration(labelText: 'Phone Number'),
+                ),
+                TextField(
+                  controller: addressController,
+                  decoration:
+                      const InputDecoration(labelText: 'Business Address'),
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: status,
+                  decoration: const InputDecoration(labelText: 'Status'),
+                  items: const [
+                    DropdownMenuItem(value: 'ACTIVE', child: Text('ACTIVE')),
+                    DropdownMenuItem(value: 'PENDING', child: Text('PENDING')),
+                    DropdownMenuItem(
+                        value: 'SUSPENDED', child: Text('SUSPENDED')),
+                  ],
+                  onChanged: (val) => setDialogState(() => status = val!),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: pointsController,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(signed: true),
+                  decoration: const InputDecoration(labelText: 'Points'),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: latController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        decoration: const InputDecoration(
+                          labelText: 'Latitude',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: lngController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        decoration: const InputDecoration(
+                          labelText: 'Longitude',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.my_location, size: 18),
+                    label: const Text('Use Current Location'),
+                    onPressed: () async {
+                      try {
+                        var perm = await Geolocator.checkPermission();
+                        if (perm == LocationPermission.denied ||
+                            perm == LocationPermission.deniedForever) {
+                          perm = await Geolocator.requestPermission();
+                          if (perm == LocationPermission.denied ||
+                              perm == LocationPermission.deniedForever) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Location permission denied')),
+                            );
+                            return;
+                          }
+                        }
+                        final pos = await Geolocator.getCurrentPosition(
+                            desiredAccuracy: LocationAccuracy.high);
+                        setDialogState(() {
+                          latController.text = pos.latitude.toStringAsFixed(6);
+                          lngController.text = pos.longitude.toStringAsFixed(6);
+                        });
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to get location: $e')),
+                        );
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  final int userId = user['id'] as int;
+                  final int? points = int.tryParse(pointsController.text);
+                  final double? lat = double.tryParse(latController.text);
+                  final double? lng = double.tryParse(lngController.text);
+                  await _authService.adminUpdateUserProfile(
+                    userId,
+                    name: nameController.text,
+                    email: emailController.text,
+                    phone: phoneController.text,
+                    address: addressController.text,
+                    status: status,
+                    points: points,
+                    latitude: lat,
+                    longitude: lng,
+                  );
+                  if (mounted) {
+                    Navigator.pop(ctx);
+                    _fetchUsers();
+                  }
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to update: $e')),
+                  );
+                }
+              },
+              child: const Text('Save'),
             ),
           ],
         ),
@@ -4764,6 +5045,9 @@ class _AllUsersScreenState extends State<AllUsersScreen> {
                               (user['points'] as num? ?? 0).toInt(),
                             );
                           }
+                          if (val == 'EDIT_PROFILE') {
+                            _showEditUserDialog(user);
+                          }
                           if (val == 'VIEW_SHOP') {
                             _viewShopImage(user['shopImagePath'] as String?);
                           }
@@ -4792,6 +5076,10 @@ class _AllUsersScreenState extends State<AllUsersScreen> {
                           const PopupMenuItem(
                             value: 'UPDATE_ADDRESS',
                             child: Text('Edit Address'),
+                          ),
+                          const PopupMenuItem(
+                            value: 'EDIT_PROFILE',
+                            child: Text('Edit Profile'),
                           ),
                           const PopupMenuItem(
                             value: 'MANAGE_POINTS',

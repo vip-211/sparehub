@@ -72,6 +72,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
   bool _enableEmailReg = true;
   bool _enablePhoneReg = true;
   bool _otpModeEmail = true;
+  bool _autoTranslateUi = false;
   String? _lastOtpError;
   int? _lastOtpErrorAt;
   bool _loginBannerEnabled = false;
@@ -155,9 +156,9 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
             (remote['ENABLE_EMAIL_REGISTRATION'] ?? 'true') == 'true';
         _enablePhoneReg =
             (remote['ENABLE_PHONE_REGISTRATION'] ?? 'true') == 'true';
+        _autoTranslateUi = (remote['AUTO_TRANSLATE_UI'] ?? 'false') == 'true';
         _otpModeEmail =
             (remote['OTP_MODE'] ?? 'EMAIL').toUpperCase() != 'LOCAL';
-        _loaded = true;
         if (last != null) {
           _lastOtpError = last['message'] as String?;
           _lastOtpErrorAt = last['at'] as int?;
@@ -194,6 +195,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       'ENABLE_EMAIL_REGISTRATION': _enableEmailReg ? 'true' : 'false',
       'ENABLE_PHONE_REGISTRATION': _enablePhoneReg ? 'true' : 'false',
       'OTP_MODE': _otpModeEmail ? 'EMAIL' : 'LOCAL',
+      'AUTO_TRANSLATE_UI': _autoTranslateUi ? 'true' : 'false',
       'THEME_SEED_COLOR': _themeProvider.seedColor.value.toString(),
       'LOGO_URL': _logoUrlController.text,
       'SERVER_HOST': _serverHostController.text,
@@ -426,6 +428,13 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                     ],
                     onChanged: (v) => setState(() => _otpModeEmail = v ?? true),
                   ),
+                ),
+                SwitchListTile(
+                  title: const Text('Enable Auto Hindi Translation'),
+                  subtitle:
+                      const Text('Automatically translate UI text to Hindi'),
+                  value: _autoTranslateUi,
+                  onChanged: (v) => setState(() => _autoTranslateUi = v),
                 ),
                 SwitchListTile(
                   title: const Text('Enable WebSocket'),

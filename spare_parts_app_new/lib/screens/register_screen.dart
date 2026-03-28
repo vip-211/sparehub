@@ -10,6 +10,7 @@ import 'otp_verification_screen.dart';
 import '../services/settings_service.dart';
 import 'login_screen.dart';
 import 'mobile_otp_verification_screen.dart';
+import '../providers/language_provider.dart';
 
 class RegisterScreen extends StatefulWidget {
   final bool showAppBar;
@@ -68,8 +69,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (raw != null && raw.isNotEmpty) {
         final parts = raw.split(',').map((e) => e.trim()).toList();
         setState(() {
-          _allowedRoles = parts;
-          if (!_allowedRoles.contains(_selectedRole)) {
+          // Reorder to prioritize Mechanic first when available
+          final hasMech = parts.contains(Constants.roleMechanic);
+          final prioritized = <String>[];
+          if (hasMech) prioritized.add(Constants.roleMechanic);
+          if (parts.contains(Constants.roleRetailer)) {
+            prioritized.add(Constants.roleRetailer);
+          }
+          if (parts.contains(Constants.roleWholesaler)) {
+            prioritized.add(Constants.roleWholesaler);
+          }
+          // Keep any remaining roles (admin/super-manager/staff) in original order
+          for (final r in parts) {
+            if (!prioritized.contains(r)) prioritized.add(r);
+          }
+          _allowedRoles = prioritized;
+          // Default selection: Mechanic if available, else first allowed
+          if (hasMech) {
+            _selectedRole = Constants.roleMechanic;
+          } else if (!_allowedRoles.contains(_selectedRole)) {
             _selectedRole = _allowedRoles.first;
           }
         });
@@ -287,7 +305,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           await Navigator.of(context).push(
             MaterialPageRoute(
               builder: (_) => OtpVerificationScreen(
-                email: email,
+                email: fullPhone,
                 isRegistration: true,
                 registrationData: registrationData,
                 isFirebase: true,
@@ -350,8 +368,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           if (_emailEnabled || _phoneEnabled)
                             Padding(
                               padding: const EdgeInsets.only(bottom: 16.0),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                              child: Wrap(
+                                alignment: WrapAlignment.center,
+                                spacing: 8,
+                                runSpacing: 8,
                                 children: [
                                   if (_emailEnabled)
                                     ChoiceChip(
@@ -361,7 +381,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                         if (_emailEnabled) _emailMode = true;
                                       }),
                                     ),
-                                  const SizedBox(width: 8),
                                   if (_phoneEnabled)
                                     ChoiceChip(
                                       label: const Text('Phone OTP'),
@@ -375,7 +394,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                           // Header Text
                           Text(
-                            'Create Account',
+                            Provider.of<LanguageProvider>(context,
+                                    listen: false)
+                                .t('Create Account'),
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 28,
@@ -385,7 +406,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Fill in your details to get started',
+                            Provider.of<LanguageProvider>(context,
+                                    listen: false)
+                                .t('Fill in your details to get started'),
                             textAlign: TextAlign.center,
                             style: TextStyle(
                                 fontSize: 14,
@@ -690,20 +713,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const EdgeInsets.symmetric(horizontal: 0, vertical: 12),
           ),
           items: [
-            if (_allowedRoles.contains(Constants.roleWholesaler))
+            if (_allowedRoles.contains(Constants.roleMechanic))
               const DropdownMenuItem(
-                value: Constants.roleWholesaler,
-                child: Text('Wholesaler'),
+                value: Constants.roleMechanic,
+                child: Text('Mechanic'),
               ),
             if (_allowedRoles.contains(Constants.roleRetailer))
               const DropdownMenuItem(
                 value: Constants.roleRetailer,
                 child: Text('Retailer'),
               ),
-            if (_allowedRoles.contains(Constants.roleMechanic))
+            if (_allowedRoles.contains(Constants.roleWholesaler))
               const DropdownMenuItem(
-                value: Constants.roleMechanic,
-                child: Text('Mechanic'),
+                value: Constants.roleWholesaler,
+                child: Text('Wholesaler'),
               ),
             if (_allowedRoles.contains(Constants.roleSuperManager))
               const DropdownMenuItem(

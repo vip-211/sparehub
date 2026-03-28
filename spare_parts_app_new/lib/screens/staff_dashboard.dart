@@ -374,8 +374,14 @@ class _StaffOrdersScreenState extends State<StaffOrdersScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Customer: ${order.customerName}'),
-                      Row(
+                      Expanded(
+                        child: Text(
+                          'Customer: ${order.customerName}',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Wrap(
+                        spacing: 0,
                         children: [
                           IconButton(
                             icon: Icon(Icons.share,
