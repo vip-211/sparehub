@@ -14,6 +14,11 @@ class ThemeProvider extends ChangeNotifier {
 
   ThemeProvider() {
     _load();
+    SettingsService.onSettingsChanged.listen((key) {
+      if (key == 'THEME_SEED_COLOR' || key == 'USE_GLOBAL_THEME_COLOR') {
+        _load();
+      }
+    });
   }
 
   Future<void> _load() async {

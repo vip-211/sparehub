@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'remote_client.dart';
 import '../utils/constants.dart';
@@ -146,7 +147,28 @@ class SettingsService {
       });
       _remoteCache[key] = value;
       _settingsChangedController.add(key);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('SettingsService: Error saving remote setting $key: $e');
+    }
+  }
+
+  static Future<void> saveRemoteSettingsBulk(Map<String, String> settings) async {
+    if (!Constants.useRemote) return;
+    try {
+      final List<Map<String, String>> payload = settings.entries.map((e) => {
+        'settingKey': e.key,
+        'settingValue': e.value,
+      }).toList();
+      
+      await _remote.postJson('/admin/settings/bulk', payload);
+      _remoteCache.addAll(settings);
+      for (var key in settings.keys) {
+        _settingsChangedController.add(key);
+      }
+    } catch (e) {
+      debugPrint('SettingsService: Error saving bulk remote settings: $e');
+      rethrow;
+    }
   }
 
   static const _lastOtpErrorMsgKey = 'last_otp_error_msg';

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import '../providers/theme_provider.dart';
 import '../services/settings_service.dart';
 import '../widgets/section_header.dart';
@@ -188,54 +189,82 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
   }
 
   Future<void> _save() async {
-    await SettingsService.setVoiceTrainingEnabled(_voice);
-    await SettingsService.setAiChatbotEnabled(_ai);
-    await SettingsService.setWebSocketEnabled(_ws);
-    await SettingsService.setForceLocalOtp(_localOtp);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await SettingsService.setVoiceTrainingEnabled(_voice);
+      await SettingsService.setAiChatbotEnabled(_ai);
+      await SettingsService.setWebSocketEnabled(_ws);
+      await SettingsService.setForceLocalOtp(_localOtp);
 
-    // Save Remote Settings
-    final remoteMap = {
-      'NOTIF_IN_APP_ENABLED': _notifInApp ? 'true' : 'false',
-      'NOTIF_WHATSAPP_ENABLED': _notifWhatsApp ? 'true' : 'false',
-      'WS_ENABLED': _wsGlobal ? 'true' : 'false',
-      'FORCE_LOCAL_OTP': _localOtpGlobal ? 'true' : 'false',
-      'USE_GLOBAL_THEME_COLOR': _useGlobalThemeColor ? 'true' : 'false',
-      'HIDE_REGISTRATION': _hideRegistration ? 'true' : 'false',
-      'ENABLE_EMAIL_REGISTRATION': _enableEmailReg ? 'true' : 'false',
-      'ENABLE_PHONE_REGISTRATION': _enablePhoneReg ? 'true' : 'false',
-      'OTP_MODE': _otpModeEmail ? 'EMAIL' : 'LOCAL',
-      'AUTO_TRANSLATE_UI': _autoTranslateUi ? 'true' : 'false',
-      'THEME_SEED_COLOR': _themeProvider.seedColor.value.toString(),
-      'LOGO_URL': _logoUrlController.text,
-      'SERVER_HOST': _serverHostController.text,
-      'GOOGLE_CLIENT_ID': _googleClientIdController.text,
-      'LOYALTY_PERCENT': _loyaltyPercentController.text,
-      'MIN_REDEEM_POINTS': _minRedeemPointsController.text,
-      'ALLOWED_REG_ROLES': _allowedRoles.entries
-          .where((e) => e.value)
-          .map((e) => e.key)
-          .join(','),
-      'LOGIN_BANNER_ENABLED': _loginBannerEnabled ? 'true' : 'false',
-      'LOGIN_BANNER_TEXT': _loginBannerTextController.text,
-      'LOGIN_BANNER_IMAGE_URL': _loginBannerImageUrlController.text,
-      'LOGIN_BANNER_SHOW_BUTTON': _loginBannerShowButton ? 'true' : 'false',
-      'LOGIN_BANNER_BUTTON_TEXT': _loginBannerButtonTextController.text,
-      'LOGIN_BANNER_COOLDOWN_HOURS': _loginBannerCooldownController.text,
-    };
+      // Prepare Remote Settings Map
+      final remoteMap = {
+        'NOTIF_IN_APP_ENABLED': _notifInApp ? 'true' : 'false',
+        'NOTIF_WHATSAPP_ENABLED': _notifWhatsApp ? 'true' : 'false',
+        'WS_ENABLED': _wsGlobal ? 'true' : 'false',
+        'FORCE_LOCAL_OTP': _localOtpGlobal ? 'true' : 'false',
+        'USE_GLOBAL_THEME_COLOR': _useGlobalThemeColor ? 'true' : 'false',
+        'HIDE_REGISTRATION': _hideRegistration ? 'true' : 'false',
+        'ENABLE_EMAIL_REGISTRATION': _enableEmailReg ? 'true' : 'false',
+        'ENABLE_PHONE_REGISTRATION': _enablePhoneReg ? 'true' : 'false',
+        'OTP_MODE': _otpModeEmail ? 'EMAIL' : 'LOCAL',
+        'AUTO_TRANSLATE_UI': _autoTranslateUi ? 'true' : 'false',
+        'THEME_SEED_COLOR': _themeProvider.seedColor.value.toString(),
+        'LOGO_URL': _logoUrlController.text,
+        'SERVER_HOST': _serverHostController.text,
+        'GOOGLE_CLIENT_ID': _googleClientIdController.text,
+        'LOYALTY_PERCENT': _loyaltyPercentController.text,
+        'MIN_REDEEM_POINTS': _minRedeemPointsController.text,
+        'ALLOWED_REG_ROLES': _allowedRoles.entries
+            .where((e) => e.value)
+            .map((e) => e.key)
+            .join(','),
+        'LOGIN_BANNER_ENABLED': _loginBannerEnabled ? 'true' : 'false',
+        'LOGIN_BANNER_TEXT': _loginBannerTextController.text,
+        'LOGIN_BANNER_IMAGE_URL': _loginBannerImageUrlController.text,
+        'LOGIN_BANNER_SHOW_BUTTON': _loginBannerShowButton ? 'true' : 'false',
+        'LOGIN_BANNER_BUTTON_TEXT': _loginBannerButtonTextController.text,
+        'LOGIN_BANNER_COOLDOWN_HOURS': _loginBannerCooldownController.text,
+      };
 
-    for (var entry in remoteMap.entries) {
-      await SettingsService.saveRemoteSetting(entry.key, entry.value);
+      await SettingsService.saveRemoteSettingsBulk(remoteMap);
+      await SettingsService.preloadRemoteSettings();
+
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Settings saved successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+              content: Text('Error saving settings: $e'),
+              backgroundColor: Colors.red),
+        );
+      }
     }
-    await SettingsService.preloadRemoteSettings();
-    // Broadcast a general refresh hint
-    // (AuthHome also refreshes on AppLifecycle and specific key events)
-    // This emits multiple keys already; preload ensures cache consistency.
+  }
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Settings saved')),
-      );
-    }
+  void _showColorPicker() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Pick Theme Color'),
+        content: SingleChildScrollView(
+          child: ColorPicker(
+            pickerColor: _themeProvider.seedColor,
+            onColorChanged: (c) => _themeProvider.setSeedColor(c),
+            pickerAreaHeightPercent: 0.8,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Done'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -309,34 +338,30 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Text('Primary Color',
-                    style: Theme.of(context).textTheme.labelLarge),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: _colorChoices.map((c) {
-                    final selected = c.value == currentSeed.value;
-                    return GestureDetector(
-                      onTap: () => _themeProvider.setSeedColor(c),
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: c,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: selected ? Colors.black : Colors.black12,
-                            width: selected ? 2 : 1,
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text('Primary Color',
+                      style: Theme.of(context).textTheme.labelLarge),
+                  subtitle: const Text('Choose a custom seed color for the app'),
+                  trailing: GestureDetector(
+                    onTap: _showColorPicker,
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: currentSeed,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.black26),
+                        boxShadow: [
+                          BoxShadow(
+                            color: currentSeed.withOpacity(0.4),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
                           ),
-                        ),
-                        child: selected
-                            ? const Icon(Icons.check,
-                                color: Colors.white, size: 20)
-                            : null,
+                        ],
                       ),
-                    );
-                  }).toList(),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 SwitchListTile(

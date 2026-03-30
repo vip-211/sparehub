@@ -60,7 +60,21 @@ public class OrderService {
         request.setCreatedAt(LocalDateTime.now());
 
         request = orderRequestRepository.save(request);
-        return convertToCustomRequestDto(request);
+        CustomOrderRequestDto dto = convertToCustomRequestDto(request);
+        
+        // Notify Super Managers when user creates a custom order request
+        try {
+            String title = "New Custom Order Request #" + request.getId();
+            String message = "New custom order request from " + customer.getName();
+            fcmService.sendToRole("ROLE_SUPER_MANAGER", title, message, "DAILY", null);
+            
+            // Real-time update for admin dashboard
+            messagingTemplate.convertAndSend("/topic/admin/orders", dto);
+        } catch (Exception e) {
+            System.err.println("Failed to notify Super Manager of new custom request: " + e.getMessage());
+        }
+        
+        return dto;
     }
 
     @Transactional(readOnly = true)
@@ -81,7 +95,23 @@ public class OrderService {
         }
 
         request = orderRequestRepository.save(request);
-        return convertToCustomRequestDto(request);
+        CustomOrderRequestDto dto = convertToCustomRequestDto(request);
+        
+        try {
+            // Real-time update for customer only
+            messagingTemplate.convertAndSendToUser(request.getCustomer().getId().toString(), "/queue/orders", dto);
+        } catch (Exception ignored) {}
+        
+        try {
+            // Only notify the customer (respected user) when status is updated
+            String title = "Custom Order #" + request.getId() + " updated";
+            String body = "Your custom order request status is " + status;
+            fcmService.sendOrderStatusToUser(request.getCustomer().getId(), request.getId(), title, body);
+        } catch (Exception e) {
+            System.err.println("Error sending custom order status notification to customer: " + e.getMessage());
+        }
+        
+        return dto;
     }
 
     private CustomOrderRequestDto convertToCustomRequestDto(CustomOrderRequest request) {
@@ -193,28 +223,21 @@ public class OrderService {
 
         OrderDto dto = convertToDto(order);
 
-        // Notify Super Managers and Staff; and notify the customer
+        // Notify Super Managers only when user creates an order
         try {
             String title = "New Order #" + order.getId();
             String message = "New order received from " + customer.getName() + " for Rs. " + order.getTotalAmount();
             fcmService.sendToRole("ROLE_SUPER_MANAGER", title, message, "DAILY", null);
-            fcmService.sendToRole("ROLE_STAFF", title, message, "DAILY", null);
-            try {
-                fcmService.sendOrderStatusToUser(customer.getId(), order.getId(), "Order placed", "Your order #" + order.getId() + " has been placed successfully.");
-            } catch (Exception ignored) {}
+            
             if (order.getPointsRedeemed() != null && order.getPointsRedeemed() > 0) {
                 String redeemMsg = customer.getName() + " redeemed " + order.getPointsRedeemed() + " points (₹" + order.getPointsRedeemed() + ") on Order #" + order.getId();
                 fcmService.sendToRole("ROLE_SUPER_MANAGER", "Points Redeemed", redeemMsg, "DAILY", null);
-                fcmService.sendToRole("ROLE_STAFF", "Points Redeemed", redeemMsg, "DAILY", null);
-                try {
-                    fcmService.sendOrderStatusToUser(customer.getId(), order.getId(), "You saved ₹" + order.getPointsRedeemed(), "Thanks for ordering with Parts Mitra! You saved ₹" + order.getPointsRedeemed() + " by redeeming your points.");
-                } catch (Exception ignored) {}
             }
             
             // Real-time update for admin dashboard - Restricted topic
             messagingTemplate.convertAndSend("/topic/admin/orders", dto);
         } catch (Exception e) {
-            System.err.println("Failed to notify stakeholders of new order: " + e.getMessage());
+            System.err.println("Failed to notify Super Manager of new order: " + e.getMessage());
         }
 
         return dto;
@@ -266,8 +289,23 @@ public class OrderService {
         BigDecimal totalAmount = subtotal.subtract(discountAmount).max(BigDecimal.ZERO);
         order.setTotalAmount(totalAmount);
         order = orderRepository.save(order);
+        OrderDto dto = convertToDto(order);
 
-        return convertToDto(order);
+        try {
+            // Real-time update for customer only
+            messagingTemplate.convertAndSendToUser(order.getCustomer().getId().toString(), "/queue/orders", dto);
+        } catch (Exception ignored) {}
+
+        try {
+            // Only notify the customer (respected user) when order is created by admin
+            String title = "New Order Created for You #" + order.getId();
+            String body = "An admin has created an order for you. Status: " + order.getStatus();
+            fcmService.sendOrderStatusToUser(order.getCustomer().getId(), order.getId(), title, body);
+        } catch (Exception e) {
+            System.err.println("Error sending admin order creation notification to customer: " + e.getMessage());
+        }
+
+        return dto;
     }
 
     @Transactional(readOnly = true)
@@ -365,48 +403,18 @@ public class OrderService {
         OrderDto dto = convertToDto(order);
         
         try {
-            // Only Admins/Super Managers see all order updates
-            messagingTemplate.convertAndSend("/topic/admin/orders", dto);
-            // Customer sees their own update
+            // Real-time update for customer only
             messagingTemplate.convertAndSendToUser(order.getCustomer().getId().toString(), "/queue/orders", dto);
-            // Seller (Wholesaler) sees their own update
-            if (order.getSeller() != null) {
-                messagingTemplate.convertAndSendToUser(order.getSeller().getId().toString(), "/queue/orders", dto);
-            }
         } catch (Exception ignored) {}
         
         try {
+            // Only notify the customer (respected user) when status is updated
             String title = "Order #" + order.getId() + " " + status.name().replace('_', ' ').toLowerCase();
             String body = "Your order status is " + status.name();
             fcmService.sendOrderStatusToUser(order.getCustomer().getId(), order.getId(), title, body);
-            
-            // Also notify seller (Wholesaler)
-            if (order.getSeller() != null) {
-                String sellerTitle = "Order #" + order.getId() + " updated";
-                String sellerBody = "Status changed to " + status.name() + " for customer " + order.getCustomer().getName();
-                fcmService.sendOrderStatusToUser(order.getSeller().getId(), order.getId(), sellerTitle, sellerBody);
-            }
         } catch (Exception e) {
-            System.err.println("Error sending order status notification: " + e.getMessage());
+            System.err.println("Error sending order status notification to customer: " + e.getMessage());
         }
-        
-        // When APPROVED by Super Manager/Admin, notify Staff to prepare/deliver
-        try {
-            if (status == Order.OrderStatus.APPROVED) {
-                String staffTitle = "New Order to Process: #" + order.getId();
-                String staffMessage = "Order from " + order.getCustomer().getName() + " has been approved. Please prepare for delivery.";
-                fcmService.sendOrderStatusToStaff(order.getId(), staffTitle, staffMessage);
-            }
-        } catch (Exception e) {
-            System.err.println("Error sending staff notification: " + e.getMessage());
-        }
-        
-        try {
-            String performerName = order.getDeliveredBy() != null ? order.getDeliveredBy().getName() : "Staff";
-            String adminTitle = "Order #" + order.getId() + " updated";
-            String adminMessage = "Status set to " + status.name() + " by " + performerName;
-            fcmService.sendToAdminAndSuperManager(adminTitle, adminMessage, Map.of("orderId", String.valueOf(order.getId()), "route", "orders"));
-        } catch (Exception ignored) {}
         
         return dto;
     }
@@ -504,8 +512,23 @@ public class OrderService {
         BigDecimal totalAmount = subtotal.subtract(discountAmount).max(BigDecimal.ZERO);
         order.setTotalAmount(totalAmount);
         order = orderRepository.save(order);
+        OrderDto dto = convertToDto(order);
 
-        return convertToDto(order);
+        try {
+            // Real-time update for customer only
+            messagingTemplate.convertAndSendToUser(order.getCustomer().getId().toString(), "/queue/orders", dto);
+        } catch (Exception ignored) {}
+
+        try {
+            // Only notify the customer (respected user) when order items are updated by admin
+            String title = "Order #" + order.getId() + " Items Updated";
+            String body = "An admin has updated the items in your order. New Total: Rs. " + order.getTotalAmount();
+            fcmService.sendOrderStatusToUser(order.getCustomer().getId(), order.getId(), title, body);
+        } catch (Exception e) {
+            System.err.println("Error sending order update notification to customer: " + e.getMessage());
+        }
+
+        return dto;
     }
 
     @Transactional(readOnly = true)

@@ -4,6 +4,7 @@ import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/notification_service.dart';
 import '../services/remote_client.dart';
+import '../services/settings_service.dart'; // Added import
 
 import 'package:spare_parts_app/services/auth_exceptions.dart';
 
@@ -25,12 +26,13 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> _loadUser() async {
     try {
+      await SettingsService.preloadRemoteSettings(); // Preload settings on start
       _user = await _authService.getCurrentUser();
       if (_user != null) {
         _updateFcmToken();
       }
     } catch (e) {
-      debugPrint('AuthProvider: Error loading user: $e');
+      debugPrint('AuthProvider: Error loading user or settings: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -51,6 +53,7 @@ class AuthProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
+      await SettingsService.preloadRemoteSettings(); // Refresh settings
       _user = await _authService.getCurrentUser();
       if (_user != null) {
         _updateFcmToken();
@@ -67,6 +70,7 @@ class AuthProvider with ChangeNotifier {
 
     _user = await _authService.login(email, password);
     if (_user != null) {
+      await SettingsService.preloadRemoteSettings(); // Preload settings on login
       _updateFcmToken();
     }
     _isLoading = false;

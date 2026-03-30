@@ -79,6 +79,7 @@ const AdminDashboard = () => {
   const [deletedProducts, setDeletedProducts] = useState<any[]>([]);
 
   const [settings, setSettings] = useState<any[]>([]);
+  const [localSettings, setLocalSettings] = useState<any[]>([]);
   const [savingSettings, setSavingSettings] = useState(false);
 
   const [showAddUser, setShowAddUser] = useState(false);
@@ -294,26 +295,39 @@ const AdminDashboard = () => {
     try {
       const res = await api.get('admin/settings');
       setSettings(res.data);
+      setLocalSettings(res.data);
     } catch (err) {
       console.error(err);
     }
   };
 
-  const updateSetting = async (key: string, value: string) => {
+  const updateSettingLocally = (key: string, value: string) => {
+    setLocalSettings(prev => {
+      const existing = prev.find(s => s.settingKey === key);
+      if (existing) {
+        return prev.map(s => s.settingKey === key ? { ...s, settingValue: value } : s);
+      } else {
+        return [...prev, { settingKey: key, settingValue: value }];
+      }
+    });
+  };
+
+  const saveAllSettings = async () => {
     try {
       setSavingSettings(true);
-      await api.post('admin/settings', { settingKey: key, settingValue: value });
-      fetchSettings();
+      await api.post('admin/settings/bulk', localSettings);
+      setSettings([...localSettings]);
+      alert('Settings saved successfully!');
     } catch (err) {
       console.error(err);
-      alert('Failed to update setting');
+      alert('Failed to save settings');
     } finally {
       setSavingSettings(false);
     }
   };
 
   const getSetting = (key: string, defaultValue: string = 'false') => {
-    const s = settings.find(s => s.settingKey === key);
+    const s = localSettings.find(s => s.settingKey === key);
     return s ? s.settingValue : defaultValue;
   };
 
@@ -2535,7 +2549,7 @@ const AdminDashboard = () => {
                       type="checkbox"
                       className="sr-only peer"
                       checked={getSetting('NOTIF_IN_APP_ENABLED', 'true') === 'true'}
-                      onChange={(e) => updateSetting('NOTIF_IN_APP_ENABLED', e.target.checked ? 'true' : 'false')}
+                      onChange={(e) => updateSettingLocally('NOTIF_IN_APP_ENABLED', e.target.checked ? 'true' : 'false')}
                     />
                     <div className="w-12 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
                   </label>
@@ -2556,7 +2570,7 @@ const AdminDashboard = () => {
                       type="checkbox"
                       className="sr-only peer"
                       checked={getSetting('NOTIF_WHATSAPP_ENABLED', 'false') === 'true'}
-                      onChange={(e) => updateSetting('NOTIF_WHATSAPP_ENABLED', e.target.checked ? 'true' : 'false')}
+                      onChange={(e) => updateSettingLocally('NOTIF_WHATSAPP_ENABLED', e.target.checked ? 'true' : 'false')}
                     />
                     <div className="w-12 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
                   </label>
@@ -2577,7 +2591,7 @@ const AdminDashboard = () => {
                       type="checkbox"
                       className="sr-only peer"
                       checked={getSetting('WS_ENABLED', 'true') === 'true'}
-                      onChange={(e) => updateSetting('WS_ENABLED', e.target.checked ? 'true' : 'false')}
+                      onChange={(e) => updateSettingLocally('WS_ENABLED', e.target.checked ? 'true' : 'false')}
                     />
                     <div className="w-12 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                   </label>
@@ -2598,10 +2612,43 @@ const AdminDashboard = () => {
                       type="checkbox"
                       className="sr-only peer"
                       checked={getSetting('FORCE_LOCAL_OTP', 'false') === 'true'}
-                      onChange={(e) => updateSetting('FORCE_LOCAL_OTP', e.target.checked ? 'true' : 'false')}
+                      onChange={(e) => updateSettingLocally('FORCE_LOCAL_OTP', e.target.checked ? 'true' : 'false')}
                     />
                     <div className="w-12 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
                   </label>
+                </div>
+
+                <div className="flex items-center justify-between p-6 bg-gray-50 rounded-2xl border border-gray-100 group hover:border-primary-200 transition-all">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-white rounded-xl shadow-sm text-primary-600">
+                      <LayoutGrid size={24} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-900">Global Theme Color</h3>
+                      <p className="text-xs text-gray-500 font-medium">App-wide seed color.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="color"
+                      value={'#' + (parseInt(getSetting('THEME_SEED_COLOR', '4281236786')).toString(16).padStart(8, '0').slice(2))}
+                      onChange={(e) => {
+                        const hex = e.target.value.replace('#', '');
+                        const argb = parseInt('FF' + hex, 16);
+                        updateSettingLocally('THEME_SEED_COLOR', argb.toString());
+                      }}
+                      className="w-10 h-10 rounded-lg border-2 border-white shadow-sm cursor-pointer"
+                    />
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={getSetting('USE_GLOBAL_THEME_COLOR', 'false') === 'true'}
+                        onChange={(e) => updateSettingLocally('USE_GLOBAL_THEME_COLOR', e.target.checked ? 'true' : 'false')}
+                      />
+                      <div className="w-12 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                    </label>
+                  </div>
                 </div>
               </div>
 
@@ -2616,7 +2663,7 @@ const AdminDashboard = () => {
                         min={0}
                         max={100}
                         value={parseInt(getSetting('LOYALTY_PERCENT', '1'))}
-                        onChange={(e) => updateSetting('LOYALTY_PERCENT', e.target.value)}
+                        onChange={(e) => updateSettingLocally('LOYALTY_PERCENT', e.target.value)}
                         className="w-full border border-gray-200 rounded-xl p-3 font-bold text-gray-700 outline-none focus:ring-2 focus:ring-primary-500"
                       />
                       <span className="text-gray-700 font-bold">%</span>
@@ -2629,7 +2676,7 @@ const AdminDashboard = () => {
                         type="number"
                         min={0}
                         value={parseInt(getSetting('MIN_REDEEM_POINTS', '100'))}
-                        onChange={(e) => updateSetting('MIN_REDEEM_POINTS', e.target.value)}
+                        onChange={(e) => updateSettingLocally('MIN_REDEEM_POINTS', e.target.value)}
                         className="w-full border border-gray-200 rounded-xl p-3 font-bold text-gray-700 outline-none focus:ring-2 focus:ring-primary-500"
                       />
                       <span className="text-gray-700 font-bold">pts</span>
@@ -2646,7 +2693,7 @@ const AdminDashboard = () => {
                         type="text"
                         placeholder="https://example.com/logo.png"
                         value={getSetting('LOGO_URL', '')}
-                        onChange={(e) => updateSetting('LOGO_URL', e.target.value)}
+                        onChange={(e) => updateSettingLocally('LOGO_URL', e.target.value)}
                         className="w-full border border-gray-200 rounded-xl p-3 text-sm font-medium text-gray-700 outline-none focus:ring-2 focus:ring-primary-500"
                       />
                     </div>
@@ -2656,7 +2703,7 @@ const AdminDashboard = () => {
                         type="text"
                         placeholder="sparehub-0t47.onrender.com"
                         value={getSetting('SERVER_HOST', 'sparehub-0t47.onrender.com')}
-                        onChange={(e) => updateSetting('SERVER_HOST', e.target.value)}
+                        onChange={(e) => updateSettingLocally('SERVER_HOST', e.target.value)}
                         className="w-full border border-gray-200 rounded-xl p-3 text-sm font-medium text-gray-700 outline-none focus:ring-2 focus:ring-primary-500"
                       />
                     </div>
@@ -2666,7 +2713,7 @@ const AdminDashboard = () => {
                         type="text"
                         placeholder="Your Google OAuth Client ID"
                         value={getSetting('GOOGLE_CLIENT_ID', '')}
-                        onChange={(e) => updateSetting('GOOGLE_CLIENT_ID', e.target.value)}
+                        onChange={(e) => updateSettingLocally('GOOGLE_CLIENT_ID', e.target.value)}
                         className="w-full border border-gray-200 rounded-xl p-3 text-sm font-medium text-gray-700 outline-none focus:ring-2 focus:ring-primary-500"
                       />
                     </div>
@@ -2692,7 +2739,7 @@ const AdminDashboard = () => {
                         const set = new Set(allowed);
                         if (checked) set.add(r.key);
                         else set.delete(r.key);
-                        updateSetting('ALLOWED_REG_ROLES', Array.from(set).join(','));
+                        updateSettingLocally('ALLOWED_REG_ROLES', Array.from(set).join(','));
                       };
                       return (
                         <label key={r.key} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
@@ -2707,16 +2754,33 @@ const AdminDashboard = () => {
                     })}
                   </div>
                 </div>
+
+                <div className="flex justify-end pt-4">
+                  <button
+                    onClick={saveAllSettings}
+                    disabled={savingSettings}
+                    className="bg-primary-600 hover:bg-primary-700 text-white font-bold py-3 px-8 rounded-2xl shadow-lg shadow-primary-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {savingSettings ? (
+                      <>
+                        <RotateCcw className="animate-spin" size={20} />
+                        Saving Settings...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle size={20} />
+                        Save All Settings
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
 
             <div className="px-8 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
               <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-                {savingSettings ? 'Saving changes...' : 'All changes saved automatically'}
+                {savingSettings ? 'Saving changes...' : 'Review changes before saving'}
               </span>
-              {savingSettings && (
-                <div className="w-4 h-4 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
-              )}
             </div>
           </div>
         </div>
