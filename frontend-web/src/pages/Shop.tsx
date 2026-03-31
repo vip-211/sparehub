@@ -249,7 +249,7 @@ const Shop: React.FC = () => {
                     </div>
                   )}
                   {displayPrice !== p.sellingPrice && (
-                    <div className="absolute top-3 left-3 bg-green-500 text-white px-2.5 py-1 rounded-lg font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-green-200">
+                    <div className="absolute top-3 left-3 bg-blue-500 text-white px-2.5 py-1 rounded-lg font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-blue-200">
                       Member Price
                     </div>
                   )}
@@ -260,7 +260,7 @@ const Shop: React.FC = () => {
                     <h3 className="text-xl font-black text-gray-900 leading-tight line-clamp-2">{tp(p.name)}</h3>
                   </div>
                   <div className="flex items-center gap-2 mb-4">
-                    <span className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${inStock ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                    <span className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${inStock ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>
                       {inStock ? <CheckCircle2 className="w-3 h-3" /> : <Info className="w-3 h-3" />}
                       {inStock ? 'In Stock' : 'Out of Stock'}
                     </span>

@@ -196,7 +196,7 @@ const Login: React.FC = () => {
                   exit={{ opacity: 0, height: 0 }}
                   className={`p-4 rounded-2xl text-sm flex items-center gap-3 ${
                     message.includes(t('common.success')) 
-                      ? 'bg-green-50 text-green-700 border border-green-100' 
+                      ? 'bg-blue-50 text-blue-700 border border-blue-100' 
                       : 'bg-red-50 text-red-700 border border-red-100'
                   }`}
                 >

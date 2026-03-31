@@ -179,7 +179,7 @@ const MobileDashboard = () => {
           <p className="text-xs font-bold uppercase tracking-wider opacity-70">Orders</p>
           <p className="text-2xl font-black">{stats?.totalOrders}</p>
         </div>
-        <div className="bg-emerald-500 p-5 rounded-[2rem] text-white shadow-xl shadow-emerald-100 relative overflow-hidden group">
+        <div className="bg-blue-500 p-5 rounded-[2rem] text-white shadow-xl shadow-blue-100 relative overflow-hidden group">
           <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/10 rounded-full group-hover:scale-150 transition-transform duration-700"></div>
           <TrendingUp className="mb-3 opacity-80" size={24} />
           <p className="text-xs font-bold uppercase tracking-wider opacity-70">Revenue</p>
@@ -259,7 +259,7 @@ const MobileDashboard = () => {
             <div key={order.id} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl hover:bg-gray-50 transition group cursor-pointer">
               <div className="flex items-center gap-4">
                 <div className={`p-3 rounded-xl ${
-                  order.status === 'DELIVERED' ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'
+                  order.status === 'DELIVERED' ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'
                 }`}>
                   {order.status === 'DELIVERED' ? <CheckCircle size={20} /> : <Clock size={20} />}
                 </div>

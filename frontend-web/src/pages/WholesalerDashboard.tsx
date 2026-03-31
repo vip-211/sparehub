@@ -156,7 +156,7 @@ const WholesalerDashboard = () => {
           </div>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition">
-          <div className="bg-green-100 p-4 rounded-xl text-green-600">
+          <div className="bg-blue-100 p-4 rounded-xl text-blue-600">
             <ShoppingCart size={24} />
           </div>
           <div>
@@ -326,7 +326,7 @@ const WholesalerDashboard = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-gray-900">₹{(order.totalAmount || 0).toLocaleString()}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-3 py-1 text-[10px] font-black tracking-widest uppercase rounded-lg ${
-                        order.status === 'DELIVERED' ? 'bg-green-100 text-green-700' :
+                        order.status === 'DELIVERED' ? 'bg-blue-100 text-blue-700' :
                         order.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
                         'bg-blue-100 text-blue-700'
                       }`}>
@@ -375,7 +375,7 @@ const WholesalerDashboard = () => {
                   <div className="text-right">
                     <div className="text-lg font-black text-gray-900 leading-tight">₹{(order.totalAmount || 0).toLocaleString()}</div>
                     <span className={`inline-block mt-1 px-2.5 py-0.5 text-[9px] font-black tracking-widest uppercase rounded-md ${
-                      order.status === 'DELIVERED' ? 'bg-green-100 text-green-700' :
+                      order.status === 'DELIVERED' ? 'bg-blue-100 text-blue-700' :
                       order.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
                       'bg-blue-100 text-blue-700'
                     }`}>
@@ -447,7 +447,7 @@ const WholesalerDashboard = () => {
             </button>
           </form>
           {uploadStatus && (
-            <div className={`mt-4 p-3 rounded-lg text-sm text-center ${uploadStatus.includes('successful') ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+            <div className={`mt-4 p-3 rounded-lg text-sm text-center ${uploadStatus.includes('successful') ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
               {uploadStatus}
             </div>
           )}

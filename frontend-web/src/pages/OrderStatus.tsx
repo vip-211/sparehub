@@ -44,11 +44,11 @@ const OrderStatus: React.FC = () => {
         <h1 className="text-xl font-bold">Order #{id}</h1>
         <p className="text-gray-500 text-sm mt-1">Live status and tracking</p>
         {order?.pointsRedeemed > 0 && (
-          <div className="mt-4 p-4 rounded-xl bg-emerald-50 border border-emerald-100">
-            <div className="text-emerald-800 font-black">
+          <div className="mt-4 p-4 rounded-xl bg-blue-50 border border-blue-100">
+            <div className="text-blue-800 font-black">
               You saved ₹{order.pointsRedeemed} on this order! 🎉
             </div>
-            <div className="text-emerald-700 text-sm font-medium mt-1">
+            <div className="text-blue-700 text-sm font-medium mt-1">
               Thanks for ordering with Parts Mitra — smart choice using your points.
             </div>
           </div>
@@ -79,7 +79,7 @@ const OrderStatus: React.FC = () => {
               <div
                 className={`mt-2 inline-block px-3 py-1 text-sm font-semibold rounded-full ${
                   order.status === 'DELIVERED'
-                    ? 'bg-green-100 text-green-800'
+                    ? 'bg-blue-100 text-blue-800'
                     : order.status === 'OUT_FOR_DELIVERY'
                     ? 'bg-blue-100 text-blue-800'
                     : order.status === 'PREPARING' || order.status === 'PACKED'

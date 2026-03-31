@@ -216,7 +216,7 @@ const Cart: React.FC = () => {
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span>Delivery Fee</span>
-                  <span className="text-green-600 font-medium">Free</span>
+                  <span className="text-blue-600 font-medium">Free</span>
                 </div>
                 {userPoints > 0 && (
                   <div className="pt-4 border-t border-gray-100">
@@ -270,7 +270,7 @@ const Cart: React.FC = () => {
               </button>
 
               {msg && (
-                <div className={`mt-6 p-4 rounded-xl text-sm font-medium text-center ${msg.includes(t('common.success')) ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                <div className={`mt-6 p-4 rounded-xl text-sm font-medium text-center ${msg.includes(t('common.success')) ? 'bg-blue-50 text-blue-700' : 'bg-red-50 text-red-700'}`}>
                   {msg}
                 </div>
               )}

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const Color _brandPrimary = Color(0xFF2E7D32); // Emerald Green
-  static const Color _brandSecondary = Color(0xFF1565C0); // Royal Blue
+  static const Color _brandPrimary = Color(0xFF1565C0); // Royal Blue (Replaced Emerald Green)
+  static const Color _brandSecondary = Color(0xFF0D47A1); // Darker Blue (Replaced Royal Blue)
   static const Color _surfaceLight = Colors.white;
   static const Color _backgroundLight = Color(0xFFF8F9FA);
 

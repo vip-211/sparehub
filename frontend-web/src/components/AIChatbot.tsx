@@ -154,7 +154,7 @@ const AIChatbot: React.FC = () => {
               <div>
                 <h3 className="font-bold text-lg leading-tight">Parts Mitra AI</h3>
                 <p className="text-blue-100 text-[10px] font-medium uppercase tracking-widest flex items-center gap-1.5">
-                  <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                  <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></span>
                   Always Active
                 </p>
               </div>
@@ -337,7 +337,7 @@ const AIChatbot: React.FC = () => {
                                 setMessages(prev => [...prev, { text: 'Failed to place order.', isBot: true }]);
                               }
                             }}
-                            className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-bold hover:bg-green-100"
+                            className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-100"
                           >
                             Order
                           </button>
@@ -368,7 +368,7 @@ const AIChatbot: React.FC = () => {
             className="bg-gradient-to-br from-blue-600 to-blue-500 text-white p-5 rounded-3xl shadow-2xl hover:shadow-blue-200/50 hover:scale-110 transition-all duration-500 active:scale-95 relative"
           >
             <MessageSquare className="w-7 h-7" />
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></span>
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 border-2 border-white rounded-full"></span>
           </button>
         </div>
       )}
