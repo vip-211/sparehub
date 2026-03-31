@@ -3,9 +3,9 @@ import 'package:flutter/scheduler.dart' show timeDilation;
 import '../services/settings_service.dart';
 
 class ThemeProvider extends ChangeNotifier {
-  ThemeMode _mode = ThemeMode.system;
+  ThemeMode _mode = ThemeMode.light; // Force light mode
   ThemeMode get themeMode => _mode;
-  Color _seed = const Color(0xFF2E7D32);
+  Color _seed = const Color.fromARGB(255, 113, 161, 223);
   Color get seedColor => _seed;
   double _textScale = 1.0;
   double get textScale => _textScale;
@@ -22,8 +22,8 @@ class ThemeProvider extends ChangeNotifier {
   }
 
   Future<void> _load() async {
-    final m = await SettingsService.getThemeMode();
-    _mode = _strToMode(m);
+    // Ignore saved theme mode and always use light
+    _mode = ThemeMode.light;
     final seed = await SettingsService.getThemeSeedColor();
     if (seed != null) _seed = Color(seed);
     try {
@@ -46,9 +46,7 @@ class ThemeProvider extends ChangeNotifier {
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
-    _mode = mode;
-    notifyListeners();
-    await SettingsService.setThemeMode(_mode.name);
+    // Do nothing to prevent changing from light mode
   }
 
   Future<void> setSeedColor(Color color) async {

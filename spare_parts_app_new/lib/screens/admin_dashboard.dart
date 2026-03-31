@@ -364,20 +364,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
           actions: [
             const CartBadge(),
             const NotificationBadge(),
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.brightness_6_outlined),
-              onSelected: (val) {
-                final tp = Provider.of<ThemeProvider>(context, listen: false);
-                if (val == 'system') tp.setThemeMode(ThemeMode.system);
-                if (val == 'light') tp.setThemeMode(ThemeMode.light);
-                if (val == 'dark') tp.setThemeMode(ThemeMode.dark);
-              },
-              itemBuilder: (ctx) => const [
-                PopupMenuItem(value: 'system', child: Text('System Theme')),
-                PopupMenuItem(value: 'light', child: Text('Light Theme')),
-                PopupMenuItem(value: 'dark', child: Text('Dark Theme')),
-              ],
-            ),
             IconButton(
               icon: const Icon(Icons.settings),
               onPressed: () {
@@ -704,7 +690,7 @@ class _AdminOverviewScreenState extends State<AdminOverviewScreen> {
                       'Total Revenue',
                       '₹${_stats['totalRevenue'].toStringAsFixed(0)}',
                       Icons.payments,
-                      Colors.green,
+                      Colors.blue,
                     ),
                     _buildStatCard(
                       'Total Orders',
@@ -750,7 +736,7 @@ class _AdminOverviewScreenState extends State<AdminOverviewScreen> {
               context,
               'Add New Product',
               Icons.add_box,
-              Colors.green.shade700,
+              Colors.blue.shade700,
               () => (context.findAncestorStateOfType<_AdminDashboardState>())
                   ?.setState(() =>
                       (context.findAncestorStateOfType<_AdminDashboardState>())
@@ -1996,7 +1982,7 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
                             width: double.infinity,
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.green.shade50,
+                              color: Colors.blue.shade50,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Column(
@@ -2006,7 +1992,7 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
                                   'Delivery Info:',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.green,
+                                    color: Colors.blue,
                                   ),
                                 ),
                                 Text(
@@ -2026,7 +2012,7 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
                                 onPressed: () =>
                                     _updateStatus(order.id, 'APPROVED'),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
+                                  backgroundColor: Colors.blue,
                                   foregroundColor: Colors.white,
                                 ),
                                 child: const Text('Approve'),
@@ -2154,7 +2140,7 @@ class AdminUserOrdersDetailScreen extends StatelessWidget {
                                 onPressed: () =>
                                     onUpdateStatus(order.id, 'APPROVED'),
                                 style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green,
+                                    backgroundColor: Colors.blue,
                                     foregroundColor: Colors.white),
                                 child: const Text('Approve'),
                               ),
@@ -3181,14 +3167,14 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                           SnackBar(
                             content: Text(
                                 'Added & Auto-categorized as: ${savedProduct.categoryName}'),
-                            backgroundColor: Colors.green,
+                            backgroundColor: Colors.blue,
                           ),
                         );
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Product saved successfully'),
-                            backgroundColor: Colors.green,
+                            backgroundColor: Colors.blue,
                           ),
                         );
                       }
@@ -3486,7 +3472,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                                 'Stock: ${p.stock}',
                                 style: TextStyle(
                                   color: p.stock > 0
-                                      ? Colors.green.shade700
+                                      ? Colors.blue.shade700
                                       : Colors.red.shade700,
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
@@ -3702,7 +3688,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
             FloatingActionButton(
               heroTag: 'export',
               onPressed: _exportExcel,
-              backgroundColor: Colors.green,
+              backgroundColor: Colors.blue,
               child: const Icon(Icons.file_download),
             ),
             const SizedBox(height: 10),
@@ -4447,7 +4433,7 @@ class _InvoicingScreenState extends State<InvoicingScreen> {
                                   'Net: ${((item['price'] as double) * (1 - ((item['discount'] as double? ?? 0.0) / 100)) * (item['quantity'] as int)).toStringAsFixed(2)}',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.green,
+                                    color: Colors.blue,
                                   ),
                                 ),
                               ],
@@ -4692,7 +4678,7 @@ class _SalesReportsScreenState extends State<SalesReportsScreen> {
           ),
           _buildReportCard('Daily Report', _dailyReport, Colors.blue),
           _buildReportCard('Weekly Report', _weeklyReport, Colors.orange),
-          _buildReportCard('Monthly Report', _monthlyReport, Colors.green),
+          _buildReportCard('Monthly Report', _monthlyReport, Colors.indigo),
           const SizedBox(height: 20),
         ],
       ),

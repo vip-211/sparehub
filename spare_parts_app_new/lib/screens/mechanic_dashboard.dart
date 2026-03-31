@@ -160,20 +160,6 @@ class _MechanicDashboardState extends State<MechanicDashboard> {
               icon: const Icon(Icons.settings),
               onPressed: () => Navigator.of(context).pushNamed('/settings'),
             ),
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.brightness_6_outlined),
-              onSelected: (val) {
-                final tp = Provider.of<ThemeProvider>(context, listen: false);
-                if (val == 'system') tp.setThemeMode(ThemeMode.system);
-                if (val == 'light') tp.setThemeMode(ThemeMode.light);
-                if (val == 'dark') tp.setThemeMode(ThemeMode.dark);
-              },
-              itemBuilder: (ctx) => const [
-                PopupMenuItem(value: 'system', child: Text('System Theme')),
-                PopupMenuItem(value: 'light', child: Text('Light Theme')),
-                PopupMenuItem(value: 'dark', child: Text('Dark Theme')),
-              ],
-            ),
             const CartBadge(),
             const NotificationBadge(),
             const SizedBox(width: 8),

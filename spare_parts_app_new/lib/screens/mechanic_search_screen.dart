@@ -743,51 +743,103 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                                 color: Theme.of(context).colorScheme.primary,
                               ),
                             ),
-                            GestureDetector(
-                              onTap: isOutOfStock
-                                  ? null
-                                  : () {
-                                      cart.addItem(p, price);
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content:
-                                              Text('${p.name} added to cart'),
-                                          behavior: SnackBarBehavior.floating,
-                                          shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(12)),
-                                          backgroundColor: Theme.of(context)
-                                              .colorScheme
-                                              .primary,
-                                        ),
-                                      );
-                                    },
-                              child: Container(
-                                padding: const EdgeInsets.all(8),
+                            if (cart.items.containsKey(p.id))
+                              Container(
                                 decoration: BoxDecoration(
-                                  color: isOutOfStock
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.remove, size: 16),
+                                      visualDensity: VisualDensity.compact,
+                                      onPressed: () {
+                                        final item = cart.items[p.id]!;
+                                        if (item.quantity <= (item.minQty ?? 1)) {
+                                          cart.removeItem(p.id);
+                                        } else {
+                                          cart.decrementItem(p.id);
+                                        }
+                                      },
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                    ),
+                                    Text(
+                                      '${cart.items[p.id]!.quantity}',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.add, size: 16),
+                                      visualDensity: VisualDensity.compact,
+                                      onPressed: () => cart.addItem(p, price),
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                    ),
+                                  ],
+                                ),
+                              )
+                            else
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isOutOfStock
                                       ? Theme.of(context)
                                           .colorScheme
                                           .surfaceContainerHighest
-                                      : Theme.of(context)
-                                          .colorScheme
-                                          .primary
-                                          .withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(
-                                  Icons.add_shopping_cart_rounded,
-                                  size: 18,
-                                  color: isOutOfStock
+                                      : Theme.of(context).colorScheme.primary,
+                                  foregroundColor: isOutOfStock
                                       ? Theme.of(context)
                                           .colorScheme
                                           .onSurfaceVariant
                                           .withOpacity(0.3)
-                                      : Theme.of(context).colorScheme.primary,
+                                      : Theme.of(context).colorScheme.onPrimary,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 8),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                onPressed: isOutOfStock
+                                    ? null
+                                    : () {
+                                        cart.addItem(p, price);
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content:
+                                                Text('${p.name} added to cart'),
+                                            behavior: SnackBarBehavior.floating,
+                                            duration:
+                                                const Duration(seconds: 1),
+                                            shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12)),
+                                            backgroundColor: Theme.of(context)
+                                                .colorScheme
+                                                .primary,
+                                          ),
+                                        );
+                                      },
+                                child: const Text(
+                                  'BUY',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 0.5,
+                                  ),
                                 ),
                               ),
-                            ),
                           ],
                         ),
                       ],

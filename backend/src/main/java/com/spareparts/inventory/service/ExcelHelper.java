@@ -168,6 +168,10 @@ public class ExcelHelper {
                                     product.setWholesalerPrice(BigDecimal.ZERO);
                                 }
                             }
+                            // Default to MRP if 0
+                            if (product.getWholesalerPrice().compareTo(BigDecimal.ZERO) == 0 && product.getMrp().compareTo(BigDecimal.ZERO) > 0) {
+                                product.setWholesalerPrice(product.getMrp());
+                            }
                             break;
                         case 6: // Retailer Price
                             if (currentCell.getCellType() == CellType.NUMERIC) {
@@ -181,6 +185,10 @@ public class ExcelHelper {
                                     product.setRetailerPrice(BigDecimal.ZERO);
                                 }
                             }
+                            // Default to MRP if 0
+                            if (product.getRetailerPrice().compareTo(BigDecimal.ZERO) == 0 && product.getMrp().compareTo(BigDecimal.ZERO) > 0) {
+                                product.setRetailerPrice(product.getMrp());
+                            }
                             break;
                         case 7: // Mechanic Price
                             if (currentCell.getCellType() == CellType.NUMERIC) {
@@ -193,6 +201,10 @@ public class ExcelHelper {
                                 } catch (Exception e) {
                                     product.setMechanicPrice(BigDecimal.ZERO);
                                 }
+                            }
+                            // Default to MRP if 0
+                            if (product.getMechanicPrice().compareTo(BigDecimal.ZERO) == 0 && product.getMrp().compareTo(BigDecimal.ZERO) > 0) {
+                                product.setMechanicPrice(product.getMrp());
                             }
                             break;
                         case 8: // Rack Number

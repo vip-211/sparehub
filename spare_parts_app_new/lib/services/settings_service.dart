@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'remote_client.dart';
 import '../utils/constants.dart';
 
@@ -10,6 +13,63 @@ class SettingsService {
       StreamController<String>.broadcast();
   static Stream<String> get onSettingsChanged =>
       _settingsChangedController.stream;
+
+  static Future<void> checkAppUpdate(BuildContext context) async {
+    try {
+      final latestVersion = getCachedRemoteSetting('LATEST_APP_VERSION', '1.0.0');
+      final updateUrl = getCachedRemoteSetting('APP_UPDATE_URL', '');
+      
+      if (updateUrl.isEmpty) return;
+
+      final packageInfo = await PackageInfo.fromPlatform();
+      final currentVersion = packageInfo.version;
+
+      if (_isVersionNewer(currentVersion, latestVersion)) {
+        if (!context.mounted) return;
+        
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Text('Update Available'),
+            content: Text('A newer version ($latestVersion) of the app is available. Please update to continue using the latest features.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Later'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final url = Uri.parse(updateUrl);
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  }
+                },
+                child: const Text('Update Now'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('SettingsService: Error checking app update: $e');
+    }
+  }
+
+  static bool _isVersionNewer(String current, String latest) {
+    try {
+      List<int> currentParts = current.split('.').map(int.parse).toList();
+      List<int> latestParts = latest.split('.').map(int.parse).toList();
+
+      for (int i = 0; i < latestParts.length; i++) {
+        int currentPart = i < currentParts.length ? currentParts[i] : 0;
+        if (latestParts[i] > currentPart) return true;
+        if (latestParts[i] < currentPart) return false;
+      }
+    } catch (_) {}
+    return false;
+  }
+
   static const _voiceTrainingKey = 'voice_training_enabled';
   static const _aiChatbotKey = 'ai_chatbot_enabled';
   static const _websocketKey = 'websocket_enabled';

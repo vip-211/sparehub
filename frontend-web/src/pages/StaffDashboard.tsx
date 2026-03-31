@@ -91,7 +91,7 @@ const StaffDashboard = () => {
           </div>
         </div>
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
-          <div className="p-3 rounded-lg bg-green-100 text-green-600">
+          <div className="p-3 rounded-lg bg-indigo-100 text-indigo-600">
             <MapPin size={24} />
           </div>
           <div>
@@ -145,7 +145,7 @@ const StaffDashboard = () => {
                     <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
                       order.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' : 
                       order.status === 'OUT_FOR_DELIVERY' ? 'bg-blue-100 text-blue-800' : 
-                      order.status === 'DELIVERED' ? 'bg-green-100 text-green-800' : 
+                      order.status === 'DELIVERED' ? 'bg-blue-100 text-blue-800' : 
                       'bg-gray-100 text-gray-800'
                     }`}>
                       {order.status}
@@ -165,7 +165,7 @@ const StaffDashboard = () => {
                         </button>
                         <button
                           onClick={() => updateOrderStatus(order.id, 'DELIVERED')}
-                          className="text-green-600 hover:text-green-900 flex items-center"
+                          className="text-blue-600 hover:text-blue-900 flex items-center"
                           title="Mark as Delivered"
                         >
                           <CheckCircle size={18} className="mr-1" />
@@ -202,7 +202,7 @@ const StaffDashboard = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.customerName}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                      order.status === 'OUT_FOR_DELIVERY' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                      order.status === 'OUT_FOR_DELIVERY' ? 'bg-blue-100 text-blue-800' : 'bg-indigo-100 text-indigo-800'
                     }`}>
                       {order.status === 'OUT_FOR_DELIVERY' ? 'Delivering...' : 'Delivered'}
                     </span>

@@ -263,7 +263,7 @@ class _OffersScreenState extends State<OffersScreen>
                             product.stock > 0 ? 'In Stock' : 'Out of Stock',
                             style: TextStyle(
                               color: product.stock > 0
-                                  ? Colors.green.shade700
+                                  ? Colors.blue.shade700
                                   : Theme.of(context).colorScheme.error,
                               fontWeight: FontWeight.w600,
                               fontSize: 11,

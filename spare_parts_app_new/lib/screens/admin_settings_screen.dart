@@ -50,6 +50,8 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       TextEditingController();
   final TextEditingController _loginBannerCooldownController =
       TextEditingController();
+  final TextEditingController _latestVersionController = TextEditingController();
+  final TextEditingController _updateUrlController = TextEditingController();
   final Map<String, bool> _allowedRoles = {
     Constants.roleMechanic: true,
     Constants.roleRetailer: true,
@@ -102,6 +104,8 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     _loginBannerImageUrlController.dispose();
     _loginBannerButtonTextController.dispose();
     _loginBannerCooldownController.dispose();
+    _latestVersionController.dispose();
+    _updateUrlController.dispose();
     super.dispose();
   }
 
@@ -177,6 +181,8 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
               remote['LOGIN_BANNER_BUTTON_TEXT'] ?? 'Check Offers';
           _loginBannerCooldownController.text =
               remote['LOGIN_BANNER_COOLDOWN_HOURS'] ?? '24';
+          _latestVersionController.text = remote['LATEST_APP_VERSION'] ?? '1.0.0';
+          _updateUrlController.text = remote['APP_UPDATE_URL'] ?? '';
           _loaded = true;
         });
       }
@@ -224,6 +230,8 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
         'LOGIN_BANNER_SHOW_BUTTON': _loginBannerShowButton ? 'true' : 'false',
         'LOGIN_BANNER_BUTTON_TEXT': _loginBannerButtonTextController.text,
         'LOGIN_BANNER_COOLDOWN_HOURS': _loginBannerCooldownController.text,
+        'LATEST_APP_VERSION': _latestVersionController.text,
+        'APP_UPDATE_URL': _updateUrlController.text,
       };
 
       await SettingsService.saveRemoteSettingsBulk(remoteMap);
@@ -313,30 +321,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                     title: 'Appearance',
                     subtitle: 'Customize app look and feel'),
                 const SizedBox(height: 8),
-                SegmentedButton<ThemeMode>(
-                  segments: const [
-                    ButtonSegment(
-                        value: ThemeMode.system,
-                        icon: Icon(Icons.brightness_auto),
-                        label: Text('System')),
-                    ButtonSegment(
-                        value: ThemeMode.light,
-                        icon: Icon(Icons.light_mode),
-                        label: Text('Light')),
-                    ButtonSegment(
-                        value: ThemeMode.dark,
-                        icon: Icon(Icons.dark_mode),
-                        label: Text('Dark')),
-                  ],
-                  selected: {currentTheme},
-                  onSelectionChanged: (sel) {
-                    final mode = sel.first;
-                    _themeProvider.setThemeMode(mode);
-                  },
-                  style: ButtonStyle(
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ),
+
                 const SizedBox(height: 12),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
@@ -527,6 +512,14 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                 _buildTextField('Banner Cooldown (hours)',
                     _loginBannerCooldownController, 'e.g., 24',
                     keyboardType: TextInputType.number),
+                const Divider(),
+                const SectionHeader(
+                    title: 'App Updates',
+                    subtitle: 'Manage app version and update link'),
+                _buildTextField('Latest App Version', _latestVersionController,
+                    'e.g. 1.0.1 (must match pubspec version)'),
+                _buildTextField('App Update URL', _updateUrlController,
+                    'Link to Play Store or APK download'),
                 const Divider(),
                 const SectionHeader(
                     title: 'Loyalty & Points',

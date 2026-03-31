@@ -995,7 +995,7 @@ const AdminDashboard = () => {
             }}
             className={`p-2 rounded-xl transition-all shadow-sm flex items-center gap-2 text-xs font-bold ${
               audioEnabled 
-                ? 'bg-green-100 text-green-700 border border-green-200' 
+                ? 'bg-blue-100 text-blue-700 border border-blue-200' 
                 : 'bg-gray-100 text-gray-500 border border-gray-200'
             }`}
             title={audioEnabled ? 'Audio notifications enabled' : 'Click to enable audio notifications'}
@@ -1030,7 +1030,7 @@ const AdminDashboard = () => {
               ))}
             </select>
           </div>
-          <label className="flex items-center gap-2 bg-green-600 text-white px-4 py-2.5 rounded-xl hover:bg-green-700 cursor-pointer transition shadow-lg shadow-green-100 font-bold text-sm">
+          <label className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl hover:bg-blue-700 cursor-pointer transition shadow-lg shadow-blue-100 font-bold text-sm">
             <Upload size={18} />
             <span>Import Excel</span>
             <input type="file" className="hidden" accept=".xlsx, .xls" onChange={handleExcelUpload} />
@@ -1057,14 +1057,14 @@ const AdminDashboard = () => {
             <span>Add Product</span>
           </button>
           <div className="relative group">
-            <button className="flex items-center gap-2 bg-green-600 text-white px-4 py-2.5 rounded-xl hover:bg-green-700 transition shadow-lg shadow-green-100 font-bold text-sm">
+            <button className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-100 font-bold text-sm">
               <Upload size={18} />
               <span>Bulk Import</span>
             </button>
             <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 p-4 hidden group-hover:block z-50">
               <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Target Category</label>
               <select
-                className="w-full border border-gray-200 rounded-lg p-2 text-sm mb-3 outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full border border-gray-200 rounded-lg p-2 text-sm mb-3 outline-none focus:ring-2 focus:ring-blue-500"
                 value={selectedExcelCategory}
                 onChange={e => setSelectedExcelCategory(e.target.value)}
               >
@@ -1077,7 +1077,7 @@ const AdminDashboard = () => {
                 type="file"
                 accept=".xlsx, .xls"
                 onChange={handleExcelUpload}
-                className="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                className="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
               />
             </div>
           </div>
@@ -1095,7 +1095,7 @@ const AdminDashboard = () => {
           </div>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition">
-          <div className={`p-4 rounded-xl ${isSuperManager ? 'bg-purple-100 text-purple-600' : 'bg-green-100 text-green-600'}`}>
+          <div className={`p-4 rounded-xl ${isSuperManager ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
             <ShoppingBag size={24} />
           </div>
           <div>
@@ -1289,7 +1289,7 @@ const AdminDashboard = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-3 py-1 text-[10px] font-black tracking-widest uppercase rounded-lg ${
-                        user.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
+                        user.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'
                       }`}>
                         {user.status}
                       </span>
@@ -1318,7 +1318,7 @@ const AdminDashboard = () => {
                         {user.status === 'PENDING' ? (
                           <button
                             onClick={() => updateUserStatus(user.id, 'ACTIVE')}
-                            className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition"
+                            className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition"
                             title="Approve User"
                           >
                             <CheckCircle size={18} />
@@ -1365,7 +1365,7 @@ const AdminDashboard = () => {
                     </div>
                   </div>
                   <span className={`px-3 py-1 text-[10px] font-black tracking-widest uppercase rounded-lg ${
-                    user.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
+                    user.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'
                   }`}>
                     {user.status}
                   </span>
@@ -1391,7 +1391,7 @@ const AdminDashboard = () => {
                     {user.status === 'PENDING' ? (
                       <button
                         onClick={() => updateUserStatus(user.id, 'ACTIVE')}
-                        className="p-3 bg-green-600 text-white rounded-xl shadow-lg shadow-green-100 transition"
+                        className="p-3 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-100 transition"
                       >
                         <CheckCircle size={20} />
                       </button>
@@ -1486,7 +1486,7 @@ const AdminDashboard = () => {
                           <span className={`px-2 py-0.5 text-[8px] font-black tracking-widest uppercase rounded-md ${
                             firstOrder.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
                             firstOrder.status === 'APPROVED' ? 'bg-blue-100 text-blue-700' :
-                            firstOrder.status === 'DELIVERED' ? 'bg-green-100 text-green-700' :
+                            firstOrder.status === 'DELIVERED' ? 'bg-blue-100 text-blue-700' :
                             'bg-gray-100 text-gray-700'
                           }`}>
                             {firstOrder.status}
@@ -1546,7 +1546,7 @@ const AdminDashboard = () => {
                               <span className={`px-3 py-1 text-[10px] font-black tracking-widest uppercase rounded-lg ${
                                 order.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
                                 order.status === 'APPROVED' ? 'bg-blue-100 text-blue-700' :
-                                order.status === 'DELIVERED' ? 'bg-green-100 text-green-700' :
+                                order.status === 'DELIVERED' ? 'bg-blue-100 text-blue-700' :
                                 'bg-gray-100 text-gray-700'
                               }`}>
                                 {order.status}
@@ -1843,7 +1843,7 @@ const AdminDashboard = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-semibold">{order.deliveredByName || 'Not assigned'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                      order.status === 'OUT_FOR_DELIVERY' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                      order.status === 'OUT_FOR_DELIVERY' ? 'bg-blue-100 text-blue-800' : 'bg-indigo-100 text-indigo-800'
                     }`}>
                       {order.status}
                     </span>
@@ -1852,7 +1852,7 @@ const AdminDashboard = () => {
                     {order.status === 'OUT_FOR_DELIVERY' && (
                       <button
                         onClick={() => updateOrderStatus(order.id, 'DELIVERED')}
-                        className="text-green-600 hover:text-green-900 flex items-center"
+                        className="text-blue-600 hover:text-blue-900 flex items-center"
                       >
                         <CheckCircle size={18} className="mr-1" />
                         <span>Mark Delivered</span>
@@ -2293,7 +2293,7 @@ const AdminDashboard = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 text-[10px] font-black uppercase rounded-lg ${
                         req.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
-                        req.status === 'PROCESSING' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
+                        req.status === 'PROCESSING' ? 'bg-blue-100 text-blue-700' : 'bg-indigo-100 text-indigo-700'
                       }`}>
                         {req.status}
                       </span>
@@ -2313,7 +2313,7 @@ const AdminDashboard = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <div className="flex gap-2 justify-center">
                         <button onClick={() => updateRequestStatus(req.id, 'PROCESSING')} className="text-xs font-bold text-blue-600 hover:underline">Process</button>
-                        <button onClick={() => updateRequestStatus(req.id, 'COMPLETED')} className="text-xs font-bold text-green-600 hover:underline">Complete</button>
+                        <button onClick={() => updateRequestStatus(req.id, 'COMPLETED')} className="text-xs font-bold text-blue-600 hover:underline">Complete</button>
                       </div>
                     </td>
                   </tr>
@@ -2406,7 +2406,7 @@ const AdminDashboard = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
                           <span className={`px-4 py-1.5 rounded-full text-sm font-black ${
-                            (user.points || 0) >= 100 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                            (user.points || 0) >= 100 ? 'bg-indigo-100 text-indigo-700' : 'bg-amber-100 text-amber-700'
                           }`}>
                             {user.points || 0} pts
                           </span>
@@ -2437,7 +2437,7 @@ const AdminDashboard = () => {
                                   <div key={order.id} className="bg-white p-2 rounded-lg border border-gray-100 flex justify-between items-center">
                                     <span className="text-[10px] font-bold text-gray-400">#{order.id} • {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'}</span>
                                     <div className="flex gap-2">
-                                      {order.pointsEarned > 0 && <span className="text-[10px] font-black text-green-600">+{order.pointsEarned} pts</span>}
+                                      {order.pointsEarned > 0 && <span className="text-[10px] font-black text-blue-600">+{order.pointsEarned} pts</span>}
                                       {order.pointsRedeemed > 0 && <span className="text-[10px] font-black text-red-600">-{order.pointsRedeemed} pts</span>}
                                     </div>
                                   </div>
@@ -2555,9 +2555,9 @@ const AdminDashboard = () => {
                   </label>
                 </div>
 
-                <div className="flex items-center justify-between p-6 bg-gray-50 rounded-2xl border border-gray-100 group hover:border-green-200 transition-all">
+                <div className="flex items-center justify-between p-6 bg-gray-50 rounded-2xl border border-gray-100 group hover:border-blue-200 transition-all">
                   <div className="flex items-center gap-4">
-                    <div className="p-3 bg-white rounded-xl shadow-sm text-green-600">
+                    <div className="p-3 bg-white rounded-xl shadow-sm text-blue-600">
                       <MessageSquare size={24} />
                     </div>
                     <div>
@@ -2572,7 +2572,7 @@ const AdminDashboard = () => {
                       checked={getSetting('NOTIF_WHATSAPP_ENABLED', 'false') === 'true'}
                       onChange={(e) => updateSettingLocally('NOTIF_WHATSAPP_ENABLED', e.target.checked ? 'true' : 'false')}
                     />
-                    <div className="w-12 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                    <div className="w-12 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                   </label>
                 </div>
 
@@ -2714,6 +2714,32 @@ const AdminDashboard = () => {
                         placeholder="Your Google OAuth Client ID"
                         value={getSetting('GOOGLE_CLIENT_ID', '')}
                         onChange={(e) => updateSettingLocally('GOOGLE_CLIENT_ID', e.target.value)}
+                        className="w-full border border-gray-200 rounded-xl p-3 text-sm font-medium text-gray-700 outline-none focus:ring-2 focus:ring-primary-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest px-2">App Version & Updates</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-500 ml-2">Latest App Version</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 1.0.1"
+                        value={getSetting('LATEST_APP_VERSION', '1.0.0')}
+                        onChange={(e) => updateSettingLocally('LATEST_APP_VERSION', e.target.value)}
+                        className="w-full border border-gray-200 rounded-xl p-3 text-sm font-medium text-gray-700 outline-none focus:ring-2 focus:ring-primary-500"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-500 ml-2">App Update URL</label>
+                      <input
+                        type="text"
+                        placeholder="https://play.google.com/store/apps/details?id=..."
+                        value={getSetting('APP_UPDATE_URL', '')}
+                        onChange={(e) => updateSettingLocally('APP_UPDATE_URL', e.target.value)}
                         className="w-full border border-gray-200 rounded-xl p-3 text-sm font-medium text-gray-700 outline-none focus:ring-2 focus:ring-primary-500"
                       />
                     </div>
@@ -2929,7 +2955,19 @@ const AdminDashboard = () => {
                     type="number"
                     className="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
                     value={newProduct.mrp}
-                    onChange={e => setNewProduct({...newProduct, mrp: e.target.value})}
+                    onChange={e => {
+                      const mrpVal = parseFloat(e.target.value) || 0;
+                      const discount = parseFloat(newProduct.discountPercent) || 0;
+                      const discountedPrice = mrpVal > 0 ? (mrpVal * (1 - discount / 100)).toFixed(2) : '0';
+                      setNewProduct({
+                        ...newProduct, 
+                        mrp: e.target.value,
+                        sellingPrice: discountedPrice,
+                        wholesalerPrice: discountedPrice,
+                        retailerPrice: discountedPrice,
+                        mechanicPrice: discountedPrice
+                      });
+                    }}
                     required
                   />
                 </div>
@@ -3026,7 +3064,7 @@ const AdminDashboard = () => {
                   />
                   {uploading && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>}
                 </div>
-                {newProduct.imagePath && <p className="text-xs text-green-600 mt-1">Image uploaded!</p>}
+                {newProduct.imagePath && <p className="text-xs text-blue-600 mt-1">Image uploaded!</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Product Image URL (Optional)</label>
@@ -3102,7 +3140,19 @@ const AdminDashboard = () => {
                     type="number"
                     className="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
                     value={editingProduct.mrp}
-                    onChange={e => setEditingProduct({...editingProduct, mrp: e.target.value})}
+                    onChange={e => {
+                      const mrpVal = parseFloat(e.target.value) || 0;
+                      const discount = parseFloat(editingDiscountPercent) || 0;
+                      const discountedPrice = mrpVal > 0 ? (mrpVal * (1 - discount / 100)).toFixed(2) : '0';
+                      setEditingProduct({
+                        ...editingProduct, 
+                        mrp: e.target.value,
+                        sellingPrice: discountedPrice,
+                        wholesalerPrice: discountedPrice,
+                        retailerPrice: discountedPrice,
+                        mechanicPrice: discountedPrice
+                      });
+                    }}
                     required
                   />
                 </div>
@@ -3199,7 +3249,7 @@ const AdminDashboard = () => {
                   />
                   {uploading && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-600"></div>}
                 </div>
-                {editingProduct.imagePath && <p className="text-xs text-green-600 mt-1">Image uploaded!</p>}
+                {editingProduct.imagePath && <p className="text-xs text-blue-600 mt-1">Image uploaded!</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Product Image URL (Optional)</label>

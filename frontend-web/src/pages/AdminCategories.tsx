@@ -222,7 +222,7 @@ const AdminCategories: React.FC = () => {
                   {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
-              <button onClick={assign} disabled={loading || !assignPartNumber || !assignCategoryId} className="w-full py-3 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 transition-all shadow-lg shadow-green-200 active:scale-[0.98] disabled:opacity-50">
+              <button onClick={assign} disabled={loading || !assignPartNumber || !assignCategoryId} className="w-full py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-[0.98] disabled:opacity-50">
                 Assign Category
               </button>
             </div>

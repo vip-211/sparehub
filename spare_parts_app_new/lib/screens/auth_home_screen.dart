@@ -25,6 +25,13 @@ class _AuthHomeScreenState extends State<AuthHomeScreen>
         await _refresh();
       }
     });
+    // Check for updates after preloading settings
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await SettingsService.preloadRemoteSettings();
+      if (mounted) {
+        SettingsService.checkAppUpdate(context);
+      }
+    });
   }
 
   @override
