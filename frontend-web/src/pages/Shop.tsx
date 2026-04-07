@@ -8,6 +8,7 @@ import { Search, ShoppingCart, Package, Info, CheckCircle2, Settings, Car, StopC
 import { useLocation } from 'react-router-dom';
 import Skeleton from '../components/Skeleton';
 import BarcodeScanner from '../components/BarcodeScanner';
+import { useExternalScanner } from '../hooks/useExternalScanner';
 
 const Shop: React.FC = () => {
   const { t, tp } = useLanguage();
@@ -18,6 +19,14 @@ const Shop: React.FC = () => {
   const [isListening, setIsListening] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const { addItem } = useCart();
+
+  // Listen for external hardware scanner
+  useExternalScanner((code) => {
+    setSearchTerm(code);
+    // Focus search input if not already
+    const searchInput = document.querySelector('input[placeholder*="search"]') as HTMLInputElement;
+    if (searchInput) searchInput.focus();
+  });
   const currentUser = AuthService.getCurrentUser();
   const location = useLocation();
   const [categoryId, setCategoryId] = useState<number | null>(null);

@@ -361,11 +361,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           backgroundColor: isSuperManager
-              ? Theme.of(context).colorScheme.primary
+              ? AppTheme.adminColor
               : Theme.of(context).colorScheme.error,
-          foregroundColor: isSuperManager
-              ? Theme.of(context).colorScheme.onPrimary
-              : Theme.of(context).colorScheme.onError,
+          foregroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
           actions: [
             const CartBadge(),
             const NotificationBadge(),
@@ -412,7 +412,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   ),
                   decoration: BoxDecoration(
                     color: isSuperManager
-                        ? Theme.of(context).colorScheme.primary
+                        ? AppTheme.adminColor
                         : Theme.of(context).colorScheme.error,
                   ),
                 ),

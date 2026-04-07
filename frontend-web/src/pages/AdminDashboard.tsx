@@ -8,6 +8,7 @@ import { ROLE_SUPER_MANAGER, ROLE_ADMIN, ROLE_MECHANIC, ROLE_RETAILER, ROLE_WHOL
 import AuthService from '../services/auth.service';
 import Skeleton from '../components/Skeleton';
 import BarcodeScanner from '../components/BarcodeScanner';
+import { useExternalScanner } from '../hooks/useExternalScanner';
 import useSound from 'use-sound';
 import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
@@ -130,6 +131,13 @@ const AdminDashboard = () => {
   const [billingSearchResults, setBillingSearchResults] = useState<any[]>([]);
   const [showScanner, setShowScanner] = useState(false);
 
+  // Listen for external hardware scanner in Billing section
+  useExternalScanner((code) => {
+    if (activeTab === 'billing' || activeTab === 'invoicing') {
+      handleExternalScan(code);
+    }
+  });
+
   const addProductToBill = (product: any) => {
     const existing = billingItems.find(i => i.id === product.id);
     if (existing) {
@@ -201,6 +209,38 @@ const AdminDashboard = () => {
       }
     } else if (term.length === 0) {
       setBillingSearchResults([]);
+    }
+  };
+
+  const handleExternalScan = async (code: string) => {
+    try {
+      // First try searching specifically for this code
+      const res = await api.get(`products/search?query=${code}&page=0&size=5&sortBy=id&direction=desc`);
+      const results = res.data.content || [];
+      
+      // If we find an exact match for part number, add it directly
+      const exactMatch = results.find((p: any) => p.partNumber === code || p.barcode === code);
+      if (exactMatch) {
+        addProductToBill(exactMatch);
+        setBillingSearchTerm('');
+        setBillingSearchResults([]);
+        return;
+      }
+
+      // If only one result, add it
+      if (results.length === 1) {
+        addProductToBill(results[0]);
+        setBillingSearchTerm('');
+        setBillingSearchResults([]);
+        return;
+      }
+
+      // Otherwise just show the search results
+      setBillingSearchTerm(code);
+      setBillingSearchResults(results);
+    } catch (err) {
+      console.error('External scan handling error:', err);
+      handleBillSearch(code);
     }
   };
 

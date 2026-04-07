@@ -60,12 +60,15 @@ class _OffersScreenState extends State<OffersScreen>
       appBar: AppBar(
         title: const Text('Exclusive Offers',
             style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: Theme.of(context).colorScheme.onPrimary,
+          indicatorColor: Theme.of(context).appBarTheme.foregroundColor,
           indicatorWeight: 3,
+          labelColor: Theme.of(context).appBarTheme.foregroundColor,
+          unselectedLabelColor:
+              Theme.of(context).appBarTheme.foregroundColor?.withOpacity(0.7),
           labelStyle:
               const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           tabs: const [
@@ -100,7 +103,7 @@ class _OffersScreenState extends State<OffersScreen>
             const SizedBox(height: 16),
             Text(
               'No active offers at the moment.',
-              style: TextStyle(color: const Color.fromARGB(255, 12, 12, 12), fontSize: 16),
+              style: TextStyle(color: Colors.black87, fontSize: 16),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
@@ -144,6 +147,7 @@ class _OffersScreenState extends State<OffersScreen>
 
           return Card(
             elevation: 4,
+            color: Colors.white,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             child: Column(
@@ -203,10 +207,10 @@ class _OffersScreenState extends State<OffersScreen>
                         product.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+                        style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
-                            color: Theme.of(context).colorScheme.onSurface),
+                            color: Colors.black),
                       ),
                       const SizedBox(height: 4),
                       Row(
@@ -225,9 +229,7 @@ class _OffersScreenState extends State<OffersScreen>
                               '₹${product.mrp.toStringAsFixed(0)}',
                               style: TextStyle(
                                 decoration: TextDecoration.lineThrough,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
+                                color: Colors.grey.shade600,
                                 fontSize: 12,
                               ),
                             ),

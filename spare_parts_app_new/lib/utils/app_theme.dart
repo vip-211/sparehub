@@ -12,7 +12,7 @@ class AppTheme {
   static const Color staffColor = Color(0xFF14B8A6);      // Teal
   
   static const Color _surfaceLight = Colors.white;
-  static const Color _backgroundLight = Color(0xFFF8F9FA);
+  static const Color _backgroundLight = Colors.white; // Changed from Color(0xFFF8F9FA) to Colors.white
 
   static const double radiusLg = 24;
   static const double radiusMd = 18;
@@ -49,7 +49,9 @@ class AppTheme {
       useMaterial3: true,
       typography: Typography.material2021(),
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: _backgroundLight,
+      scaffoldBackgroundColor: Colors.white,
+      canvasColor: Colors.white,
+      dialogBackgroundColor: Colors.white,
       fontFamily: 'Inter',
       textTheme: _textTheme(dark: false),
       appBarTheme: AppBarTheme(
@@ -57,6 +59,7 @@ class AppTheme {
         elevation: 0,
         backgroundColor: seed,
         foregroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent, // Disable Material 3 surface tinting
         titleTextStyle: const TextStyle(
           fontSize: 22,
           fontWeight: FontWeight.w900,
@@ -67,6 +70,9 @@ class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: Colors.white,
+        elevation: 10,
+        shadowColor: Colors.black.withOpacity(0.3),
+        surfaceTintColor: Colors.transparent, // Disable Material 3 surface tinting
         indicatorColor: seed.withOpacity(0.1),
         iconTheme: MaterialStateProperty.resolveWith((states) {
           if (states.contains(MaterialState.selected)) {
