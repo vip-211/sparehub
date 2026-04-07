@@ -13,6 +13,8 @@ import com.spareparts.inventory.observer.InAppNotificationObserver;
 import com.spareparts.inventory.observer.ProductSubject;
 import com.spareparts.inventory.observer.WhatsAppNotificationObserver;
 import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -26,6 +28,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class ProductService extends ProductSubject {
+    private static final Logger log = LoggerFactory.getLogger(ProductService.class);
+
     @Autowired
     private ProductRepository productRepository;
 
@@ -100,6 +104,11 @@ public class ProductService extends ProductSubject {
     public ProductDto addProduct(ProductDto productDto, Long wholesalerId) {
         User wholesaler = userRepository.findById(wholesalerId)
                 .orElseThrow(() -> new RuntimeException("Wholesaler not found"));
+
+        // Check for duplicate part number
+        productRepository.findByPartNumberAndDeletedFalse(productDto.getPartNumber()).ifPresent(p -> {
+            throw new RuntimeException("Product with part number " + productDto.getPartNumber() + " already exists.");
+        });
 
         Product product = new Product();
         product.setName(productDto.getName());
@@ -217,39 +226,51 @@ public class ProductService extends ProductSubject {
         
         List<Category> allCategories = categoryRepository.findAll();
 
-        List<Product> products = productDtos.stream().map(dto -> {
-            Product product = new Product();
-            product.setName(dto.getName());
-            product.setPartNumber(dto.getPartNumber());
-            product.setRackNumber(dto.getRackNumber());
-            product.setMrp(dto.getMrp());
-            product.setSellingPrice(dto.getSellingPrice());
-            product.setWholesalerPrice(dto.getWholesalerPrice());
-            product.setRetailerPrice(dto.getRetailerPrice());
-            product.setMechanicPrice(dto.getMechanicPrice());
-            product.setStock(dto.getStock());
-            product.setEnabled(dto.isEnabled());
-            product.setImagePath(dto.getImagePath());
-            product.setImageLink(dto.getImageLink());
-            product.setWholesaler(wholesaler);
+        List<Product> products = productDtos.stream()
+            .filter(dto -> {
+                // Filter out products that already exist with the same part number
+                boolean exists = productRepository.findByPartNumberAndDeletedFalse(dto.getPartNumber()).isPresent();
+                if (exists) {
+                    log.warn("Skipping duplicate product in bulk upload. Part Number: {}", dto.getPartNumber());
+                }
+                return !exists;
+            })
+            .map(dto -> {
+                Product product = new Product();
+                product.setName(dto.getName());
+                product.setPartNumber(dto.getPartNumber());
+                product.setRackNumber(dto.getRackNumber());
+                product.setMrp(dto.getMrp());
+                product.setSellingPrice(dto.getSellingPrice());
+                product.setWholesalerPrice(dto.getWholesalerPrice());
+                product.setRetailerPrice(dto.getRetailerPrice());
+                product.setMechanicPrice(dto.getMechanicPrice());
+                product.setStock(dto.getStock());
+                product.setEnabled(dto.isEnabled());
+                product.setImagePath(dto.getImagePath());
+                product.setImageLink(dto.getImageLink());
+                product.setWholesaler(wholesaler);
 
-            Long categoryId = dto.getCategoryId();
-            if (categoryId == null) {
-                categoryId = findBestCategoryMatchInList(dto.getName(), dto.getPartNumber(), allCategories);
-            }
-            if (categoryId != null) {
-                final Long finalCid = categoryId;
-                allCategories.stream().filter(c -> c.getId().equals(finalCid)).findFirst().ifPresent(product::setCategory);
-            }
+                Long categoryId = dto.getCategoryId();
+                if (categoryId == null) {
+                    categoryId = findBestCategoryMatchInList(dto.getName(), dto.getPartNumber(), allCategories);
+                }
+                if (categoryId != null) {
+                    final Long finalCid = categoryId;
+                    allCategories.stream().filter(c -> c.getId().equals(finalCid)).findFirst().ifPresent(product::setCategory);
+                }
 
-            return product;
-        }).collect(Collectors.toList());
+                return product;
+            })
+            .collect(Collectors.toList());
         
-        productRepository.saveAll(products);
-        
-        // Notify observers for each new product in bulk addition
-        for (Product product : products) {
-            notifyObservers(product);
+        if (!products.isEmpty()) {
+            productRepository.saveAll(products);
+            
+            // Notify observers for each new product in bulk addition
+            for (Product product : products) {
+                notifyObservers(product);
+            }
         }
     }
 
