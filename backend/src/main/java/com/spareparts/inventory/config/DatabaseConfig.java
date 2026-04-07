@@ -1,5 +1,7 @@
 package com.spareparts.inventory.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,6 +12,7 @@ import java.net.URI;
 
 @Configuration
 public class DatabaseConfig {
+    private static final Logger log = LoggerFactory.getLogger(DatabaseConfig.class);
 
     @Bean
     @Primary
@@ -21,7 +24,7 @@ public class DatabaseConfig {
 
         if (urlToParse != null && !urlToParse.isEmpty()) {
             try {
-                System.out.println("DatabaseConfig: Attempting to parse URL: " + urlToParse.replaceAll(":.*@", ":****@"));
+                log.info("DatabaseConfig: Attempting to parse database URL");
                 
                 // Remove all possible prefixes to get a clean user:pass@host:port/db string
                 String cleanUrl = urlToParse
@@ -35,7 +38,7 @@ public class DatabaseConfig {
                 URI uri = new URI(cleanUrl);
                 
                 if (uri.getUserInfo() == null) {
-                    System.out.println("DatabaseConfig: No userInfo found, using as standard JDBC URL");
+                    log.info("DatabaseConfig: No userInfo found, using as standard JDBC URL");
                     return DataSourceBuilder.create()
                             .url(urlToParse.startsWith("jdbc:") ? urlToParse : "jdbc:postgresql://" + cleanUrl.replace("postgresql://", ""))
                             .build();
@@ -47,7 +50,7 @@ public class DatabaseConfig {
                 String username = userInfo[0];
                 String password = userInfo.length > 1 ? userInfo[1] : "";
 
-                System.out.println("DatabaseConfig: Successfully parsed components. Host: " + uri.getHost());
+                log.info("DatabaseConfig: Successfully parsed components. Host: {}", uri.getHost());
                 
                 return DataSourceBuilder.create()
                         .url(jdbcUrl)
@@ -56,11 +59,11 @@ public class DatabaseConfig {
                         .driverClassName("org.postgresql.Driver")
                         .build();
             } catch (Exception e) {
-                System.err.println("DatabaseConfig: Critical error parsing database URL: " + e.getMessage());
+                log.error("DatabaseConfig: Critical error parsing database URL: {}", e.getMessage());
             }
         }
 
-        System.out.println("DatabaseConfig: Falling back to application.properties defaults");
+        log.info("DatabaseConfig: Falling back to application.properties defaults");
         return DataSourceBuilder.create().build();
     }
 }

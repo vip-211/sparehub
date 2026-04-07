@@ -23,6 +23,7 @@ import java.util.ArrayList;
 @RestController
 @RequestMapping("/api/ai")
 public class AIController {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AIController.class);
 
     @Autowired
     private AIService aiService;
@@ -63,7 +64,7 @@ public class AIController {
     public ResponseEntity<?> feedback(@RequestBody Map<String, Object> request) {
         // In a real production app, we would save this to a database table 'ai_feedback'
         // For now, we log it to console/server logs as requested for "training"
-        System.out.println("AI Feedback Received: " + request);
+        log.info("AI Feedback Received: {}", request);
         return ResponseEntity.ok(Map.of("message", "Feedback recorded"));
     }
 
@@ -71,7 +72,7 @@ public class AIController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> train(@RequestBody Map<String, Object> request) {
         // Similar to feedback, record corrections for manual model fine-tuning
-        System.out.println("AI Training Correction Received: " + request);
+        log.info("AI Training Correction Received: {}", request);
         return ResponseEntity.ok(Map.of("message", "Correction recorded for training"));
     }
 

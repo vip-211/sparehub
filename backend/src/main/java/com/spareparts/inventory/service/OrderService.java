@@ -71,7 +71,7 @@ public class OrderService {
             // Real-time update for admin dashboard
             messagingTemplate.convertAndSend("/topic/admin/orders", dto);
         } catch (Exception e) {
-            System.err.println("Failed to notify Super Manager of new custom request: " + e.getMessage());
+            log.error("Failed to notify Super Manager of new custom request: {}", e.getMessage());
         }
         
         return dto;
@@ -108,7 +108,7 @@ public class OrderService {
             String body = "Your custom order request status is " + status;
             fcmService.sendOrderStatusToUser(request.getCustomer().getId(), request.getId(), title, body);
         } catch (Exception e) {
-            System.err.println("Error sending custom order status notification to customer: " + e.getMessage());
+            log.error("Error sending custom order status notification to customer: {}", e.getMessage());
         }
         
         return dto;
@@ -132,7 +132,7 @@ public class OrderService {
 
     @Transactional
     public OrderDto createOrder(OrderRequest orderRequest, Long customerId) {
-        System.out.println("Creating order for customerId: " + customerId + " and sellerId: " + orderRequest.getSellerId());
+        log.debug("Creating order for customerId: {} and sellerId: {}", customerId, orderRequest.getSellerId());
         
         User customer = userRepository.findById(customerId)
                 .orElseThrow(() -> new RuntimeException("Customer not found: " + customerId));
@@ -146,12 +146,12 @@ public class OrderService {
 
         BigDecimal totalAmount = BigDecimal.ZERO;
         for (OrderItemDto itemDto : orderRequest.getItems()) {
-            System.out.println("Processing item: " + itemDto.getProductName() + " (ID: " + itemDto.getProductId() + ")");
+            log.debug("Processing item: {} (ID: {})", itemDto.getProductName(), itemDto.getProductId());
             Product product = productRepository.findById(itemDto.getProductId())
                     .orElseThrow(() -> new RuntimeException("Product not found: " + itemDto.getProductId()));
 
             if (product.getStock() < itemDto.getQuantity()) {
-                System.err.println("Insufficient stock for " + product.getName() + ". Available: " + product.getStock() + ", Requested: " + itemDto.getQuantity());
+                log.error("Insufficient stock for {}. Available: {}, Requested: {}", product.getName(), product.getStock(), itemDto.getQuantity());
                 throw new RuntimeException("Insufficient stock for product: " + product.getName() + " (Available: " + product.getStock() + ")");
             }
 

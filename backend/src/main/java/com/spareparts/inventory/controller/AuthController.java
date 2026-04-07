@@ -246,23 +246,20 @@ public class AuthController {
         List<Otp> storedOtps = otpRepository.findAllByEmailOrderByExpiryTimeDesc(email);
         
         if (storedOtps.isEmpty()) {
-            System.out.println("OTP Verification Failed for " + email + ". No OTP found in DB.");
             return ResponseEntity.badRequest().body(new MessageResponse("No OTP found. Please request a new one."));
         }
 
         Otp validOtp = null;
         for (int i = 0; i < Math.min(storedOtps.size(), 2); i++) {
             Otp candidate = storedOtps.get(i);
-            System.out.println("Candidate OTP [" + i + "]: " + candidate.getOtp());
             if (candidate.getOtp().equals(otp) && !candidate.isExpired()) {
                 validOtp = candidate;
                 break;
             }
         }
 
-        System.out.println("Received OTP: " + otp);
         if (validOtp == null) {
-            System.out.println("OTP Mismatch for " + email + ". Received: " + otp + ". Latest stored: " + storedOtps.get(0).getOtp());
+            log.warn("OTP Mismatch for {}. Received: {}", email, otp);
             return ResponseEntity.badRequest().body(new MessageResponse("Invalid or expired OTP. Please use the latest code from your email."));
         }
 
@@ -348,23 +345,20 @@ public class AuthController {
             List<Otp> storedOtps = otpRepository.findAllByEmailOrderByExpiryTimeDesc(signUpRequest.getEmail());
             
             if (storedOtps.isEmpty()) {
-                System.out.println("Signup OTP Verification Failed for " + signUpRequest.getEmail() + ". No OTP found.");
                 return ResponseEntity.badRequest().body(new MessageResponse("No OTP found. Please request a new one."));
             }
 
             Otp validOtp = null;
             for (int i = 0; i < Math.min(storedOtps.size(), 2); i++) {
                 Otp candidate = storedOtps.get(i);
-                System.out.println("Signup Candidate OTP [" + i + "]: " + candidate.getOtp());
                 if (candidate.getOtp().equals(signUpRequest.getOtp()) && !candidate.isExpired()) {
                     validOtp = candidate;
                     break;
                 }
             }
 
-            System.out.println("Signup Received OTP: " + signUpRequest.getOtp());
             if (validOtp == null) {
-                System.out.println("Signup OTP Mismatch for " + signUpRequest.getEmail() + ". Received: " + signUpRequest.getOtp());
+                log.warn("Signup OTP Mismatch for {}. Received: {}", signUpRequest.getEmail(), signUpRequest.getOtp());
                 return ResponseEntity.badRequest().body(new MessageResponse("Invalid or expired OTP."));
             }
             
@@ -453,23 +447,20 @@ public class AuthController {
         List<Otp> storedOtps = otpRepository.findAllByEmailOrderByExpiryTimeDesc(email);
         
         if (storedOtps.isEmpty()) {
-            System.out.println("Reset Password OTP Verification Failed for " + email + ". No OTP found.");
             return ResponseEntity.badRequest().body(new MessageResponse("No OTP found. Please request a new one."));
         }
 
         Otp validOtp = null;
         for (int i = 0; i < Math.min(storedOtps.size(), 2); i++) {
             Otp candidate = storedOtps.get(i);
-            System.out.println("Reset Candidate OTP [" + i + "]: " + candidate.getOtp());
             if (candidate.getOtp().equals(otp) && !candidate.isExpired()) {
                 validOtp = candidate;
                 break;
             }
         }
 
-        System.out.println("Reset Received OTP: " + otp);
         if (validOtp == null) {
-            System.out.println("Reset Password OTP Mismatch for " + email + ". Received: " + otp);
+            log.warn("Reset Password OTP Mismatch for {}. Received: {}", email, otp);
             return ResponseEntity.badRequest().body(new MessageResponse("Invalid or expired OTP."));
         }
 

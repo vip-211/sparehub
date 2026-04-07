@@ -34,12 +34,12 @@ public class FileController {
             Path root = Paths.get(uploadDir).toAbsolutePath().normalize();
             if (!Files.exists(root)) {
                 Files.createDirectories(root);
-                System.out.println("Created upload directory at: " + root.toString());
+                log.info("Created upload directory at: {}", root);
             } else {
-                System.out.println("Using existing upload directory at: " + root.toString());
+                log.info("Using existing upload directory at: {}", root);
             }
         } catch (IOException e) {
-            System.err.println("Could not initialize upload directory: " + e.getMessage());
+            log.error("Could not initialize upload directory: {}", e.getMessage());
         }
     }
 
@@ -54,10 +54,10 @@ public class FileController {
             String filename = UUID.randomUUID().toString() + "_" + file.getOriginalFilename().replaceAll("\\s+", "_");
             Files.copy(file.getInputStream(), root.resolve(filename));
 
-            System.out.println("File uploaded successfully: " + filename + " to " + root.toString());
+            log.info("File uploaded successfully: {}", filename);
             return ResponseEntity.ok(Map.of("url", "/api/files/display/" + filename));
         } catch (IOException e) {
-            System.err.println("File upload failed: " + e.getMessage());
+            log.error("File upload failed: {}", e.getMessage());
             return ResponseEntity.internalServerError().body("Could not upload file: " + e.getMessage());
         }
     }
@@ -79,7 +79,7 @@ public class FileController {
                         .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
                         .body(resource);
             } else {
-                System.err.println("File not found for display: " + filename + " at " + file.toString());
+                log.warn("File not found for display: {}", filename);
                 return ResponseEntity.notFound().build();
             }
         } catch (MalformedURLException e) {

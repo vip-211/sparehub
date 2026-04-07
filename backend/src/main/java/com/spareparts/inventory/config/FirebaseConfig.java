@@ -3,6 +3,8 @@ package com.spareparts.inventory.config;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 
@@ -15,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 
 @Configuration
 public class FirebaseConfig {
+    private static final Logger log = LoggerFactory.getLogger(FirebaseConfig.class);
 
     @Value("${firebase.service-account.path:}")
     private String serviceAccountPath;
@@ -27,15 +30,15 @@ public class FirebaseConfig {
         InputStream serviceAccount = null;
         try {
             if (serviceAccountJson != null && !serviceAccountJson.isEmpty()) {
-                System.out.println("FirebaseConfig: Initializing with service account JSON from environment.");
+                log.info("FirebaseConfig: Initializing with service account JSON from environment.");
                 serviceAccount = new ByteArrayInputStream(serviceAccountJson.getBytes(StandardCharsets.UTF_8));
             } else if (serviceAccountPath != null && !serviceAccountPath.isEmpty()) {
-                System.out.println("FirebaseConfig: Initializing with service account file: " + serviceAccountPath);
+                log.info("FirebaseConfig: Initializing with service account file: {}", serviceAccountPath);
                 serviceAccount = new FileInputStream(serviceAccountPath);
             }
 
             if (serviceAccount == null) {
-                System.out.println("FirebaseConfig: No service account provided, skipping initialization.");
+                log.info("FirebaseConfig: No service account provided, skipping initialization.");
                 return;
             }
 
@@ -43,9 +46,9 @@ public class FirebaseConfig {
             byte[] content = serviceAccount.readAllBytes();
             String jsonContent = new String(content, StandardCharsets.UTF_8);
             if (jsonContent.contains("\"project_info\"") || jsonContent.contains("\"client\"")) {
-                System.err.println("FirebaseConfig: ERROR! It looks like you're using 'google-services.json' (the mobile client config) " +
+                log.error("FirebaseConfig: ERROR! It looks like you're using 'google-services.json' (the mobile client config) " +
                         "instead of a 'Firebase Service Account Key' (the server/admin config).");
-                System.err.println("FirebaseConfig: Please download the correct JSON from: Firebase Console -> Project Settings -> Service Accounts -> Generate New Private Key.");
+                log.error("FirebaseConfig: Please download the correct JSON from: Firebase Console -> Project Settings -> Service Accounts -> Generate New Private Key.");
                 return;
             }
 
@@ -55,10 +58,10 @@ public class FirebaseConfig {
 
             if (FirebaseApp.getApps().isEmpty()) {
                 FirebaseApp.initializeApp(options);
-                System.out.println("FirebaseConfig: Firebase has been initialized.");
+                log.info("FirebaseConfig: Firebase has been initialized.");
             }
         } catch (IOException e) {
-            System.err.println("FirebaseConfig: Error initializing Firebase: " + e.getMessage());
+            log.error("FirebaseConfig: Error initializing Firebase: {}", e.getMessage());
         } finally {
             if (serviceAccount != null) {
                 try {

@@ -4,6 +4,8 @@ import com.spareparts.inventory.entity.Product;
 import com.spareparts.inventory.entity.User;
 import com.spareparts.inventory.repository.SystemSettingRepository;
 import com.spareparts.inventory.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -11,6 +13,7 @@ import java.util.List;
 
 @Component
 public class WhatsAppNotificationObserver implements ProductObserver {
+    private static final Logger log = LoggerFactory.getLogger(WhatsAppNotificationObserver.class);
 
     @Autowired
     private SystemSettingRepository systemSettingRepository;
@@ -26,18 +29,15 @@ public class WhatsAppNotificationObserver implements ProductObserver {
         }
 
         List<User> users = userRepository.findByDeletedFalse();
+        int sentCount = 0;
         
-        String message = "New Spare Part Alert! \n" +
-                         "Name: " + product.getName() + "\n" +
-                         "Part No: " + product.getPartNumber() + "\n" +
-                         "Check it out in Parts Mitra!";
-
         for (User user : users) {
             if (user.getPhone() != null && !user.getPhone().isEmpty()) {
                 // Simulating WhatsApp message sending to each user
-                System.out.println("[WHATSAPP SENT TO " + user.getPhone() + "]: " + message);
+                sentCount++;
             }
         }
+        log.info("WhatsApp Simulation: Processed alerts for {} users for product: {}", sentCount, product.getName());
     }
 
     @Override
@@ -47,17 +47,14 @@ public class WhatsAppNotificationObserver implements ProductObserver {
 
     public void sendOfferNotification(Product product) {
         List<User> users = userRepository.findByDeletedFalse();
-        String offerType = product.getOfferType().name().toLowerCase();
-        
-        String message = "🔥 NEW " + offerType.toUpperCase() + " OFFER! 🔥\n" +
-                         "Product: " + product.getName() + "\n" +
-                         "Check out this special offer in Parts Mitra now!";
+        int sentCount = 0;
 
         for (User user : users) {
             if (user.getPhone() != null && !user.getPhone().isEmpty()) {
                 // Simulating WhatsApp message sending
-                System.out.println("[WHATSAPP SENT TO " + user.getPhone() + "]: " + message);
+                sentCount++;
             }
         }
+        log.info("WhatsApp Simulation: Processed offer alerts for {} users for product: {}", sentCount, product.getName());
     }
 }
