@@ -46,8 +46,10 @@ public class AIService {
 
     @Transactional(readOnly = true)
     public String askAI(String prompt, String provider) {
-        // Debug Log: Check if API keys are loaded (masked for security)
-        log.info("AIService: Checking configuration... Gemini Key Present: {}, OpenAI Key Present: {}", 
+        String requestedProvider = provider == null ? "" : provider.toLowerCase();
+        // Debug Log: Check configuration and requested provider
+        log.info("AIService: Request received. Provider: '{}', Gemini Key Present: {}, OpenAI Key Present: {}", 
+                 requestedProvider,
                  (geminiApiKey != null && !geminiApiKey.isEmpty()), 
                  (openaiApiKey != null && !openaiApiKey.isEmpty()));
 
@@ -59,13 +61,13 @@ public class AIService {
                     .flatMap(t -> productRepository.findByNameContainingIgnoreCaseOrPartNumberContainingIgnoreCase(t, t).stream())
                     .distinct()
                     .limit(10)
-                    .map(p -> p.getName() + " (Part: " + p.getPartNumber() + ") • Price: ₹" + p.getSellingPrice() + " • Stock: " + p.getStock())
+                    .map(prod -> prod.getName() + " (Part: " + prod.getPartNumber() + ") • Price: ₹" + prod.getSellingPrice() + " • Stock: " + prod.getStock())
                     .collect(Collectors.joining(", "));
 
             String productContext = productRepository.findAll().stream()
-                    .filter(p -> !p.isDeleted() && p.isEnabled())
+                    .filter(prod -> !prod.isDeleted() && prod.isEnabled())
                     .limit(20)
-                    .map(p -> p.getName() + " (Part: " + p.getPartNumber() + ")")
+                    .map(prod -> prod.getName() + " (Part: " + prod.getPartNumber() + ")")
                     .collect(Collectors.joining(", "));
 
             String fullContext = matchedContext.isEmpty() ? productContext : "Matching parts found: " + matchedContext + ". General sample: " + productContext;
@@ -78,8 +80,7 @@ public class AIService {
                     "3. If no matching parts are found, suggest searching by part number or photo. " +
                     "4. Be professional and concise.";
 
-            String p = provider == null ? "" : provider.toLowerCase();
-            if ("openai".equals(p)) {
+            if ("openai".equals(requestedProvider)) {
                 HttpHeaders headers = new HttpHeaders();
                 headers.setContentType(MediaType.APPLICATION_JSON);
                 headers.setBearerAuth(openaiApiKey);
@@ -106,7 +107,7 @@ public class AIService {
                 return "I couldn't generate a response.";
             }
 
-            if ("gemini".equals(p) || p.isEmpty()) {
+            if ("gemini".equals(requestedProvider) || requestedProvider.isEmpty()) {
                 if (geminiApiKey == null || geminiApiKey.isEmpty()) {
                     if (openaiApiKey != null && !openaiApiKey.isEmpty()) {
                         // Fallback to OpenAI only if Gemini key missing and OpenAI available
@@ -168,7 +169,7 @@ public class AIService {
                 if (error != null) return "AI service error: " + error.toString();
                 return "I couldn't generate a response.";
             }
-            if ("local".equals(p) || ((openaiApiKey == null || openaiApiKey.isEmpty()) && (geminiApiKey == null || geminiApiKey.isEmpty()))) {
+            if ("local".equals(requestedProvider) || ((openaiApiKey == null || openaiApiKey.isEmpty()) && (geminiApiKey == null || geminiApiKey.isEmpty()))) {
                 String q = prompt == null ? "" : prompt.trim();
                 if (q.isEmpty()) return "Please describe the part or question.";
                 List<String> localTokens = List.of(q.split("\\W+"));
@@ -196,9 +197,9 @@ public class AIService {
     public String searchByPhoto(MultipartFile image, String provider) {
         try {
             String productContext = productRepository.findAll().stream()
-                    .filter(p -> !p.isDeleted() && p.isEnabled())
+                    .filter(prod -> !prod.isDeleted() && prod.isEnabled())
                     .limit(30)
-                    .map(p -> p.getName() + " (Part: " + p.getPartNumber() + ")")
+                    .map(prod -> prod.getName() + " (Part: " + prod.getPartNumber() + ")")
                     .collect(Collectors.joining(", "));
 
             boolean useOpenAI = "openai".equalsIgnoreCase(provider) || (openaiApiKey != null && !openaiApiKey.isEmpty());
@@ -320,7 +321,7 @@ public class AIService {
                 List<Product> matches = productRepository.findByNameContainingIgnoreCaseOrPartNumberContainingIgnoreCase(text, text);
                 String matched = matches.stream()
                         .limit(10)
-                        .map(p -> p.getName() + " (" + p.getPartNumber() + ")")
+                        .map(prod -> prod.getName() + " (" + prod.getPartNumber() + ")")
                         .collect(Collectors.joining(", "));
                 if (matched.isEmpty()) {
                     return "No matching products found for: " + text;
@@ -373,7 +374,7 @@ public class AIService {
                 List<Product> matches = productRepository.findByNameContainingIgnoreCaseOrPartNumberContainingIgnoreCase(text, text);
                 String matched = matches.stream()
                         .limit(10)
-                        .map(p -> p.getName() + " (" + p.getPartNumber() + ")")
+                        .map(prod -> prod.getName() + " (" + prod.getPartNumber() + ")")
                         .collect(Collectors.joining(", "));
                 if (matched.isEmpty()) {
                     return "No matching products found for: " + text;
