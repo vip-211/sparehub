@@ -452,7 +452,7 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                   IconButton(
                     icon: Icon(
                       isListening ? Icons.mic : Icons.mic_none,
-                      color: isListening ? Colors.red : Colors.blue,
+                      color: isListening ? Colors.red : const Color.fromARGB(255, 5, 63, 50),
                     ),
                     onPressed: () async {
                       if (!isListening) {
@@ -498,7 +498,7 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                   if (pickedImage != null)
                     const Text(
                       'Photo selected',
-                      style: TextStyle(color: Colors.blue),
+                      style: TextStyle(color: Color.fromARGB(255, 10, 197, 141)),
                     ),
                 ],
               ),

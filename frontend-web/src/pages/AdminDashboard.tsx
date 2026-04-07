@@ -3,10 +3,11 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import api, { API_BASE_URL } from '../services/api';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
-import { Users, ShoppingBag, BarChart2, CheckCircle, XCircle, Plus, Package, UserPlus, Upload, Truck, Trash2, RotateCcw, Settings, Bell, MessageSquare, Search, Star, FileText, List, LayoutGrid, Store } from 'lucide-react';
+import { Users, ShoppingBag, BarChart2, CheckCircle, XCircle, Plus, Package, UserPlus, Upload, Truck, Trash2, RotateCcw, Settings, Bell, MessageSquare, Search, Star, FileText, List, LayoutGrid, Store, ScanBarcode } from 'lucide-react';
 import { ROLE_SUPER_MANAGER, ROLE_ADMIN, ROLE_MECHANIC, ROLE_RETAILER, ROLE_WHOLESALER, ROLE_STAFF } from '../services/constants';
 import AuthService from '../services/auth.service';
 import Skeleton from '../components/Skeleton';
+import BarcodeScanner from '../components/BarcodeScanner';
 import useSound from 'use-sound';
 import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
@@ -127,6 +128,7 @@ const AdminDashboard = () => {
   const [billingDiscountType, setBillingDiscountType] = useState<'RS' | '%'>('RS');
   const [billingSearchTerm, setBillingSearchTerm] = useState('');
   const [billingSearchResults, setBillingSearchResults] = useState<any[]>([]);
+  const [showScanner, setShowScanner] = useState(false);
 
   const addProductToBill = (product: any) => {
     const existing = billingItems.find(i => i.id === product.id);
@@ -2099,6 +2101,13 @@ const AdminDashboard = () => {
             <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
               <h3 className="font-bold text-gray-900 mb-4 uppercase tracking-widest text-xs">2. Add Products</h3>
               <div className="flex gap-2">
+                <button
+                  onClick={() => setShowScanner(true)}
+                  className="bg-white border border-gray-200 text-gray-700 p-3 rounded-xl hover:border-primary-500 hover:text-primary-600 transition shadow-sm"
+                  title="Scan Barcode"
+                >
+                  <ScanBarcode size={20} />
+                </button>
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                   <input
@@ -2258,6 +2267,13 @@ const AdminDashboard = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {showScanner && (
+        <BarcodeScanner 
+          onScanSuccess={(text) => handleBillSearch(text)}
+          onClose={() => setShowScanner(false)}
+        />
       )}
 
       {activeTab === 'requests' && (

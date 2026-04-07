@@ -11,8 +11,9 @@ import '../widgets/ai_chatbot_widget.dart';
 import '../services/settings_service.dart';
 import '../widgets/cart_badge.dart';
 import '../widgets/notification_badge.dart';
-import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
+import '../services/auth_service.dart';
+import '../utils/app_theme.dart';
 
 class WholesalerDashboard extends StatefulWidget {
   const WholesalerDashboard({super.key});
@@ -51,7 +52,6 @@ class _WholesalerDashboardState extends State<WholesalerDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
     final args = ModalRoute.of(context)?.settings.arguments;
     if (!_bannerShown && args is Map && (args['offerType'] != null)) {
       _incomingOfferType = args['offerType'] as String?;
@@ -113,117 +113,112 @@ class _WholesalerDashboardState extends State<WholesalerDashboard> {
               ),
             ],
             backgroundColor:
-                Theme.of(context).colorScheme.surfaceContainerHighest,
+                Theme.of(context).colorScheme.surfaceVariant,
           ),
         );
       });
     }
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) return;
-        final shouldExit = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Exit App?'),
-            content: const Text('Do you want to exit the application?'),
+    return Theme(
+      data: AppTheme.lightWithSeed(AppTheme.wholesalerColor),
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) async {
+          if (didPop) return;
+          final shouldExit = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Exit App?'),
+              content: const Text('Do you want to exit the application?'),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text('No')),
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: const Text('Yes')),
+              ],
+            ),
+          );
+          if (shouldExit == true) {
+            SystemNavigator.pop();
+          }
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Parts Mitra'),
+                Text(
+                  'Wholesaler Dashboard',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.normal,
+                  ),
+                ),
+              ],
+            ),
             actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text('No')),
-              TextButton(
-                  onPressed: () => Navigator.pop(ctx, true),
-                  child: const Text('Yes')),
+              IconButton(
+                icon: const Icon(Icons.settings),
+                onPressed: () => Navigator.of(context).pushNamed('/settings'),
+              ),
+              IconButton(
+                icon: const Icon(Icons.logout),
+                onPressed: () => AuthService().logout().then((_) {
+                  Navigator.of(context).pushReplacementNamed('/login');
+                }),
+              ),
+              const CartBadge(),
+              const NotificationBadge(),
+              const SizedBox(width: 8),
             ],
           ),
-        );
-        if (shouldExit == true) {
-          SystemNavigator.pop();
-        }
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Parts Mitra'),
-              Text(
-                'Wholesaler Dashboard',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.normal,
-                ),
+          body: FutureBuilder<bool>(
+            future: SettingsService.isAiChatbotEnabled(),
+            builder: (context, snap) {
+              final ai = snap.data ?? true;
+              return Stack(
+                children: [
+                  _buildPage(_selectedIndex),
+                  if (ai) const AIChatbotWidget(),
+                ],
+              );
+            },
+          ),
+          bottomNavigationBar: NavigationBar(
+            selectedIndex: _selectedIndex,
+            onDestinationSelected: _onItemTapped,
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.store_outlined),
+                selectedIcon: Icon(Icons.store),
+                label: 'Shop',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.local_offer_outlined),
+                selectedIcon: Icon(Icons.local_offer),
+                label: 'Offers',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.bar_chart_outlined),
+                selectedIcon: Icon(Icons.bar_chart),
+                label: 'Reports',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.shopping_bag_outlined),
+                selectedIcon: Icon(Icons.shopping_bag),
+                label: 'Orders',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.person_outline),
+                selectedIcon: Icon(Icons.person),
+                label: 'Profile',
               ),
             ],
           ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.settings),
-              onPressed: () => Navigator.of(context).pushNamed('/settings'),
-            ),
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.brightness_6_outlined),
-              onSelected: (val) {
-                final tp = Provider.of<ThemeProvider>(context, listen: false);
-                if (val == 'system') tp.setThemeMode(ThemeMode.system);
-                if (val == 'light') tp.setThemeMode(ThemeMode.light);
-                if (val == 'dark') tp.setThemeMode(ThemeMode.dark);
-              },
-              itemBuilder: (ctx) => const [
-                PopupMenuItem(value: 'system', child: Text('System Theme')),
-                PopupMenuItem(value: 'light', child: Text('Light Theme')),
-                PopupMenuItem(value: 'dark', child: Text('Dark Theme')),
-              ],
-            ),
-            const CartBadge(),
-            const NotificationBadge(),
-            const SizedBox(width: 8),
-          ],
-        ),
-        body: FutureBuilder<bool>(
-          future: SettingsService.isAiChatbotEnabled(),
-          builder: (context, snap) {
-            final ai = snap.data ?? true;
-            return Stack(
-              children: [
-                _buildPage(_selectedIndex),
-                if (ai) const AIChatbotWidget(),
-              ],
-            );
-          },
-        ),
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _selectedIndex,
-          onDestinationSelected: _onItemTapped,
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.store_outlined),
-              selectedIcon: Icon(Icons.store),
-              label: 'Shop',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.local_offer_outlined),
-              selectedIcon: Icon(Icons.local_offer),
-              label: 'Offers',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.analytics_outlined),
-              selectedIcon: Icon(Icons.analytics),
-              label: 'Sales',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.history_outlined),
-              selectedIcon: Icon(Icons.history),
-              label: 'History',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.person_outline),
-              selectedIcon: Icon(Icons.person),
-              label: 'Profile',
-            ),
-          ],
         ),
       ),
     );

@@ -4,9 +4,10 @@ import { useCart } from '../context/CartContext';
 import { useLanguage } from '../context/LanguageContext';
 import AuthService from '../services/auth.service';
 import { ROLE_ADMIN, ROLE_MECHANIC, ROLE_RETAILER, ROLE_SUPER_MANAGER, ROLE_WHOLESALER } from '../services/constants';
-import { Search, ShoppingCart, Package, Info, CheckCircle2, Settings, Car, StopCircle, Disc, Droplets, Lightbulb, Battery, LayoutGrid, Mic } from 'lucide-react';
+import { Search, ShoppingCart, Package, Info, CheckCircle2, Settings, Car, StopCircle, Disc, Droplets, Lightbulb, Battery, LayoutGrid, Mic, ScanBarcode } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import Skeleton from '../components/Skeleton';
+import BarcodeScanner from '../components/BarcodeScanner';
 
 const Shop: React.FC = () => {
   const { t, tp } = useLanguage();
@@ -15,6 +16,7 @@ const Shop: React.FC = () => {
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [isListening, setIsListening] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const { addItem } = useCart();
   const currentUser = AuthService.getCurrentUser();
   const location = useLocation();
@@ -174,6 +176,13 @@ const Shop: React.FC = () => {
             />
           </div>
           <button
+            onClick={() => setShowScanner(true)}
+            className="p-4 rounded-2xl bg-white border-2 border-gray-200 hover:border-primary-500 hover:text-primary-600 transition-all shadow-lg shadow-gray-100"
+            title="Scan Barcode"
+          >
+            <ScanBarcode className="w-7 h-7" />
+          </button>
+          <button
             onClick={toggleVoiceSearch}
             className={`p-4 rounded-2xl transition-all shadow-lg ${isListening ? 'bg-red-500 animate-pulse scale-110 shadow-red-200' : 'bg-primary-600 hover:bg-primary-700 shadow-primary-100'}`}
             title="Speak to find parts"
@@ -182,6 +191,14 @@ const Shop: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {showScanner && (
+        <BarcodeScanner 
+          onScanSuccess={(text) => setSearchTerm(text)}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
+
       {categories.length > 0 && (
         <div className="flex flex-wrap gap-3 mb-10 overflow-x-auto pb-2 scrollbar-hide">
           <button

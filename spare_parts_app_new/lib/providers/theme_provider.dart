@@ -5,7 +5,7 @@ import '../services/settings_service.dart';
 class ThemeProvider extends ChangeNotifier {
   ThemeMode _mode = ThemeMode.light; // Force light mode
   ThemeMode get themeMode => _mode;
-  Color _seed = const Color.fromARGB(255, 113, 161, 223);
+  Color _seed = const Color.fromARGB(255, 231, 162, 226);
   Color get seedColor => _seed;
   double _textScale = 1.0;
   double get textScale => _textScale;

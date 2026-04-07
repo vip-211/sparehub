@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const Color _brandPrimary = Color(0xFF1565C0); // Royal Blue (Replaced Emerald Green)
-  static const Color _brandSecondary = Color(0xFF0D47A1); // Darker Blue (Replaced Royal Blue)
+  static const Color _brandPrimary = Color.fromARGB(255, 10, 194, 226); // Royal Blue (Replaced Emerald Green)
+  static const Color _brandSecondary = Color.fromARGB(255, 231, 8, 64); // Darker Blue (Replaced Royal Blue)
+  
+  // Dynamic Dashboard Colors
+  static const Color adminColor = Color(0xFF1E3A8A);      // Deep Blue
+  static const Color mechanicColor = Color(0xFFF59E0B);   // Amber/Orange
+  static const Color retailerColor = Color(0xFF10B981);   // Emerald Green
+  static const Color wholesalerColor = Color(0xFF6366F1); // Indigo
+  static const Color staffColor = Color(0xFF14B8A6);      // Teal
+  
   static const Color _surfaceLight = Colors.white;
   static const Color _backgroundLight = Color(0xFFF8F9FA);
 
@@ -31,8 +39,7 @@ class AppTheme {
   static ThemeData lightWithSeed(Color seed) {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: seed,
-      primary: _brandPrimary,
-      secondary: _brandSecondary,
+      primary: seed,
       surface: _surfaceLight,
       background: _backgroundLight,
       brightness: Brightness.light,
@@ -45,25 +52,46 @@ class AppTheme {
       scaffoldBackgroundColor: _backgroundLight,
       fontFamily: 'Inter',
       textTheme: _textTheme(dark: false),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         centerTitle: false,
         elevation: 0,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Color(0xFF1A1C1E),
-        titleTextStyle: TextStyle(
-          fontSize: 24,
+        backgroundColor: seed,
+        foregroundColor: Colors.white,
+        titleTextStyle: const TextStyle(
+          fontSize: 22,
           fontWeight: FontWeight.w900,
-          color: Color(0xFF1A1C1E),
+          color: Colors.white,
           letterSpacing: -0.5,
         ),
-        iconTheme: IconThemeData(color: Color(0xFF1A1C1E)),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: Colors.white,
+        indicatorColor: seed.withOpacity(0.1),
+        iconTheme: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) {
+            return IconThemeData(color: seed);
+          }
+          return IconThemeData(color: Colors.grey.shade600);
+        }),
+        labelTextStyle: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) {
+            return TextStyle(
+                color: seed, fontSize: 12, fontWeight: FontWeight.w800);
+          }
+          return TextStyle(
+              color: Colors.grey.shade600,
+              fontSize: 12,
+              fontWeight: FontWeight.w500);
+        }),
       ),
       cardTheme: CardThemeData(
-        elevation: 0,
+        elevation: 2,
+        shadowColor: seed.withOpacity(0.1),
         color: _surfaceLight,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusLg),
-          side: BorderSide(color: Colors.grey.shade100, width: 1),
+          side: BorderSide(color: seed.withOpacity(0.05), width: 1),
         ),
         clipBehavior: Clip.antiAlias,
       ),
@@ -80,7 +108,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusMd),
-          borderSide: const BorderSide(color: _brandPrimary, width: 2),
+          borderSide: BorderSide(color: seed, width: 2),
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
@@ -89,55 +117,16 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          elevation: 8,
-          shadowColor: _brandPrimary.withOpacity(0.3),
+          elevation: 4,
+          shadowColor: seed.withOpacity(0.3),
           padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 32),
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(radiusMd)),
-          backgroundColor: _brandPrimary,
+          backgroundColor: seed,
           foregroundColor: Colors.white,
           textStyle: const TextStyle(
               fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 0.5),
         ),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: _brandPrimary,
-          side: const BorderSide(color: _brandPrimary, width: 1.4),
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 28),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(radiusMd)),
-          textStyle: const TextStyle(fontWeight: FontWeight.w700),
-        ),
-      ),
-      textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: _brandPrimary,
-          textStyle: const TextStyle(fontWeight: FontWeight.w700),
-        ),
-      ),
-      listTileTheme: const ListTileThemeData(
-        dense: false,
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      ),
-      snackBarTheme: SnackBarThemeData(
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xFF1A1C1E),
-        contentTextStyle:
-            const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radiusMd)),
-      ),
-      chipTheme: ChipThemeData(
-        backgroundColor: _brandPrimary.withOpacity(0.08),
-        labelStyle:
-            const TextStyle(color: _brandPrimary, fontWeight: FontWeight.w700),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      ),
-      dividerTheme: DividerThemeData(
-        color: Colors.grey.shade200,
-        thickness: 1,
-        space: 24,
       ),
     );
   }

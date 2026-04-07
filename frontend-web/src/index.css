@@ -44,4 +44,52 @@ h1 {
   padding: 0;
 }
 
+/* html5-qrcode styles override */
+#reader {
+  border: none !important;
+  width: 100% !important;
+  margin: 0 auto !important;
+}
+
+#reader__scan_region {
+  background: white !important;
+  border-radius: 1rem !important;
+}
+
+#reader__dashboard_section_csr button {
+  padding: 10px 20px !important;
+  border-radius: 12px !important;
+  border: 2px solid #000 !important;
+  background: white !important;
+  color: black !important;
+  font-weight: 800 !important;
+  font-size: 14px !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+  margin: 5px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+#reader__dashboard_section_csr button:hover {
+  background: #000 !important;
+  color: white !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+}
+
+#reader__status_span {
+  font-weight: 700 !important;
+  color: #6366f1 !important;
+}
+
+#reader select {
+  padding: 8px 12px !important;
+  border-radius: 8px !important;
+  border: 1px solid #e5e7eb !important;
+  background: white !important;
+  margin: 10px 0 !important;
+  font-weight: 600 !important;
+}
+
 /* Remove OS-driven color scheme flips to ensure consistent light UI */

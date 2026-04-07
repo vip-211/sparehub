@@ -18,6 +18,8 @@ import '../widgets/notification_badge.dart';
 import '../providers/theme_provider.dart';
 import 'staff_mechanic_locations_screen.dart';
 
+import '../utils/app_theme.dart';
+
 class StaffDashboard extends StatefulWidget {
   const StaffDashboard({super.key});
 
@@ -116,86 +118,71 @@ class _StaffDashboardState extends State<StaffDashboard> {
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) return;
-        final shouldExit = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Exit App?'),
-            content: const Text('Do you want to exit the application?'),
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text('No')),
-              TextButton(
-                  onPressed: () => Navigator.pop(ctx, true),
-                  child: const Text('Yes')),
-            ],
-          ),
-        );
-        if (shouldExit == true) {
-          SystemNavigator.pop();
-        }
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Staff Dashboard',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.settings),
-              onPressed: () => Navigator.of(context).pushNamed('/settings'),
-            ),
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.brightness_6_outlined),
-              onSelected: (val) {
-                final tp = Provider.of<ThemeProvider>(context, listen: false);
-                if (val == 'system') tp.setThemeMode(ThemeMode.system);
-                if (val == 'light') tp.setThemeMode(ThemeMode.light);
-                if (val == 'dark') tp.setThemeMode(ThemeMode.dark);
-              },
-              itemBuilder: (ctx) => const [
-                PopupMenuItem(value: 'system', child: Text('System Theme')),
-                PopupMenuItem(value: 'light', child: Text('Light Theme')),
-                PopupMenuItem(value: 'dark', child: Text('Dark Theme')),
+    return Theme(
+      data: AppTheme.lightWithSeed(AppTheme.staffColor),
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) async {
+          if (didPop) return;
+          final shouldExit = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Exit App?'),
+              content: const Text('Do you want to exit the application?'),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text('No')),
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: const Text('Yes')),
               ],
             ),
-            const NotificationBadge(),
-            IconButton(
-                icon: const Icon(Icons.logout),
-                onPressed: () async {
-                  await auth.logout();
-                  if (mounted) {
-                    Navigator.of(context)
-                        .pushNamedAndRemoveUntil('/', (route) => false);
-                  }
-                }),
-          ],
-        ),
-        body: _buildPage(_selectedIndex),
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _selectedIndex,
-          onDestinationSelected: (index) =>
-              setState(() => _selectedIndex = index),
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.delivery_dining_outlined),
-              selectedIcon: Icon(Icons.delivery_dining),
-              label: 'Deliveries',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.location_on_outlined),
-              selectedIcon: Icon(Icons.location_on),
-              label: 'Mechanics',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.person_outline),
-              selectedIcon: Icon(Icons.person),
-              label: 'Profile',
-            ),
-          ],
+          );
+          if (shouldExit == true) {
+            SystemNavigator.pop();
+          }
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('Staff Dashboard',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.settings),
+                onPressed: () => Navigator.of(context).pushNamed('/settings'),
+              ),
+              const NotificationBadge(),
+              IconButton(
+                  icon: const Icon(Icons.logout),
+                  onPressed: () => AuthService().logout().then((_) {
+                        Navigator.of(context).pushReplacementNamed('/login');
+                      })),
+            ],
+          ),
+          body: _buildPage(_selectedIndex),
+          bottomNavigationBar: NavigationBar(
+            selectedIndex: _selectedIndex,
+            onDestinationSelected: (index) =>
+                setState(() => _selectedIndex = index),
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.delivery_dining_outlined),
+                selectedIcon: Icon(Icons.delivery_dining),
+                label: 'Deliveries',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.location_on_outlined),
+                selectedIcon: Icon(Icons.location_on),
+                label: 'Mechanics',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.person_outline),
+                selectedIcon: Icon(Icons.person),
+                label: 'Profile',
+              ),
+            ],
+          ),
         ),
       ),
     );

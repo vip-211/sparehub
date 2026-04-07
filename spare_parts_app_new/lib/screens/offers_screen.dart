@@ -96,11 +96,11 @@ class _OffersScreenState extends State<OffersScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.local_offer_outlined,
-                size: 80, color: Colors.grey.shade300),
+                size: 80, color: const Color.fromARGB(255, 0, 0, 0)),
             const SizedBox(height: 16),
             Text(
               'No active offers at the moment.',
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+              style: TextStyle(color: const Color.fromARGB(255, 12, 12, 12), fontSize: 16),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
@@ -263,7 +263,7 @@ class _OffersScreenState extends State<OffersScreen>
                             product.stock > 0 ? 'In Stock' : 'Out of Stock',
                             style: TextStyle(
                               color: product.stock > 0
-                                  ? Colors.blue.shade700
+                                  ? const Color.fromARGB(255, 241, 99, 33)
                                   : Theme.of(context).colorScheme.error,
                               fontWeight: FontWeight.w600,
                               fontSize: 11,

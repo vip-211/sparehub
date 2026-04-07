@@ -22,7 +22,7 @@ import '../services/product_service.dart';
 import '../services/auth_service.dart';
 import '../services/remote_client.dart';
 import '../services/notification_service.dart';
-import 'package:spare_parts_app/services/billing_service.dart';
+import '../services/billing_service.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -47,6 +47,8 @@ import '../widgets/cart_badge.dart';
 import '../widgets/notification_badge.dart';
 import '../providers/theme_provider.dart';
 import '../services/websocket_service.dart';
+
+import '../utils/app_theme.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -74,6 +76,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     const VoiceTrainingScreen(),
     const ProfileScreen(),
   ];
+
   void _sendNotification() {
     final titleController = TextEditingController();
     final messageController = TextEditingController();
@@ -326,9 +329,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final isAdmin = auth.user?.roles.contains(Constants.roleAdmin) ?? false;
     final hasAdminPrivileges = isSuperManager || isAdmin;
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) async {
+    return Theme(
+      data: AppTheme.lightWithSeed(AppTheme.adminColor),
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         final shouldExit = await showDialog<bool>(
           context: context,
@@ -567,8 +572,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class AdminOverviewScreen extends StatefulWidget {
@@ -2012,7 +2018,7 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
                                 onPressed: () =>
                                     _updateStatus(order.id, 'APPROVED'),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue,
+                                  backgroundColor: const Color.fromARGB(255, 235, 158, 231),
                                   foregroundColor: Colors.white,
                                 ),
                                 child: const Text('Approve'),
@@ -3695,7 +3701,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
             FloatingActionButton(
               heroTag: 'import',
               onPressed: _importExcel,
-              backgroundColor: Colors.blue,
+              backgroundColor: const Color.fromARGB(255, 230, 134, 225),
               child: const Icon(Icons.file_upload),
             ),
             const SizedBox(height: 10),
