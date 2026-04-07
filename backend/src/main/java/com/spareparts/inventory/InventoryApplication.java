@@ -19,7 +19,10 @@ import java.math.BigDecimal;
 import com.spareparts.inventory.entity.Category;
 import com.spareparts.inventory.repository.CategoryRepository;
 
+import org.springframework.scheduling.annotation.EnableScheduling;
+
 @SpringBootApplication
+@EnableScheduling
 public class InventoryApplication {
     public static void main(String[] args) {
         SpringApplication.run(InventoryApplication.class, args);

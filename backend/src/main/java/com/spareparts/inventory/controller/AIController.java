@@ -23,6 +23,8 @@ import java.util.ArrayList;
 import com.spareparts.inventory.repository.AITrainingCorrectionRepository;
 import com.spareparts.inventory.entity.AITrainingCorrection;
 
+import com.spareparts.inventory.service.AgentService;
+import com.spareparts.inventory.service.PredictionService;
 @RestController
 @RequestMapping("/api/ai")
 public class AIController {
@@ -30,6 +32,10 @@ public class AIController {
 
     @Autowired
     private AIService aiService;
+    @Autowired
+    private AgentService agentService;
+    @Autowired
+    private PredictionService predictionService;
     @Autowired
     private OrderService orderService;
     @Autowired
@@ -42,9 +48,14 @@ public class AIController {
     @PostMapping("/chat")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, String>> chat(@RequestBody Map<String, String> request,
-                                                    @RequestHeader(value = "X-AI-Provider", required = false) String provider) {
+                                                    @RequestHeader(value = "X-AI-Provider", required = false) String provider,
+                                                    Authentication authentication) {
         String prompt = request.get("prompt");
-        String response = aiService.askAI(prompt, provider);
+        Long userId = null;
+        if (authentication != null && authentication.getPrincipal() instanceof UserDetailsImpl) {
+            userId = ((UserDetailsImpl) authentication.getPrincipal()).getId();
+        }
+        String response = agentService.processQuery(prompt, provider, userId);
         return ResponseEntity.ok(Map.of("response", response));
     }
 
@@ -73,8 +84,15 @@ public class AIController {
         return ResponseEntity.ok(Map.of("message", "Feedback recorded"));
     }
 
+    @GetMapping("/stock/predict")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    public ResponseEntity<?> predictStock() {
+        List<String> suggestions = predictionService.getRestockSuggestions();
+        return ResponseEntity.ok(suggestions);
+    }
+
     @PostMapping("/train")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
     public ResponseEntity<?> train(@RequestBody Map<String, Object> request) {
         log.info("AI Training Correction Received: {}", request);
         try {

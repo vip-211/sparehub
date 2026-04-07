@@ -13,6 +13,12 @@ import useSound from 'use-sound';
 import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
 
+import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
+
+const Skeleton = ({ className }: { className?: string }) => (
+  <div className={`animate-pulse bg-gray-200 ${className}`}></div>
+);
+
 const AdminDashboard = () => {
   const { tp } = useLanguage();
   const currentUser = AuthService.getCurrentUser();
@@ -98,6 +104,27 @@ const AdminDashboard = () => {
 
   const [productSelectionMode, setProductSelectionMode] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
+
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [loadingDashboard, setLoadingDashboard] = useState(false);
+
+  const fetchDashboardData = useCallback(async () => {
+    setLoadingDashboard(true);
+    try {
+      const res = await api.get('/admin/dashboard');
+      setDashboardData(res.data);
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+    } finally {
+      setLoadingDashboard(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'insights') {
+      fetchDashboardData();
+    }
+  }, [activeTab, fetchDashboardData]);
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [productSearchTerm, setProductSearchTerm] = useState('');
   const [cashbackSearchTerm, setCashbackSearchTerm] = useState('');
@@ -1178,6 +1205,7 @@ const AdminDashboard = () => {
           { id: 'recycle', label: 'Recycle Bin', icon: Trash2 },
           { id: 'categories', label: 'Categories', icon: Plus },
           { id: 'reports', label: 'Reports', icon: BarChart2 },
+          { id: 'insights', label: 'AI Insights', icon: Cpu },
           { id: 'settings', label: 'Settings', icon: Settings },
         ].map((tab) => (
           <button
@@ -2606,6 +2634,114 @@ const AdminDashboard = () => {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {activeTab === 'insights' && (
+        <div className="space-y-8">
+          <div className="flex justify-between items-center">
+            <h3 className="text-xl font-black text-gray-900">AI-Powered Business Insights</h3>
+            <button 
+              onClick={fetchDashboardData}
+              className="p-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition shadow-sm"
+              title="Refresh Data"
+            >
+              <RotateCcw size={20} className={loadingDashboard ? 'animate-spin' : ''} />
+            </button>
+          </div>
+
+          {loadingDashboard ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <Skeleton className="w-full h-80 rounded-2xl" />
+              <Skeleton className="w-full h-80 rounded-2xl" />
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Monthly Sales Line Chart */}
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                  <h4 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-6">Revenue Trends (Monthly)</h4>
+                  <div className="h-80 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={dashboardData?.monthlySales || []}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                        <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fontSize: 12, fontWeight: 'bold', fill: '#94A3B8'}} dy={10} />
+                        <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fontWeight: 'bold', fill: '#94A3B8'}} />
+                        <Tooltip 
+                          contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'}}
+                          itemStyle={{fontWeight: 'bold'}}
+                        />
+                        <Line type="monotone" dataKey="total" stroke="#2563EB" strokeWidth={4} dot={{r: 6, fill: '#2563EB', strokeWidth: 2, stroke: '#fff'}} activeDot={{r: 8}} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Top Selling Products Bar Chart */}
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                  <h4 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-6">Top Selling Products</h4>
+                  <div className="h-80 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={dashboardData?.topSelling || []}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#94A3B8'}} dy={10} />
+                        <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fontWeight: 'bold', fill: '#94A3B8'}} />
+                        <Tooltip 
+                          contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'}}
+                          cursor={{fill: '#F8FAFC'}}
+                        />
+                        <Bar dataKey="count" fill="#8B5CF6" radius={[6, 6, 0, 0]} barSize={40} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Low Stock Alerts */}
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                  <h4 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-6">AI Restock Alerts</h4>
+                  <div className="space-y-3">
+                    {(dashboardData?.lowStock || []).length > 0 ? (
+                      dashboardData.lowStock.map((alert: string, idx: number) => (
+                        <div key={idx} className={`p-4 rounded-xl flex items-center gap-3 border ${
+                          alert.includes('Restock needed') ? 'bg-red-50 border-red-100 text-red-700' : 'bg-amber-50 border-amber-100 text-amber-700'
+                        }`}>
+                          <Bell size={18} />
+                          <span className="text-sm font-bold">{alert}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-10 text-center">
+                        <CheckCircle size={48} className="mx-auto text-green-400 mb-4" />
+                        <p className="font-bold text-gray-500">All items are well-stocked!</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* AI Demand Prediction */}
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                  <h4 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-6">Predicted Demand (Next 7 Days)</h4>
+                  <div className="space-y-4">
+                    {dashboardData?.prediction && Object.entries(dashboardData.prediction).length > 0 ? (
+                      Object.entries(dashboardData.prediction).map(([name, qty]: any) => (
+                        <div key={name} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                          <span className="font-bold text-gray-700">{name}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">+{qty} units</span>
+                            <BarChart2 size={16} className="text-indigo-400" />
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-center py-10 text-gray-400 font-bold italic">Not enough data for predictions yet.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
 

@@ -40,6 +40,10 @@ import com.spareparts.inventory.repository.VoiceTrainingSampleRepository;
 import com.spareparts.inventory.entity.VoiceTrainingSample;
 import java.util.stream.Collectors;
 
+import com.spareparts.inventory.repository.OrderRepository;
+import com.spareparts.inventory.service.PredictionService;
+import java.util.HashMap;
+
 @RestController
 @RequestMapping("/api/admin")
 @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER') or hasRole('STAFF')")
@@ -57,6 +61,12 @@ public class AdminController {
     private ProductService productService;
 
     @Autowired
+    private OrderRepository orderRepository;
+
+    @Autowired
+    private PredictionService predictionService;
+
+    @Autowired
     private NotificationRepository notificationRepository;
 
     @Autowired
@@ -67,6 +77,19 @@ public class AdminController {
 
     @Autowired
     private VoiceTrainingSampleRepository voiceTrainingSampleRepository;
+
+    @GetMapping("/dashboard")
+    public ResponseEntity<Map<String, Object>> getDashboardData() {
+        Map<String, Object> data = new HashMap<>();
+        data.put("topSelling", orderRepository.findTopSellingProducts(PageRequest.of(0, 5)));
+        data.put("lowStock", predictionService.getRestockSuggestions());
+        data.put("monthlySales", orderRepository.getMonthlySales());
+        
+        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
+        data.put("prediction", predictionService.predictDemand(orderRepository.findLast30Days(thirtyDaysAgo)));
+        
+        return ResponseEntity.ok(data);
+    }
 
     @GetMapping("/settings")
     public ResponseEntity<List<SystemSetting>> getAllSettings() {

@@ -25,6 +25,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.spareparts.inventory.repository.AITrainingCorrectionRepository;
 import com.spareparts.inventory.entity.AITrainingCorrection;
+import com.spareparts.inventory.entity.ChatMessage;
+import com.spareparts.inventory.entity.User;
+import com.spareparts.inventory.repository.ChatMessageRepository;
+import com.spareparts.inventory.repository.UserRepository;
+import org.springframework.data.domain.PageRequest;
 import java.util.Optional;
 
 @Service
@@ -45,30 +50,51 @@ public class AIService {
     @Autowired
     private AITrainingCorrectionRepository trainingCorrectionRepository;
 
+    @Autowired
+    private ChatMessageRepository chatMessageRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
     private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=";
     private static final String OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
     private static final String OPENAI_TRANSCRIBE_URL = "https://api.openai.com/v1/audio/transcriptions";
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @Transactional(readOnly = true)
-    public String askAI(String prompt, String provider) {
+    @Transactional
+    public String askAI(String prompt, String provider, Long userId) {
         String requestedProvider = provider == null ? "" : provider.toLowerCase();
         // Debug Log: Check configuration and requested provider
-        log.info("AIService: Request received. Provider: '{}', Gemini Key Present: {}, OpenAI Key Present: {}", 
+        log.info("AIService: Request received from User ID: {}. Provider: '{}', Gemini Key Present: {}, OpenAI Key Present: {}", 
+                 userId,
                  requestedProvider,
                  (geminiApiKey != null && !geminiApiKey.isEmpty()), 
                  (openaiApiKey != null && !openaiApiKey.isEmpty()));
 
         try {
-            // Check for user-trained corrections first
+            // 1. Check for user-trained corrections first
             Optional<AITrainingCorrection> existingCorrection = trainingCorrectionRepository.findTopByPromptIgnoreCaseOrderByCreatedAtDesc(prompt.trim());
             if (existingCorrection.isPresent()) {
                 log.info("AIService: Found user-trained correction for prompt: '{}'. Returning corrected response.", prompt);
-                return existingCorrection.get().getCorrectedResponse();
+                String response = existingCorrection.get().getCorrectedResponse();
+                saveChatHistory(userId, prompt, response);
+                return response;
             }
 
-            // Smart Search: Check for relevant products based on prompt first
+            // 2. Fetch Chat History (last 5 messages)
+            String historyContext = "";
+            if (userId != null) {
+                User user = userRepository.findById(userId).orElse(null);
+                if (user != null) {
+                    List<ChatMessage> history = chatMessageRepository.findByUserOrderByCreatedAtDesc(user, PageRequest.of(0, 5));
+                    historyContext = history.stream()
+                            .map(m -> (m.isBot() ? "AI: " : "User: ") + m.getContent())
+                            .collect(Collectors.joining("\n"));
+                }
+            }
+
+            // 3. Smart Search: Check for relevant products based on prompt
             List<String> tokens = List.of(prompt.split("\\W+"));
             String matchedContext = tokens.stream()
                     .filter(t -> t.length() > 2)
@@ -80,20 +106,24 @@ public class AIService {
 
             String productContext = productRepository.findAll().stream()
                     .filter(prod -> !prod.isDeleted() && prod.isEnabled())
-                    .limit(20)
+                    .limit(15)
                     .map(prod -> prod.getName() + " (Part: " + prod.getPartNumber() + ")")
                     .collect(Collectors.joining(", "));
 
             String fullContext = matchedContext.isEmpty() ? productContext : "Matching parts found: " + matchedContext + ". General sample: " + productContext;
 
-            String systemPrompt = "You are an AI assistant for Parts Mitra, an auto spare parts inventory system. " +
-                    "Contextual inventory data: " + fullContext + ". " +
-                    "Guidelines: " +
-                    "1. Prioritize 'Matching parts found' above for the user's query. " +
-                    "2. If stock is 0, mention it's out of stock. " +
-                    "3. If no matching parts are found, suggest searching by part number or photo. " +
-                    "4. Be professional and concise.";
+            // 4. Construct System Prompt
+            String systemPrompt = "You are an AI assistant for Parts Mitra, an auto spare parts inventory system.\n" +
+                    "Contextual inventory data: " + fullContext + ".\n" +
+                    "Chat history:\n" + historyContext + "\n\n" +
+                    "Guidelines:\n" +
+                    "1. Prioritize 'Matching parts found' for the user's query.\n" +
+                    "2. If stock is 0, mention it's out of stock.\n" +
+                    "3. If no matching parts are found, suggest searching by part number or photo.\n" +
+                    "4. If the user asks to 'create an invoice' or 'make a bill', explain that they can add items to their cart and checkout, or you can provide a list of parts to choose from.\n" +
+                    "5. Be professional, concise, and helpful.";
 
+            String finalResponse = "";
             if ("openai".equals(requestedProvider)) {
                 HttpHeaders headers = new HttpHeaders();
                 headers.setContentType(MediaType.APPLICATION_JSON);
@@ -115,95 +145,95 @@ public class AIService {
                         Map<String, Object> first = choices.get(0);
                         Map<String, Object> msg = (Map<String, Object>) first.get("message");
                         Object content = msg != null ? msg.get("content") : null;
-                        if (content != null) return content.toString();
+                        if (content != null) finalResponse = content.toString();
                     }
                 }
-                return "I couldn't generate a response.";
-            }
-
-            if ("gemini".equals(requestedProvider) || requestedProvider.isEmpty()) {
+                if (finalResponse.isEmpty()) finalResponse = "I couldn't generate a response.";
+            } else if ("gemini".equals(requestedProvider) || requestedProvider.isEmpty()) {
                 if (geminiApiKey == null || geminiApiKey.isEmpty()) {
-                    if (openaiApiKey != null && !openaiApiKey.isEmpty()) {
-                        // Fallback to OpenAI only if Gemini key missing and OpenAI available
-                        HttpHeaders headers = new HttpHeaders();
-                        headers.setContentType(MediaType.APPLICATION_JSON);
-                        headers.setBearerAuth(openaiApiKey);
+                    // Fallback to local if Gemini key missing
+                    finalResponse = generateLocalResponse(prompt);
+                } else {
+                    HttpHeaders headers = new HttpHeaders();
+                    headers.setContentType(MediaType.APPLICATION_JSON);
 
-                        Map<String, Object> req = new HashMap<>();
-                        req.put("model", openaiModel);
-                        List<Map<String, Object>> messages = List.of(
-                                Map.of("role", "system", "content", systemPrompt),
-                                Map.of("role", "user", "content", prompt)
-                        );
-                        req.put("messages", messages);
+                    Map<String, Object> requestBody = new HashMap<>();
+                    Map<String, Object> content = new HashMap<>();
+                    Map<String, Object> part = new HashMap<>();
+                    String fullPrompt = systemPrompt + "\nUser's question: " + prompt;
+                    part.put("text", fullPrompt);
+                    content.put("parts", Collections.singletonList(part));
+                    requestBody.put("contents", Collections.singletonList(content));
 
-                        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(req, headers);
-                        Map<String, Object> response = restTemplate.postForObject(OPENAI_CHAT_URL, entity, Map.class);
-                        if (response != null && response.containsKey("choices")) {
-                            List<Map<String, Object>> choices = (List<Map<String, Object>>) response.get("choices");
-                            if (!choices.isEmpty()) {
-                                Map<String, Object> first = choices.get(0);
-                                Map<String, Object> msg = (Map<String, Object>) first.get("message");
-                                Object content = msg != null ? msg.get("content") : null;
-                                if (content != null) return content.toString();
-                            }
-                        }
-                        return "I couldn't generate a response.";
-                    }
-                    return "AI integration is not configured. Please set GEMINI_API_KEY.";
-                }
-                HttpHeaders headers = new HttpHeaders();
-                headers.setContentType(MediaType.APPLICATION_JSON);
-
-                Map<String, Object> requestBody = new HashMap<>();
-                Map<String, Object> content = new HashMap<>();
-                Map<String, Object> part = new HashMap<>();
-                String fullPrompt = systemPrompt + " User's question: " + prompt;
-                part.put("text", fullPrompt);
-                content.put("parts", Collections.singletonList(part));
-                requestBody.put("contents", Collections.singletonList(content));
-
-                HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-                Map<String, Object> response = restTemplate.postForObject(GEMINI_API_URL + geminiApiKey, entity, Map.class);
-                if (response != null && response.containsKey("candidates")) {
-                    List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.get("candidates");
-                    if (!candidates.isEmpty()) {
-                        Map<String, Object> candidate = candidates.get(0);
-                        Map<String, Object> contentRes = (Map<String, Object>) candidate.get("content");
-                        if (contentRes != null && contentRes.containsKey("parts")) {
-                            List<Map<String, Object>> partsRes = (List<Map<String, Object>>) contentRes.get("parts");
-                            if (!partsRes.isEmpty()) {
-                                Object t = partsRes.get(0).get("text");
-                                if (t != null) return t.toString();
+                    HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+                    Map<String, Object> response = restTemplate.postForObject(GEMINI_API_URL + geminiApiKey, entity, Map.class);
+                    if (response != null && response.containsKey("candidates")) {
+                        List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.get("candidates");
+                        if (!candidates.isEmpty()) {
+                            Map<String, Object> candidate = candidates.get(0);
+                            Map<String, Object> contentRes = (Map<String, Object>) candidate.get("content");
+                            if (contentRes != null && contentRes.containsKey("parts")) {
+                                List<Map<String, Object>> partsRes = (List<Map<String, Object>>) contentRes.get("parts");
+                                if (!partsRes.isEmpty()) {
+                                    Object t = partsRes.get(0).get("text");
+                                    if (t != null) finalResponse = t.toString();
+                                }
                             }
                         }
                     }
+                    if (finalResponse.isEmpty()) finalResponse = "I couldn't generate a response.";
                 }
-                Object error = response != null ? response.get("error") : null;
-                if (error != null) return "AI service error: " + error.toString();
-                return "I couldn't generate a response.";
+            } else {
+                finalResponse = generateLocalResponse(prompt);
             }
-            if ("local".equals(requestedProvider) || ((openaiApiKey == null || openaiApiKey.isEmpty()) && (geminiApiKey == null || geminiApiKey.isEmpty()))) {
-                String q = prompt == null ? "" : prompt.trim();
-                if (q.isEmpty()) return "Please describe the part or question.";
-                List<String> localTokens = List.of(q.split("\\W+"));
-                List<Product> found = localTokens.stream()
-                        .filter(t -> t.length() > 1)
-                        .flatMap(t -> productRepository.findByNameContainingIgnoreCaseOrPartNumberContainingIgnoreCase(t, t).stream())
-                        .distinct()
-                        .limit(10)
-                        .toList();
-                if (!found.isEmpty()) {
-                    String suggestions = found.stream()
-                            .map(p2 -> p2.getName() + " (" + p2.getPartNumber() + ")")
-                            .collect(Collectors.joining(", "));
-                    return "Suggestions: " + suggestions;
-                }
-                return "I couldn't find matching products. Try specifying the part name or number.";
-            }
-            return "AI integration is not configured. Please set GEMINI_API_KEY or OPENAI_API_KEY.";
+
+            saveChatHistory(userId, prompt, finalResponse);
+            return finalResponse;
+
         } catch (Exception e) {
+            log.error("AIService: Error processing request: {}", e.getMessage());
             return "AI service error: " + e.getMessage();
+        }
+    }
+
+    private String generateLocalResponse(String prompt) {
+        String q = prompt == null ? "" : prompt.trim();
+        if (q.isEmpty()) return "Please describe the part or question.";
+        List<String> localTokens = List.of(q.split("\\W+"));
+        List<Product> found = localTokens.stream()
+                .filter(t -> t.length() > 1)
+                .flatMap(t -> productRepository.findByNameContainingIgnoreCaseOrPartNumberContainingIgnoreCase(t, t).stream())
+                .distinct()
+                .limit(10)
+                .toList();
+        if (!found.isEmpty()) {
+            String suggestions = found.stream()
+                    .map(prod -> prod.getName() + " (" + prod.getPartNumber() + ")")
+                    .collect(Collectors.joining(", "));
+            return "Suggestions: " + suggestions;
+        }
+        return "I couldn't find matching products. Try specifying the part name or number.";
+    }
+
+    private void saveChatHistory(Long userId, String userMsg, String botMsg) {
+        if (userId == null) return;
+        try {
+            User user = userRepository.findById(userId).orElse(null);
+            if (user == null) return;
+
+            ChatMessage uMsg = new ChatMessage();
+            uMsg.setUser(user);
+            uMsg.setContent(userMsg);
+            uMsg.setBot(false);
+            chatMessageRepository.save(uMsg);
+
+            ChatMessage bMsg = new ChatMessage();
+            bMsg.setUser(user);
+            bMsg.setContent(botMsg);
+            bMsg.setBot(true);
+            chatMessageRepository.save(bMsg);
+        } catch (Exception e) {
+            log.error("AIService: Failed to save chat history: {}", e.getMessage());
         }
     }
 

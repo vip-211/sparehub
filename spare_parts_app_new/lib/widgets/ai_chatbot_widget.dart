@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../providers/auth_provider.dart';
 import '../services/remote_client.dart';
 import '../services/product_service.dart';
 import '../models/product.dart';
@@ -467,25 +468,39 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
                                             tooltip: 'Not helpful',
                                           ),
                                           const SizedBox(width: 8),
-                                          TextButton.icon(
-                                            onPressed: () =>
-                                                _showCorrectionDialog(
-                                                    msg['prompt'] ?? 'N/A',
-                                                    msg['text'] as String),
-                                            icon: const Icon(Icons.edit_note,
-                                                size: 16),
-                                            label: const Text('Train AI',
-                                                style: TextStyle(fontSize: 12)),
-                                            style: TextButton.styleFrom(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 8),
-                                              minimumSize: Size.zero,
-                                              tapTargetSize:
-                                                  MaterialTapTargetSize
-                                                      .shrinkWrap,
-                                              foregroundColor: Colors.grey,
-                                            ),
+                                          // Only Admins can train the AI
+                                          Consumer<AuthProvider>(
+                                            builder: (context, auth, _) {
+                                              final isAdmin = auth.user?.roles
+                                                      .any((r) =>
+                                                          r == 'ROLE_ADMIN' ||
+                                                          r ==
+                                                              'ROLE_SUPER_MANAGER') ??
+                                                  false;
+                                              if (!isAdmin)
+                                                return const SizedBox.shrink();
+
+                                              return TextButton.icon(
+                                                onPressed: () =>
+                                                    _showCorrectionDialog(
+                                                        msg['prompt'] ?? 'N/A',
+                                                        msg['text'] as String),
+                                                icon: const Icon(Icons.edit_note,
+                                                    size: 16),
+                                                label: const Text('Train AI',
+                                                    style: TextStyle(
+                                                        fontSize: 12)),
+                                                style: TextButton.styleFrom(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(horizontal: 8),
+                                                  minimumSize: Size.zero,
+                                                  tapTargetSize:
+                                                      MaterialTapTargetSize
+                                                          .shrinkWrap,
+                                                  foregroundColor: Colors.grey,
+                                                ),
+                                              );
+                                            },
                                           ),
                                         ],
                                       ),
