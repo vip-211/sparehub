@@ -499,6 +499,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   },
                 ),
                 ListTile(
+                  leading: const Icon(Icons.psychology),
+                  title: const Text('AI Training Report'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/admin/ai-training');
+                  },
+                ),
+                ListTile(
                   leading: const Icon(Icons.restore_from_trash),
                   title: const Text('Recycle Bin'),
                   selected: _selectedIndex == 9,

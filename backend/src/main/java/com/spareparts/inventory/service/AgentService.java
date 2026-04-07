@@ -71,71 +71,75 @@ public class AgentService {
         try {
             // Step 2: Parse AI's decision
             String jsonStr = extractJson(aiResponse);
-            JsonNode node = objectMapper.readTree(jsonStr);
-            String action = node.has("action") ? node.get("action").asText() : "general_query";
-            String product = node.has("product") && !node.get("product").isNull() ? node.get("product").asText() : null;
-            int quantity = node.has("quantity") ? node.get("quantity").asInt() : 1;
+            
+            // Check if it's actually JSON before trying to parse
+            if (jsonStr.trim().startsWith("{") && jsonStr.trim().endsWith("}")) {
+                JsonNode node = objectMapper.readTree(jsonStr);
+                String action = node.has("action") ? node.get("action").asText() : "general_query";
+                String product = node.has("product") && !node.get("product").isNull() ? node.get("product").asText() : null;
+                int quantity = node.has("quantity") ? node.get("quantity").asInt() : 1;
 
-            log.info("AgentService: Role: {}, Lang: {}, Action: {}, Product: {}, Qty: {}", role, language, action, product, quantity);
+                log.info("AgentService: Role: {}, Lang: {}, Action: {}, Product: {}, Qty: {}", role, language, action, product, quantity);
 
-            // Step 2.5: Role-based restriction
-            if (role.equalsIgnoreCase("MECHANIC") && action.equals("delete_product")) {
-                return language.equals("Hindi") ? "❌ आपके पास यह कार्य करने की अनुमति नहीं है।" : "❌ You do not have permission to perform this action.";
-            }
+                // Step 2.5: Role-based restriction
+                if (role.equalsIgnoreCase("MECHANIC") && action.equals("delete_product")) {
+                    return language.equals("Hindi") ? "❌ आपके पास यह कार्य करने की अनुमति नहीं है।" : "❌ You do not have permission to perform this action.";
+                }
 
-            // Step 3: Execute Business Logic
-            switch (action) {
-                case "search_product":
-                    if (product != null) {
-                        List<Product> matches = productRepository.findByNameContainingIgnoreCaseOrPartNumberContainingIgnoreCase(product, product);
-                        if (!matches.isEmpty()) {
-                            String results = matches.stream()
-                                    .limit(5)
-                                    .map(p -> "• " + p.getName() + " (" + p.getPartNumber() + ") - ₹" + p.getSellingPrice() + " (Stock: " + p.getStock() + ")")
-                                    .collect(Collectors.joining("\n"));
-                            
-                            return language.equals("Hindi") 
-                                    ? "मुझे आपके लिए ये पुर्जे मिले हैं:\n" + results 
-                                    : (language.equals("Marathi") ? "मला तुमच्यासाठी हे सुटे भाग सापडले आहेत:\n" + results : "I found these matching parts for you:\n" + results);
+                // Step 3: Execute Business Logic
+                switch (action) {
+                    case "search_product":
+                        if (product != null) {
+                            List<Product> matches = productRepository.findByNameContainingIgnoreCaseOrPartNumberContainingIgnoreCase(product, product);
+                            if (!matches.isEmpty()) {
+                                String results = matches.stream()
+                                        .limit(5)
+                                        .map(p -> "• " + p.getName() + " (" + p.getPartNumber() + ") - ₹" + p.getSellingPrice() + " (Stock: " + p.getStock() + ")")
+                                        .collect(Collectors.joining("\n"));
+                                
+                                return language.equals("Hindi") 
+                                        ? "मुझे आपके लिए ये पुर्जे मिले हैं:\n" + results 
+                                        : (language.equals("Marathi") ? "मला तुमच्यासाठी हे सुटे भाग सापडले आहेत:\n" + results : "I found these matching parts for you:\n" + results);
+                            }
                         }
-                    }
-                    break;
+                        break;
 
-                case "create_invoice":
-                    if (product != null) {
-                        List<Product> matches = productRepository.findByNameContainingIgnoreCaseOrPartNumberContainingIgnoreCase(product, product);
-                        if (!matches.isEmpty()) {
-                            Product p = matches.get(0);
-                            String msg = String.format("I can help you create an invoice for %d x %s.\nI've identified the part as: %s (₹%.2f).\nPlease add this item to your cart to proceed.", 
-                                    quantity, p.getName(), p.getName(), p.getSellingPrice());
-                            
-                            if (language.equals("Hindi")) {
-                                return String.format("मैं आपके लिए %d x %s का बिल बनाने में मदद कर सकता हूँ।\nमैंने पुर्जे की पहचान की है: %s (₹%.2f)।\nकृपया आगे बढ़ने के लिए इस आइटम को अपनी कार्ट में जोड़ें।", 
-                                        quantity, p.getName(), p.getName(), p.getSellingPrice());
-                            } else if (language.equals("Marathi")) {
-                                return String.format("मी तुम्हाला %d x %s चे बिल तयार करण्यास मदत करू शकतो.\nमी भाग ओळखला आहे: %s (₹%.2f).\nकृपया पुढे जाण्यासाठी ही वस्तू तुमच्या कार्टमध्ये जोडा.", 
+                    case "create_invoice":
+                        if (product != null) {
+                            List<Product> matches = productRepository.findByNameContainingIgnoreCaseOrPartNumberContainingIgnoreCase(product, product);
+                            if (!matches.isEmpty()) {
+                                Product p = matches.get(0);
+                                if (language.equals("Hindi")) {
+                                    return String.format("मैं आपके लिए %d x %s का बिल बनाने में मदद कर सकता हूँ।\nमैंने पुर्जे की पहचान की है: %s (₹%.2f)।\nकृपया आगे बढ़ने के लिए इस आइटम को अपनी कार्ट में जोड़ें।", 
+                                            quantity, p.getName(), p.getName(), p.getSellingPrice());
+                                } else if (language.equals("Marathi")) {
+                                    return String.format("मी तुम्हाला %d x %s चे बिल तयार करण्यास मदत करू शकतो.\nमी भाग ओळखला आहे: %s (₹%.2f).\nकृपया पुढे जाण्यासाठी ही वस्तू तुमच्या कार्टमध्ये जोडा.", 
+                                            quantity, p.getName(), p.getName(), p.getSellingPrice());
+                                }
+                                return String.format("I can help you create an invoice for %d x %s.\nI've identified the part as: %s (₹%.2f).\nPlease add this item to your cart to proceed.", 
                                         quantity, p.getName(), p.getName(), p.getSellingPrice());
                             }
-                            return msg;
+                            return language.equals("Hindi") ? "मुझे बिल बनाने के लिए सटीक पुर्जा '" + product + "' नहीं मिला।" : "I couldn't find the exact product '" + product + "' to create an invoice.";
                         }
-                        return language.equals("Hindi") ? "मुझे बिल बनाने के लिए सटीक पुर्जा '" + product + "' नहीं मिला।" : "I couldn't find the exact product '" + product + "' to create an invoice.";
-                    }
-                    return language.equals("Hindi") ? "आप किस उत्पाद के लिए बिल बनाना चाहेंगे?" : "What product would you like to create an invoice for?";
+                        return language.equals("Hindi") ? "आप किस उत्पाद के लिए बिल बनाना चाहेंगे?" : "What product would you like to create an invoice for?";
 
-                case "stock_prediction":
-                    if (!role.equalsIgnoreCase("ADMIN") && !role.equalsIgnoreCase("SUPER_MANAGER")) {
-                        return language.equals("Hindi") ? "❌ आपके पास स्टॉक भविष्यवाणी देखने की अनुमति नहीं है।" : "❌ You do not have permission to view stock predictions.";
-                    }
-                    List<String> stockAdvice = predictionService.getRestockSuggestions();
-                    if (stockAdvice.isEmpty()) {
-                        return language.equals("Hindi") ? "✅ स्टॉक लेवल अभी ठीक लग रहे हैं।" : "✅ All stock levels look good for now.";
-                    }
-                    String adviceStr = String.join("\n", stockAdvice);
-                    String stockPrompt = String.format("Language: %s\nStock Data: %s\nGive clear, concise restock advice in %s.", language, adviceStr, language);
-                    return aiService.askAI(stockPrompt, provider, null);
+                    case "stock_prediction":
+                        if (!role.equalsIgnoreCase("ADMIN") && !role.equalsIgnoreCase("SUPER_MANAGER")) {
+                            return language.equals("Hindi") ? "❌ आपके पास स्टॉक भविष्यवाणी देखने की अनुमति नहीं है।" : "❌ You do not have permission to view stock predictions.";
+                        }
+                        List<String> stockAdvice = predictionService.getRestockSuggestions();
+                        if (stockAdvice.isEmpty()) {
+                            return language.equals("Hindi") ? "✅ स्टॉक लेवल अभी ठीक लग रहे हैं।" : "✅ All stock levels look good for now.";
+                        }
+                        String adviceStr = String.join("\n", stockAdvice);
+                        String stockPrompt = String.format("Language: %s\nStock Data: %s\nGive clear, concise restock advice in %s.", language, adviceStr, language);
+                        return aiService.askAI(stockPrompt, provider, null);
 
-                default:
-                    break;
+                    default:
+                        break;
+                }
+            } else {
+                log.warn("AgentService: AI Response was not valid JSON, defaulting to general query. Response: {}", aiResponse);
             }
         } catch (Exception e) {
             log.error("AgentService: Error parsing AI action JSON: {}. AI Response was: {}", e.getMessage(), aiResponse);

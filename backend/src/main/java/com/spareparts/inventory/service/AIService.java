@@ -199,6 +199,12 @@ public class AIService {
     private String generateLocalResponse(String prompt) {
         String q = prompt == null ? "" : prompt.trim();
         if (q.isEmpty()) return "Please describe the part or question.";
+
+        // Special case: If this is an action detection prompt, return a default general_query JSON
+        if (q.contains("Convert the user's query into a JSON object") || q.contains("action-detector")) {
+            return "{\"action\": \"general_query\", \"product\": null, \"quantity\": 1}";
+        }
+
         List<String> localTokens = List.of(q.split("\\W+"));
         List<Product> found = localTokens.stream()
                 .filter(t -> t.length() > 1)
