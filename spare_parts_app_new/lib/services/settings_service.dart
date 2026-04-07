@@ -94,6 +94,13 @@ class SettingsService {
   }
 
   static Future<bool> isAiChatbotEnabled() async {
+    // 1. Check Global Admin Setting first
+    if (Constants.useRemote) {
+      final remoteValue = getCachedRemoteSetting('AI_CHATBOT_ENABLED', 'true');
+      if (remoteValue == 'false') return false;
+    }
+    
+    // 2. Fallback to local user preference
     final p = await _prefs();
     return p.getBool(_aiChatbotKey) ?? true;
   }

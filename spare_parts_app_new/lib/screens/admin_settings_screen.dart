@@ -22,6 +22,8 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
 
   // New Global Settings
   bool _wsGlobal = true;
+  bool _aiGlobal = true;
+  String _aiProvider = 'gemini'; // New: global AI provider selection
   bool _localOtpGlobal = false;
   final TextEditingController _logoUrlController = TextEditingController();
   final TextEditingController _serverHostController = TextEditingController();
@@ -130,6 +132,8 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
 
           // Load Global Settings
           _wsGlobal = (remote['WS_ENABLED'] ?? 'true') == 'true';
+          _aiGlobal = (remote['AI_CHATBOT_ENABLED'] ?? 'true') == 'true';
+          _aiProvider = remote['AI_PROVIDER'] ?? 'gemini';
           _localOtpGlobal = (remote['FORCE_LOCAL_OTP'] ?? 'false') == 'true';
           _logoUrlController.text = remote['LOGO_URL'] ?? '';
           _serverHostController.text =
@@ -207,6 +211,8 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
         'NOTIF_IN_APP_ENABLED': _notifInApp ? 'true' : 'false',
         'NOTIF_WHATSAPP_ENABLED': _notifWhatsApp ? 'true' : 'false',
         'WS_ENABLED': _wsGlobal ? 'true' : 'false',
+        'AI_CHATBOT_ENABLED': _aiGlobal ? 'true' : 'false',
+        'AI_PROVIDER': _aiProvider,
         'FORCE_LOCAL_OTP': _localOtpGlobal ? 'true' : 'false',
         'USE_GLOBAL_THEME_COLOR': _useGlobalThemeColor ? 'true' : 'false',
         'HIDE_REGISTRATION': _hideRegistration ? 'true' : 'false',
@@ -474,6 +480,25 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   subtitle: const Text('Enable/Disable WS for all clients'),
                   value: _wsGlobal,
                   onChanged: (v) => setState(() => _wsGlobal = v),
+                ),
+                SwitchListTile(
+                  title: const Text('Global AI Chatbot'),
+                  subtitle: const Text('Enable/Disable Chatbot for all clients'),
+                  value: _aiGlobal,
+                  onChanged: (v) => setState(() => _aiGlobal = v),
+                ),
+                ListTile(
+                  title: const Text('Global AI Provider'),
+                  subtitle: const Text('Select the AI model for the chatbot'),
+                  trailing: DropdownButton<String>(
+                    value: _aiProvider,
+                    items: const [
+                      DropdownMenuItem(value: 'gemini', child: Text('Gemini')),
+                      DropdownMenuItem(value: 'openai', child: Text('OpenAI')),
+                      DropdownMenuItem(value: 'local', child: Text('Local (Basic)')),
+                    ],
+                    onChanged: (v) => setState(() => _aiProvider = v ?? 'gemini'),
+                  ),
                 ),
                 SwitchListTile(
                   title: const Text('Global Force Local OTP'),

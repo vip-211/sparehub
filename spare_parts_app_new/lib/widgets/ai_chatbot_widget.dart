@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../services/ai_training_service.dart';
+import '../services/settings_service.dart';
 
 class AIChatbotWidget extends StatefulWidget {
   const AIChatbotWidget({super.key});
@@ -59,16 +60,17 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
     _scrollToBottom();
 
     try {
+      final provider = SettingsService.getCachedRemoteSetting('AI_PROVIDER', 'gemini');
       final res = await _remoteClient.postJson(
         '/ai/chat',
         {'prompt': text},
-        headers: {'X-AI-Provider': 'local'},
+        headers: {'X-AI-Provider': provider},
       );
       setState(() {
         _messages.add({
-          'text': res['response'],
+          'text': res['response'] ?? "I couldn't generate a response.",
           'isBot': true,
-          'prompt': text, // Save the prompt that triggered this response
+          'prompt': text,
         });
       });
     } catch (e) {

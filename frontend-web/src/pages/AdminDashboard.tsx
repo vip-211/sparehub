@@ -2644,6 +2644,27 @@ const AdminDashboard = () => {
                   </label>
                 </div>
 
+                <div className="flex items-center justify-between p-6 bg-gray-50 rounded-2xl border border-gray-100 group hover:border-indigo-200 transition-all">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-white rounded-xl shadow-sm text-indigo-600">
+                      <MessageSquare size={24} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-900">AI Chatbot</h3>
+                      <p className="text-xs text-gray-500 font-medium">Enable/Disable AI assistant for all users.</p>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={getSetting('AI_CHATBOT_ENABLED', 'true') === 'true'}
+                      onChange={(e) => updateSettingLocally('AI_CHATBOT_ENABLED', e.target.checked ? 'true' : 'false')}
+                    />
+                    <div className="w-12 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                  </label>
+                </div>
+
                 <div className="flex items-center justify-between p-6 bg-gray-50 rounded-2xl border border-gray-100 group hover:border-blue-200 transition-all">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-white rounded-xl shadow-sm text-blue-600">
@@ -2660,27 +2681,6 @@ const AdminDashboard = () => {
                       className="sr-only peer"
                       checked={getSetting('NOTIF_WHATSAPP_ENABLED', 'false') === 'true'}
                       onChange={(e) => updateSettingLocally('NOTIF_WHATSAPP_ENABLED', e.target.checked ? 'true' : 'false')}
-                    />
-                    <div className="w-12 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                  </label>
-                </div>
-
-                <div className="flex items-center justify-between p-6 bg-gray-50 rounded-2xl border border-gray-100 group hover:border-blue-200 transition-all">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-white rounded-xl shadow-sm text-blue-600">
-                      <RotateCcw size={24} />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-gray-900">Global WebSocket</h3>
-                      <p className="text-xs text-gray-500 font-medium">Real-time data sync.</p>
-                    </div>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={getSetting('WS_ENABLED', 'true') === 'true'}
-                      onChange={(e) => updateSettingLocally('WS_ENABLED', e.target.checked ? 'true' : 'false')}
                     />
                     <div className="w-12 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                   </label>
