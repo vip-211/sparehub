@@ -56,7 +56,7 @@ public class AIService {
     @Autowired
     private UserRepository userRepository;
 
-    private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=";
+    private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=";
     private static final String OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
     private static final String OPENAI_TRANSCRIBE_URL = "https://api.openai.com/v1/audio/transcriptions";
 
@@ -315,8 +315,10 @@ public class AIService {
                 Map<String, Object> requestBody = new HashMap<>();
                 requestBody.put("contents", List.of(parts));
 
+                // Use gemini-1.5-flash for image analysis as it supports multimodal
+                String visionUrl = GEMINI_API_URL.replace("gemini-1.5-flash", "gemini-1.5-flash"); // Just to be consistent with model name usage
                 HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-                Map<String, Object> response = restTemplate.postForObject(GEMINI_API_URL + geminiApiKey, entity, Map.class);
+                Map<String, Object> response = restTemplate.postForObject(visionUrl + geminiApiKey, entity, Map.class);
                 if (response != null && response.containsKey("candidates")) {
                     List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.get("candidates");
                     if (!candidates.isEmpty()) {
