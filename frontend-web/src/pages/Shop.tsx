@@ -4,7 +4,7 @@ import { useCart } from '../context/CartContext';
 import { useLanguage } from '../context/LanguageContext';
 import AuthService from '../services/auth.service';
 import { ROLE_ADMIN, ROLE_MECHANIC, ROLE_RETAILER, ROLE_SUPER_MANAGER, ROLE_WHOLESALER } from '../services/constants';
-import { Search, ShoppingCart, Package, Info, CheckCircle2, Settings, Car, StopCircle, Disc, Droplets, Lightbulb, Battery, LayoutGrid, Mic, ScanBarcode } from 'lucide-react';
+import { Search, ShoppingCart, Package, Info, CheckCircle2, Settings, Car, StopCircle, Disc, Droplets, Lightbulb, Battery, LayoutGrid, Mic, ScanBarcode, Keyboard } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import Skeleton from '../components/Skeleton';
 import BarcodeScanner from '../components/BarcodeScanner';
@@ -18,6 +18,7 @@ const Shop: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [scannerMode, setScannerMode] = useState<'camera' | 'external'>('camera');
   const { addItem } = useCart();
 
   // Listen for external hardware scanner
@@ -184,13 +185,44 @@ const Shop: React.FC = () => {
               className="w-full pl-12 pr-4 py-4 bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 shadow-sm transition-all text-lg font-bold"
             />
           </div>
-          <button
-            onClick={() => setShowScanner(true)}
-            className="p-4 rounded-2xl bg-white border-2 border-gray-200 hover:border-primary-500 hover:text-primary-600 transition-all shadow-lg shadow-gray-100"
-            title="Scan Barcode"
-          >
-            <ScanBarcode className="w-7 h-7" />
-          </button>
+          <div className="relative group">
+            <button
+              onClick={() => {
+                setScannerMode('camera');
+                setShowScanner(true);
+              }}
+              className="p-4 rounded-2xl bg-white border-2 border-gray-200 hover:border-primary-500 hover:text-primary-600 transition-all shadow-lg shadow-gray-100 flex items-center gap-2"
+              title="Scan Barcode"
+            >
+              <ScanBarcode className="w-7 h-7" />
+            </button>
+            <div className="absolute top-full right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-10 hidden group-hover:block overflow-hidden min-w-[180px]">
+              <button
+                onClick={() => {
+                  setScannerMode('camera');
+                  setShowScanner(true);
+                }}
+                className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 font-bold text-sm text-gray-700"
+              >
+                <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg">
+                  <ScanBarcode size={16} />
+                </div>
+                Camera Scan
+              </button>
+              <button
+                onClick={() => {
+                  setScannerMode('external');
+                  setShowScanner(true);
+                }}
+                className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 font-bold text-sm text-gray-700"
+              >
+                <div className="p-1.5 bg-amber-100 text-amber-600 rounded-lg">
+                  <Keyboard size={16} />
+                </div>
+                Hardware Scanner
+              </button>
+            </div>
+          </div>
           <button
             onClick={toggleVoiceSearch}
             className={`p-4 rounded-2xl transition-all shadow-lg ${isListening ? 'bg-red-500 animate-pulse scale-110 shadow-red-200' : 'bg-primary-600 hover:bg-primary-700 shadow-primary-100'}`}
@@ -203,6 +235,7 @@ const Shop: React.FC = () => {
 
       {showScanner && (
         <BarcodeScanner 
+          initialMode={scannerMode}
           onScanSuccess={(text) => setSearchTerm(text)}
           onClose={() => setShowScanner(false)}
         />

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import api, { API_BASE_URL } from '../services/api';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
-import { Users, ShoppingBag, BarChart2, CheckCircle, XCircle, Plus, Package, UserPlus, Upload, Truck, Trash2, RotateCcw, Settings, Bell, MessageSquare, Search, Star, FileText, List, LayoutGrid, Store, ScanBarcode } from 'lucide-react';
+import { Users, ShoppingBag, BarChart2, CheckCircle, XCircle, Plus, Package, UserPlus, Upload, Truck, Trash2, RotateCcw, Settings, Bell, MessageSquare, Search, Star, FileText, List, LayoutGrid, Store, ScanBarcode, Keyboard } from 'lucide-react';
 import { ROLE_SUPER_MANAGER, ROLE_ADMIN, ROLE_MECHANIC, ROLE_RETAILER, ROLE_WHOLESALER, ROLE_STAFF } from '../services/constants';
 import AuthService from '../services/auth.service';
 import Skeleton from '../components/Skeleton';
@@ -130,6 +130,7 @@ const AdminDashboard = () => {
   const [billingSearchTerm, setBillingSearchTerm] = useState('');
   const [billingSearchResults, setBillingSearchResults] = useState<any[]>([]);
   const [showScanner, setShowScanner] = useState(false);
+  const [scannerMode, setScannerMode] = useState<'camera' | 'external'>('camera');
 
   // Listen for external hardware scanner in Billing section
   useExternalScanner((code) => {
@@ -2141,13 +2142,44 @@ const AdminDashboard = () => {
             <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
               <h3 className="font-bold text-gray-900 mb-4 uppercase tracking-widest text-xs">2. Add Products</h3>
               <div className="flex gap-2">
-                <button
-                  onClick={() => setShowScanner(true)}
-                  className="bg-white border border-gray-200 text-gray-700 p-3 rounded-xl hover:border-primary-500 hover:text-primary-600 transition shadow-sm"
-                  title="Scan Barcode"
-                >
-                  <ScanBarcode size={20} />
-                </button>
+                <div className="relative group">
+                  <button
+                    onClick={() => {
+                      setScannerMode('camera');
+                      setShowScanner(true);
+                    }}
+                    className="bg-white border border-gray-200 text-gray-700 p-3 rounded-xl hover:border-primary-500 hover:text-primary-600 transition shadow-sm h-full"
+                    title="Scan Barcode"
+                  >
+                    <ScanBarcode size={20} />
+                  </button>
+                  <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-20 hidden group-hover:block overflow-hidden min-w-[180px]">
+                    <button
+                      onClick={() => {
+                        setScannerMode('camera');
+                        setShowScanner(true);
+                      }}
+                      className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 font-bold text-sm text-gray-700"
+                    >
+                      <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg">
+                        <ScanBarcode size={16} />
+                      </div>
+                      Camera Scan
+                    </button>
+                    <button
+                      onClick={() => {
+                        setScannerMode('external');
+                        setShowScanner(true);
+                      }}
+                      className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 font-bold text-sm text-gray-700"
+                    >
+                      <div className="p-1.5 bg-amber-100 text-amber-600 rounded-lg">
+                        <Keyboard size={16} />
+                      </div>
+                      Hardware Scanner
+                    </button>
+                  </div>
+                </div>
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                   <input
@@ -2311,6 +2343,7 @@ const AdminDashboard = () => {
 
       {showScanner && (
         <BarcodeScanner 
+          initialMode={scannerMode}
           onScanSuccess={(text) => handleExternalScan(text)}
           onClose={() => setShowScanner(false)}
         />

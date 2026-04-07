@@ -7,11 +7,12 @@ interface BarcodeScannerProps {
   onScanSuccess: (decodedText: string) => void;
   onScanError?: (errorMessage: string) => void;
   onClose: () => void;
+  initialMode?: 'camera' | 'external';
 }
 
-const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess, onScanError, onClose }) => {
+const BarcodeScanner: React.FC<BarcodeScannerProps> = ({ onScanSuccess, onScanError, onClose, initialMode = 'camera' }) => {
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
-  const [mode, setMode] = useState<'camera' | 'external'>('camera');
+  const [mode, setMode] = useState<'camera' | 'external'>(initialMode);
 
   // Listen for external hardware scanner
   useExternalScanner((code) => {
