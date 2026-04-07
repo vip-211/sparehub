@@ -2311,7 +2311,7 @@ const AdminDashboard = () => {
 
       {showScanner && (
         <BarcodeScanner 
-          onScanSuccess={(text) => handleBillSearch(text)}
+          onScanSuccess={(text) => handleExternalScan(text)}
           onClose={() => setShowScanner(false)}
         />
       )}
