@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.transaction.annotation.Transactional;
+
 @Service
 public class AIService {
 
@@ -42,6 +44,7 @@ public class AIService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
+    @Transactional(readOnly = true)
     public String askAI(String prompt, String provider) {
         // Debug Log: Check if API keys are loaded (masked for security)
         log.info("AIService: Checking configuration... Gemini Key Present: {}, OpenAI Key Present: {}", 
@@ -49,15 +52,31 @@ public class AIService {
                  (openaiApiKey != null && !openaiApiKey.isEmpty()));
 
         try {
+            // Smart Search: Check for relevant products based on prompt first
+            List<String> tokens = List.of(prompt.split("\\W+"));
+            String matchedContext = tokens.stream()
+                    .filter(t -> t.length() > 2)
+                    .flatMap(t -> productRepository.findByNameContainingIgnoreCaseOrPartNumberContainingIgnoreCase(t, t).stream())
+                    .distinct()
+                    .limit(10)
+                    .map(p -> p.getName() + " (Part: " + p.getPartNumber() + ") • Price: ₹" + p.getSellingPrice() + " • Stock: " + p.getStock())
+                    .collect(Collectors.joining(", "));
+
             String productContext = productRepository.findAll().stream()
+                    .filter(p -> !p.isDeleted() && p.isEnabled())
                     .limit(20)
                     .map(p -> p.getName() + " (Part: " + p.getPartNumber() + ")")
                     .collect(Collectors.joining(", "));
 
+            String fullContext = matchedContext.isEmpty() ? productContext : "Matching parts found: " + matchedContext + ". General sample: " + productContext;
+
             String systemPrompt = "You are an AI assistant for Parts Mitra, an auto spare parts inventory system. " +
-                    "We have parts like: " + productContext + ". " +
-                    "Help users with part identification, maintenance advice, or finding items. " +
-                    "Be professional, concise, and helpful.";
+                    "Contextual inventory data: " + fullContext + ". " +
+                    "Guidelines: " +
+                    "1. Prioritize 'Matching parts found' above for the user's query. " +
+                    "2. If stock is 0, mention it's out of stock. " +
+                    "3. If no matching parts are found, suggest searching by part number or photo. " +
+                    "4. Be professional and concise.";
 
             String p = provider == null ? "" : provider.toLowerCase();
             if ("openai".equals(p)) {
@@ -152,8 +171,8 @@ public class AIService {
             if ("local".equals(p) || ((openaiApiKey == null || openaiApiKey.isEmpty()) && (geminiApiKey == null || geminiApiKey.isEmpty()))) {
                 String q = prompt == null ? "" : prompt.trim();
                 if (q.isEmpty()) return "Please describe the part or question.";
-                List<String> tokens = List.of(q.split("\\W+"));
-                List<Product> found = tokens.stream()
+                List<String> localTokens = List.of(q.split("\\W+"));
+                List<Product> found = localTokens.stream()
                         .filter(t -> t.length() > 1)
                         .flatMap(t -> productRepository.findByNameContainingIgnoreCaseOrPartNumberContainingIgnoreCase(t, t).stream())
                         .distinct()
@@ -173,10 +192,12 @@ public class AIService {
         }
     }
 
+    @Transactional(readOnly = true)
     public String searchByPhoto(MultipartFile image, String provider) {
         try {
             String productContext = productRepository.findAll().stream()
-                    .limit(20)
+                    .filter(p -> !p.isDeleted() && p.isEnabled())
+                    .limit(30)
                     .map(p -> p.getName() + " (Part: " + p.getPartNumber() + ")")
                     .collect(Collectors.joining(", "));
 
@@ -269,6 +290,7 @@ public class AIService {
         }
     }
 
+    @Transactional(readOnly = true)
     public String searchByVoice(MultipartFile audio, String provider) {
         try {
             boolean useOpenAI = "openai".equalsIgnoreCase(provider) || (openaiApiKey != null && !openaiApiKey.isEmpty());
