@@ -23,6 +23,10 @@ import java.util.stream.Collectors;
 
 import org.springframework.transaction.annotation.Transactional;
 
+import com.spareparts.inventory.repository.AITrainingCorrectionRepository;
+import com.spareparts.inventory.entity.AITrainingCorrection;
+import java.util.Optional;
+
 @Service
 public class AIService {
 
@@ -37,6 +41,9 @@ public class AIService {
 
     @Autowired
     private ProductRepository productRepository;
+
+    @Autowired
+    private AITrainingCorrectionRepository trainingCorrectionRepository;
 
     private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=";
     private static final String OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
@@ -54,6 +61,13 @@ public class AIService {
                  (openaiApiKey != null && !openaiApiKey.isEmpty()));
 
         try {
+            // Check for user-trained corrections first
+            Optional<AITrainingCorrection> existingCorrection = trainingCorrectionRepository.findTopByPromptIgnoreCaseOrderByCreatedAtDesc(prompt.trim());
+            if (existingCorrection.isPresent()) {
+                log.info("AIService: Found user-trained correction for prompt: '{}'. Returning corrected response.", prompt);
+                return existingCorrection.get().getCorrectedResponse();
+            }
+
             // Smart Search: Check for relevant products based on prompt first
             List<String> tokens = List.of(prompt.split("\\W+"));
             String matchedContext = tokens.stream()

@@ -20,6 +20,9 @@ import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
 
+import com.spareparts.inventory.repository.AITrainingCorrectionRepository;
+import com.spareparts.inventory.entity.AITrainingCorrection;
+
 @RestController
 @RequestMapping("/api/ai")
 public class AIController {
@@ -33,6 +36,8 @@ public class AIController {
     private ProductRepository productRepository;
     @Autowired
     private VoiceTrainingSampleRepository voiceTrainingSampleRepository;
+    @Autowired
+    private AITrainingCorrectionRepository trainingCorrectionRepository;
 
     @PostMapping("/chat")
     @PreAuthorize("isAuthenticated()")
@@ -71,9 +76,24 @@ public class AIController {
     @PostMapping("/train")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> train(@RequestBody Map<String, Object> request) {
-        // Similar to feedback, record corrections for manual model fine-tuning
         log.info("AI Training Correction Received: {}", request);
-        return ResponseEntity.ok(Map.of("message", "Correction recorded for training"));
+        try {
+            String prompt = (String) request.get("prompt");
+            String originalResponse = (String) request.get("originalResponse");
+            String correctedResponse = (String) request.get("correctedResponse");
+
+            if (prompt != null && correctedResponse != null) {
+                AITrainingCorrection correction = new AITrainingCorrection();
+                correction.setPrompt(prompt);
+                correction.setOriginalResponse(originalResponse);
+                correction.setCorrectedResponse(correctedResponse);
+                trainingCorrectionRepository.save(correction);
+                return ResponseEntity.ok(Map.of("message", "Correction recorded and applied for future queries"));
+            }
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid training data"));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PostMapping("/voice/train")
