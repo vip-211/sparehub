@@ -34,6 +34,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("SELECT i.product.name as name, SUM(i.quantity) as count FROM OrderItem i WHERE i.order.deleted = false GROUP BY i.product.name ORDER BY count DESC")
     List<Map<String, Object>> findTopSellingProducts(Pageable pageable);
 
-    @Query("SELECT FUNCTION('DATE_FORMAT', o.createdAt, '%Y-%m') as month, SUM(o.totalAmount) as total FROM Order o WHERE o.deleted = false GROUP BY month ORDER BY month ASC")
+    @Query("SELECT TO_CHAR(o.createdAt, 'YYYY-MM') as month, SUM(o.totalAmount) as total FROM Order o WHERE o.deleted = false GROUP BY TO_CHAR(o.createdAt, 'YYYY-MM') ORDER BY month ASC")
     List<Map<String, Object>> getMonthlySales();
 }

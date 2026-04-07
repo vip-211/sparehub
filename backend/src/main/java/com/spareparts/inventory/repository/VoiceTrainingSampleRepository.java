@@ -11,12 +11,12 @@ import java.time.LocalDateTime;
 
 public interface VoiceTrainingSampleRepository extends JpaRepository<VoiceTrainingSample, Long> {
     @Query("SELECT v FROM VoiceTrainingSample v " +
-            "WHERE (:role IS NULL OR v.role = :role) " +
-            "AND (:from IS NULL OR v.createdAt >= :from) " +
-            "AND (:to IS NULL OR v.createdAt <= :to) " +
+            "WHERE (?1 IS NULL OR v.role = ?1) " +
+            "AND (CAST(?2 AS timestamp) IS NULL OR v.createdAt >= ?2) " +
+            "AND (CAST(?3 AS timestamp) IS NULL OR v.createdAt <= ?3) " +
             "ORDER BY v.createdAt DESC")
-    Page<VoiceTrainingSample> findFiltered(@Param("role") String role,
-                                           @Param("from") LocalDateTime from,
-                                           @Param("to") LocalDateTime to,
+    Page<VoiceTrainingSample> findFiltered(String role,
+                                           LocalDateTime from,
+                                           LocalDateTime to,
                                            Pageable pageable);
 }
