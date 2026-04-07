@@ -24,6 +24,8 @@ import java.util.stream.Collectors;
 @Service
 public class AIService {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AIService.class);
+
     @Value("${app.gemini.api.key:}")
     private String geminiApiKey;
     @Value("${app.openai.api.key:}")
@@ -41,6 +43,11 @@ public class AIService {
     private final RestTemplate restTemplate = new RestTemplate();
 
     public String askAI(String prompt, String provider) {
+        // Debug Log: Check if API keys are loaded (masked for security)
+        log.info("AIService: Checking configuration... Gemini Key Present: {}, OpenAI Key Present: {}", 
+                 (geminiApiKey != null && !geminiApiKey.isEmpty()), 
+                 (openaiApiKey != null && !openaiApiKey.isEmpty()));
+
         try {
             String productContext = productRepository.findAll().stream()
                     .limit(20)

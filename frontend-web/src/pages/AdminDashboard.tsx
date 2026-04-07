@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import api, { API_BASE_URL } from '../services/api';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
-import { Users, ShoppingBag, BarChart2, CheckCircle, XCircle, Plus, Package, UserPlus, Upload, Truck, Trash2, RotateCcw, Settings, Bell, MessageSquare, Search, Star, FileText, List, LayoutGrid, Store, ScanBarcode, Keyboard } from 'lucide-react';
+import { Users, ShoppingBag, BarChart2, CheckCircle, XCircle, Plus, Package, UserPlus, Upload, Truck, Trash2, RotateCcw, Settings, Bell, MessageSquare, Search, Star, FileText, List, LayoutGrid, Store, ScanBarcode, Keyboard, Cpu } from 'lucide-react';
 import { ROLE_SUPER_MANAGER, ROLE_ADMIN, ROLE_MECHANIC, ROLE_RETAILER, ROLE_WHOLESALER, ROLE_STAFF } from '../services/constants';
 import AuthService from '../services/auth.service';
 import Skeleton from '../components/Skeleton';
@@ -2663,6 +2663,27 @@ const AdminDashboard = () => {
                     />
                     <div className="w-12 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                   </label>
+                </div>
+
+                <div className="flex items-center justify-between p-6 bg-gray-50 rounded-2xl border border-gray-100 group hover:border-indigo-200 transition-all">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-white rounded-xl shadow-sm text-indigo-600">
+                      <Cpu size={24} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-900">AI Provider</h3>
+                      <p className="text-xs text-gray-500 font-medium">Select the AI model for the chatbot.</p>
+                    </div>
+                  </div>
+                  <select
+                    value={getSetting('AI_PROVIDER', 'gemini')}
+                    onChange={(e) => updateSettingLocally('AI_PROVIDER', e.target.value)}
+                    className="bg-white border border-gray-200 rounded-xl p-2 text-sm font-bold text-gray-700 outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="gemini">Gemini</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="local">Local (Basic)</option>
+                  </select>
                 </div>
 
                 <div className="flex items-center justify-between p-6 bg-gray-50 rounded-2xl border border-gray-100 group hover:border-blue-200 transition-all">
