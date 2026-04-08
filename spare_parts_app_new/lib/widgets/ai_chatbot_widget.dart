@@ -136,11 +136,48 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
       padding: const EdgeInsets.only(right: 8),
       child: ActionChip(
         label: Text(text, style: const TextStyle(fontSize: 12)),
-        onPressed: () => _sendMessage(text),
+        onPressed: () {
+          if (text == 'Check stock') {
+            _promptAndSendStock();
+          } else {
+            _sendMessage(text);
+          }
+        },
         backgroundColor: Colors.blue.shade50,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     );
+  }
+
+  Future<void> _promptAndSendStock() async {
+    final c = TextEditingController();
+    final value = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Check Stock'),
+        content: TextField(
+          controller: c,
+          autofocus: true,
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            hintText: 'Enter part name or number',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, c.text.trim()),
+            child: const Text('Check'),
+          ),
+        ],
+      ),
+    );
+    if (value != null && value.isNotEmpty) {
+      _sendMessage('Check stock for $value');
+    }
   }
 
   Future<void> _handlePhotoSearch() async {

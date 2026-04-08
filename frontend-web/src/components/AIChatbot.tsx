@@ -48,6 +48,24 @@ const AIChatbot: React.FC = () => {
     fetchSettings();
   }, []);
 
+  const sendPrompt = async (prompt: string) => {
+    if (!prompt.trim()) return;
+    const userMessage = { text: prompt, isBot: false };
+    setMessages(prev => [...prev, userMessage]);
+    setLoading(true);
+    try {
+      const res = await api.post('ai/chat', { prompt }, { headers: { 'X-AI-Provider': aiProvider } });
+      const botMessage = { text: res.data.response, isBot: true, prompt };
+      setMessages(prev => [...prev, botMessage]);
+    } catch (error) {
+      console.error('AI Chat Error:', error);
+      const errorMessage = { text: "Sorry, I'm having trouble connecting to my brain right now.", isBot: true, prompt };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleFeedback = async (prompt: string, response: string, isPositive: boolean) => {
     try {
       await api.post('ai/feedback', { prompt, response, isPositive, timestamp: new Date().toISOString() });
@@ -91,21 +109,36 @@ const AIChatbot: React.FC = () => {
   const handleSend = async () => {
     if (!input.trim()) return;
 
-    const userMessage = { text: input, isBot: false };
-    setMessages(prev => [...prev, userMessage]);
+    const prompt = input;
     setInput('');
-    setLoading(true);
+    await sendPrompt(prompt);
+  };
 
-    try {
-      const res = await api.post('ai/chat', { prompt: input }, { headers: { 'X-AI-Provider': aiProvider } });
-      const botMessage = { text: res.data.response, isBot: true, prompt: input };
-      setMessages(prev => [...prev, botMessage]);
-    } catch (error) {
-      console.error('AI Chat Error:', error);
-      const errorMessage = { text: "Sorry, I'm having trouble connecting to my brain right now.", isBot: true, prompt: input };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setLoading(false);
+  const handleQuick = async (type: 'stock' | 'invoice' | 'assist' | 'offers') => {
+    if (type === 'stock') {
+      const q = window.prompt('Enter part name or number to check stock:');
+      if (q && q.trim()) {
+        await sendPrompt(`Check stock for ${q.trim()}`);
+      }
+      return;
+    }
+    if (type === 'invoice') {
+      const p = window.prompt('Enter part name or number to create invoice:');
+      if (p && p.trim()) {
+        const qtyStr = window.prompt('Enter quantity (default 1):') || '1';
+        const qty = parseInt(qtyStr || '1', 10) || 1;
+        await sendPrompt(`Create invoice for ${qty} x ${p.trim()}`);
+      }
+      return;
+    }
+    if (type === 'assist') {
+      await sendPrompt('Need assistance');
+      return;
+    }
+    if (type === 'offers') {
+      setMessages(prev => [...prev, { text: 'Opening offers…', isBot: true }]);
+      navigate('/shop');
+      return;
     }
   };
 
@@ -253,6 +286,36 @@ const AIChatbot: React.FC = () => {
               </div>
             )}
             <div ref={messagesEndRef} />
+          </div>
+
+          {/* Quick Tabs */}
+          <div className="px-5 py-2 bg-white border-t border-slate-100">
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => handleQuick('stock')}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-[11px] font-bold text-slate-700 transition"
+              >
+                Check stock
+              </button>
+              <button
+                onClick={() => handleQuick('invoice')}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-[11px] font-bold text-slate-700 transition"
+              >
+                Create invoice
+              </button>
+              <button
+                onClick={() => handleQuick('assist')}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-[11px] font-bold text-slate-700 transition"
+              >
+                Need assistance
+              </button>
+              <button
+                onClick={() => handleQuick('offers')}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-full text-[11px] font-bold text-slate-700 transition"
+              >
+                Latest offers
+              </button>
+            </div>
           </div>
 
           {/* Input */}

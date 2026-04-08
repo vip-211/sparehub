@@ -14,6 +14,7 @@ import '../widgets/notification_badge.dart';
 import '../providers/theme_provider.dart';
 import '../services/auth_service.dart';
 import '../utils/app_theme.dart';
+import 'stock_screen.dart';
 
 class WholesalerDashboard extends StatefulWidget {
   const WholesalerDashboard({super.key});
@@ -161,6 +162,15 @@ class _WholesalerDashboardState extends State<WholesalerDashboard> {
               ],
             ),
             actions: [
+              IconButton(
+                icon: const Icon(Icons.inventory_2_outlined),
+                tooltip: 'Stock',
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const StockScreen()),
+                  );
+                },
+              ),
               IconButton(
                 icon: const Icon(Icons.settings),
                 onPressed: () => Navigator.of(context).pushNamed('/settings'),

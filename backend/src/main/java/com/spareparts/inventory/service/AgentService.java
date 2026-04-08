@@ -3,6 +3,8 @@ package com.spareparts.inventory.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spareparts.inventory.entity.Product;
+import com.spareparts.inventory.dto.OrderItemDto;
+import com.spareparts.inventory.dto.OrderRequest;
 import com.spareparts.inventory.repository.ProductRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,10 +74,47 @@ public class AgentService {
         }
 
         // Step 1: Detect action using AI
+        // Step 0.6: Quick stock check without AI
+        if (queryLower.contains("check stock") || queryLower.contains("stock of") ||
+                queryLower.contains("availability") || queryLower.contains("available") ||
+                queryLower.contains("स्टॉक") || queryLower.contains("उपलब्ध")) {
+            List<String> tokens = List.of(userQuery.split("\\W+"));
+            List<Product> matches = tokens.stream()
+                    .filter(t -> t.length() > 2 &&
+                            !t.equalsIgnoreCase("check") &&
+                            !t.equalsIgnoreCase("stock") &&
+                            !t.equalsIgnoreCase("availability") &&
+                            !t.equalsIgnoreCase("available"))
+                    .flatMap(t -> productRepository.findByNameContainingIgnoreCaseOrPartNumberContainingIgnoreCase(t, t).stream())
+                    .distinct()
+                    .limit(10)
+                    .toList();
+            if (!matches.isEmpty()) {
+                String results = matches.stream()
+                        .limit(5)
+                        .map(p -> "• " + p.getName() + " (" + p.getPartNumber() + ") - ₹" + p.getSellingPrice() + " (Stock: " + p.getStock() + ")")
+                        .collect(Collectors.joining("\n"));
+                if (language.equals("Hindi")) {
+                    return "मुझे ये स्टॉक विवरण मिले हैं:\n" + results;
+                } else if (language.equals("Marathi")) {
+                    return "मला हे स्टॉक तपशील मिळाले आहेत:\n" + results;
+                }
+                return "Here is the stock information I found:\n" + results;
+            } else {
+                if (language.equals("Hindi")) {
+                    return "कृपया उस पुर्जे का नाम या पार्ट नंबर बताएं जिसका स्टॉक आप चेक करना चाहते हैं।";
+                } else if (language.equals("Marathi")) {
+                    return "कृपया ज्या भागाचा स्टॉक तपासायचा आहे त्या भागाचे नाव किंवा पार्ट नंबर सांगा.";
+                }
+                return "Please specify the part name or part number to check stock.";
+            }
+        }
+
         String actionPrompt = String.format(
                 "You are a specialized action-detector for a spare parts shop assistant.\n" +
                 "Role: %s\n" +
                 "Language: %s\n" +
+                "Convert the user's query into a JSON object.\n" +
                 "Convert the user's query into a JSON object.\n" +
                 "Actions available:\n" +
                 "1. search_product: If the user is looking for a part or checking availability.\n" +
@@ -133,6 +172,32 @@ public class AgentService {
                             List<Product> matches = productRepository.findByNameContainingIgnoreCaseOrPartNumberContainingIgnoreCase(product, product);
                             if (!matches.isEmpty()) {
                                 Product p = matches.get(0);
+                                boolean roleAllowed = role.equalsIgnoreCase("RETAILER") || role.equalsIgnoreCase("MECHANIC")
+                                        || role.equalsIgnoreCase("ADMIN") || role.equalsIgnoreCase("SUPER_MANAGER");
+                                if (roleAllowed && p.getWholesaler() != null && userId != null) {
+                                    try {
+                                        OrderItemDto item = new OrderItemDto();
+                                        item.setProductId(p.getId());
+                                        item.setProductName(p.getName());
+                                        item.setQuantity(quantity);
+                                        OrderRequest req = new OrderRequest();
+                                        req.setSellerId(p.getWholesaler().getId());
+                                        req.setItems(java.util.List.of(item));
+                                        var orderDto = orderService.createOrder(req, userId);
+                                        if (language.equals("Hindi")) {
+                                            return String.format("✅ बिल बनाया गया: #%d • कुल: ₹%s", 
+                                                    orderDto.getId(), orderDto.getTotalAmount());
+                                        } else if (language.equals("Marathi")) {
+                                            return String.format("✅ बिल तयार झाले: #%d • एकूण: ₹%s", 
+                                                    orderDto.getId(), orderDto.getTotalAmount());
+                                        }
+                                        return String.format("✅ Invoice created: #%d • Total: ₹%s", 
+                                                orderDto.getId(), orderDto.getTotalAmount());
+                                    } catch (Exception ex) {
+                                        LoggerFactory.getLogger(AgentService.class).error("Failed to create invoice: {}", ex.getMessage());
+                                        // Fall back to instructions if order creation fails
+                                    }
+                                }
                                 if (language.equals("Hindi")) {
                                     return String.format("मैं आपके लिए %d x %s का बिल बनाने में मदद कर सकता हूँ।\nमैंने पुर्जे की पहचान की है: %s (₹%.2f)।\nकृपया आगे बढ़ने के लिए इस आइटम को अपनी कार्ट में जोड़ें।", 
                                             quantity, p.getName(), p.getName(), p.getSellingPrice());
