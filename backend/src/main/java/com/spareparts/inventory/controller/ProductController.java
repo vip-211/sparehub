@@ -3,36 +3,68 @@ package com.spareparts.inventory.controller;
 
 import com.spareparts.inventory.dto.PaginatedResponse;
 import com.spareparts.inventory.dto.ProductDto;
+import com.spareparts.inventory.dto.SuggestionDto;
+import com.spareparts.inventory.dto.ChatResponse;
 import com.spareparts.inventory.repository.ProductRepository;
 import com.spareparts.inventory.entity.Product;
 import com.spareparts.inventory.security.UserDetailsImpl;
 import com.spareparts.inventory.service.ProductService;
+import com.spareparts.inventory.service.AIService;
+import com.spareparts.inventory.service.AgentService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.ArrayDeque;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import java.util.Objects;
+import java.util.Collections;
 
 @RestController
 @RequestMapping("/api/products")
 public class ProductController {
     @Autowired
     private ProductService productService;
+
+    @Autowired
+    private AIService aiService;
+
+    @Autowired
+    private AgentService agentService;
+    
     @Autowired(required = false)
     private com.spareparts.inventory.repository.SystemSettingRepository systemSettingRepository;
     
-    private static final java.util.concurrent.ConcurrentHashMap<String, java.util.Deque<Long>> RATE = new java.util.concurrent.ConcurrentHashMap<>();
-    private static final java.util.concurrent.ConcurrentHashMap<String, CacheEntry> CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Deque<Long>> RATE = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, CacheEntry> CACHE = new ConcurrentHashMap<>();
     
     private static record CacheEntry(Object body, long expiryMs) {}
+
+    @Scheduled(fixedRate = 60000)
+    public void cleanCache() {
+        long now = System.currentTimeMillis();
+        CACHE.entrySet().removeIf(e -> now > e.getValue().expiryMs());
+        RATE.entrySet().removeIf(e -> {
+            synchronized (e.getValue()) {
+                while (!e.getValue().isEmpty() && now - e.getValue().peekFirst() > getRateWindowMs()) {
+                    e.getValue().pollFirst();
+                }
+                return e.getValue().isEmpty();
+            }
+        });
+    }
     
     private boolean allowRequest(String key) {
         long now = System.currentTimeMillis();
-        java.util.Deque<Long> dq = RATE.computeIfAbsent(key, k -> new java.util.ArrayDeque<>());
+        Deque<Long> dq = RATE.computeIfAbsent(key, k -> new ArrayDeque<>());
         int rateLimit = getRateLimit();
         long windowMs = getRateWindowMs();
         synchronized (dq) {
@@ -88,6 +120,124 @@ public class ProductController {
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         productService.addProductsBulk(productDtos, userDetails.getId());
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/suggest")
+    public ResponseEntity<List<SuggestionDto>> suggest(@RequestParam String query) {
+        try {
+            // Fix: ensure we provide all 5 arguments to searchProducts, sort by stock to show available items first
+            PaginatedResponse<ProductDto> response = productService.searchProducts(query, 0, 5, "stock", "desc");
+            if (response == null || response.getContent() == null) {
+                return ResponseEntity.ok(Collections.emptyList());
+            }
+            List<SuggestionDto> suggestions = response.getContent()
+                    .stream()
+                    .map(p -> {
+                        SuggestionDto dto = new SuggestionDto();
+                        dto.setName(p.getName());
+                        dto.setPartNumber(p.getPartNumber());
+                        dto.setPrice(p.getSellingPrice());
+                        dto.setStock(p.getStock());
+                        return dto;
+                    })
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(suggestions);
+        } catch (Exception e) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
+    }
+
+    @GetMapping("/suggest/context")
+    public ResponseEntity<List<String>> suggestWithContext(
+            @RequestParam String query,
+            Authentication authentication) {
+        try {
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+            String history = agentService.getChatHistoryText(userDetails.getId());
+            
+            PaginatedResponse<ProductDto> products = productService.searchProducts(query, 0, 5, "id", "desc");
+            if (products == null || products.getContent() == null || products.getContent().isEmpty()) {
+                return ResponseEntity.ok(Collections.emptyList());
+            }
+
+            String productList = products.getContent().stream()
+                    .map(p -> p.getName() + " (" + p.getPartNumber() + ")")
+                    .collect(Collectors.joining(", "));
+
+            String prompt = String.format(
+                "Based on the user's recent chat history and current search query, identify the most relevant spare parts from the provided list.\n\n" +
+                "User Search Query: %s\n" +
+                "Recent Chat History:\n%s\n\n" +
+                "Available Products: %s\n\n" +
+                "Instructions:\n" +
+                "- Return ONLY the top 3 product names, comma-separated.\n" +
+                "- Prioritize parts that match the context of previous messages.\n" +
+                "- If no strong context exists, return the top results from the list.",
+                query, history, productList
+            );
+
+            String aiResponse = aiService.askAI(prompt, "gemini", userDetails.getId());
+            List<String> results = List.of(aiResponse.split(",\\s*"));
+            return ResponseEntity.ok(results);
+        } catch (Exception e) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
+    }
+
+    @GetMapping("/recommendations")
+    public ResponseEntity<String> getRecommendations(Authentication authentication) {
+        try {
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+            List<Object[]> topSelling = productService.getTopSellingProducts();
+            
+            if (topSelling.isEmpty()) {
+                return ResponseEntity.ok("I don't have enough sales data to make recommendations yet.");
+            }
+
+            String bestSellers = topSelling.stream()
+                    .limit(5)
+                    .map(o -> o[0] + " (Sold: " + o[1] + ")")
+                    .collect(Collectors.joining("\n"));
+
+            String prompt = String.format(
+                "Analyze these top-selling spare parts and provide strategic stock recommendations for the shop owner.\n\n" +
+                "Top Sellers:\n%s\n\n" +
+                "Instructions:\n" +
+                "- Identify high-demand items.\n" +
+                "- Suggest what to restock or promote.\n" +
+                "- Keep it professional and helpful.\n" +
+                "- Use bullet points.",
+                bestSellers
+            );
+
+            return ResponseEntity.ok(aiService.askAI(prompt, "gemini", userDetails.getId()));
+        } catch (Exception e) {
+            return ResponseEntity.ok("Failed to fetch recommendations.");
+        }
+    }
+
+    @GetMapping("/chat-suggest")
+    public ResponseEntity<ChatResponse> chatSuggest(@RequestParam String query) {
+        try {
+            PaginatedResponse<ProductDto> response = productService.searchProducts(query, 0, 3, "stock", "desc");
+            ChatResponse res = new ChatResponse();
+            
+            if (response == null || response.getContent() == null || response.getContent().isEmpty()) {
+                res.setMessage("I couldn't find any parts matching '" + query + "'.");
+                res.setQuickReplies(List.of("Search again", "Need assistance", "Show all parts"));
+            } else {
+                String parts = response.getContent().stream()
+                        .map(p -> "• " + p.getName() + " (₹" + p.getSellingPrice() + ")")
+                        .collect(Collectors.joining("\n"));
+                res.setMessage("🔍 I found some matching parts for you:\n\n" + parts);
+                res.setQuickReplies(List.of("Create Invoice", "Check Stock", "Show Alternatives"));
+            }
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            ChatResponse err = new ChatResponse();
+            err.setMessage("Error fetching suggestions.");
+            return ResponseEntity.ok(err);
+        }
     }
 
     @GetMapping("/wholesaler")

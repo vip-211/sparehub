@@ -46,4 +46,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     default List<Product> findByNameContainingIgnoreCaseOrPartNumberContainingIgnoreCase(String name, String partNumber) {
         return searchProducts(name); // Assuming name is the query
     }
+
+    @Query("SELECT p.name, SUM(oi.quantity) as total " +
+           "FROM OrderItem oi JOIN oi.product p " +
+           "GROUP BY p.name ORDER BY total DESC")
+    List<Object[]> getTopSellingProducts();
 }

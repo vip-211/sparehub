@@ -14,6 +14,13 @@ import org.springframework.transaction.annotation.Transactional;
 import com.spareparts.inventory.entity.User;
 import com.spareparts.inventory.repository.UserRepository;
 
+import com.spareparts.inventory.entity.ChatMessage;
+import com.spareparts.inventory.repository.ChatMessageRepository;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -40,13 +47,17 @@ public class AgentService {
     @Autowired
     private FcmService fcmService;
 
+    @Autowired
+    private ChatMessageRepository chatMessageRepository;
+
     @Transactional
     public String processQuery(String userQuery, String provider, Long userId) {
         // Step 0: Get User Role and Language
         String role = "GUEST";
         String userName = "A user";
+        User user = null;
         if (userId != null) {
-            User user = userRepository.findById(userId).orElse(null);
+            user = userRepository.findById(userId).orElse(null);
             if (user != null) {
                 userName = user.getName() != null ? user.getName() : "User " + userId;
                 if (user.getRole() != null) {
@@ -55,6 +66,11 @@ public class AgentService {
             }
         }
         String language = detectLanguage(userQuery);
+
+        // Step 0.2: Save User Query to History
+        if (user != null) {
+            saveChatMessage(user, userQuery, false);
+        }
 
         // Step 0.5: Handle "Need Assistance"
         String queryLower = userQuery.toLowerCase();
@@ -65,12 +81,16 @@ public class AgentService {
             String adminMsg = String.format("%s needs assistance with the AI chatbot. Query: \"%s\"", userName, userQuery);
             fcmService.sendToAdminAndSuperManager("User Needs Assistance", adminMsg, null);
             
+            String response;
             if (language.equals("Hindi")) {
-                return "मैंने एडमिन को सूचित कर दिया है। वे जल्द ही आपसे संपर्क करेंगे। आपकी क्या सहायता कर सकता हूँ?";
+                response = "मैंने एडमिन को सूचित कर दिया है। वे जल्द ही आपसे संपर्क करेंगे। आपकी क्या सहायता कर सकता हूँ?";
             } else if (language.equals("Marathi")) {
-                return "मी ॲडमिनला सूचित केले आहे. ते लवकरच तुमच्याशी संपर्क साधतील. मी तुम्हाला कशी मदत करू शकतो?";
+                response = "मी ॲडमिनला सूचित केले आहे. ते लवकरच तुमच्याशी संपर्क साधतील. मी तुम्हाला कशी मदत करू शकतो?";
+            } else {
+                response = "I have notified the admin. They will get back to you shortly. How else can I assist you?";
             }
-            return "I have notified the admin. They will get back to you shortly. How else can I assist you?";
+            if (user != null) saveChatMessage(user, response, true);
+            return response;
         }
 
         // Step 1: Detect action using AI
@@ -94,19 +114,29 @@ public class AgentService {
                         .limit(5)
                         .map(p -> "• " + p.getName() + " (" + p.getPartNumber() + ") - ₹" + p.getSellingPrice() + " (Stock: " + p.getStock() + ")")
                         .collect(Collectors.joining("\n"));
-                if (language.equals("Hindi")) {
-                    return "मुझे ये स्टॉक विवरण मिले हैं:\n" + results;
-                } else if (language.equals("Marathi")) {
-                    return "मला हे स्टॉक तपशील मिळाले आहेत:\n" + results;
-                }
-                return "Here is the stock information I found:\n" + results;
+                
+                String rawResponse = String.format(
+                        "📦 Here's what I found in stock:\n\n%s\n\n" +
+                        "💡 You can:\n" +
+                        "• Create an invoice for any item\n" +
+                        "• Ask for bulk pricing\n" +
+                        "• Check alternative parts\n\n" +
+                        "👉 Need help choosing the right part?",
+                        results
+                );
+                String enhancedResponse = enhanceResponse(rawResponse, language, role, provider, userId);
+                if (user != null) saveChatMessage(user, enhancedResponse, true);
+                return enhancedResponse;
             } else {
+                String rawResponse = "Please specify the part name or part number to check stock.";
                 if (language.equals("Hindi")) {
-                    return "कृपया उस पुर्जे का नाम या पार्ट नंबर बताएं जिसका स्टॉक आप चेक करना चाहते हैं।";
+                    rawResponse = "कृपया उस पुर्जे का नाम या पार्ट नंबर बताएं जिसका स्टॉक आप चेक करना चाहते हैं।";
                 } else if (language.equals("Marathi")) {
-                    return "कृपया ज्या भागाचा स्टॉक तपासायचा आहे त्या भागाचे नाव किंवा पार्ट नंबर सांगा.";
+                    rawResponse = "कृपया ज्या भागाचा स्टॉक तपासायचा आहे त्या भागाचे नाव किंवा पार्ट नंबर सांगा.";
                 }
-                return "Please specify the part name or part number to check stock.";
+                String enhancedResponse = enhanceResponse(rawResponse, language, role, provider, userId);
+                if (user != null) saveChatMessage(user, enhancedResponse, true);
+                return enhancedResponse;
             }
         }
 
@@ -115,27 +145,24 @@ public class AgentService {
                 "Role: %s\n" +
                 "Language: %s\n" +
                 "Convert the user's query into a JSON object.\n" +
-                "Convert the user's query into a JSON object.\n" +
                 "Actions available:\n" +
                 "1. search_product: If the user is looking for a part or checking availability.\n" +
                 "2. create_invoice: If the user wants to buy, order, create a bill, or invoice for items.\n" +
                 "3. stock_prediction: If the user asks about what to restock, low stock items, or future demand.\n" +
-                "4. general_query: For anything else (greetings, general help, maintenance advice).\n\n" +
+                "4. get_recommendations: If the user asks for best-selling parts, top items, or suggestions.\n" +
+                "5. general_query: For anything else (greetings, general help, maintenance advice).\n\n" +
                 "Return ONLY a JSON object in this format:\n" +
                 "{\n" +
-                "  \"action\": \"search_product\" | \"create_invoice\" | \"stock_prediction\" | \"general_query\",\n" +
+                "  \"action\": \"search_product\" | \"create_invoice\" | \"stock_prediction\" | \"get_recommendations\" | \"general_query\",\n" +
                 "  \"product\": \"name of the product if mentioned, else null\",\n" +
                 "  \"quantity\": number if mentioned, else 1\n" +
                 "}\n\n" +
                 "User Query: %s", role, language, userQuery);
 
-        String aiResponse = aiService.askAI(actionPrompt, provider, null); // Call AI without history for action detection
+        String aiResponse = aiService.askAI(actionPrompt, provider, null);
 
         try {
-            // Step 2: Parse AI's decision
             String jsonStr = extractJson(aiResponse);
-            
-            // Check if it's actually JSON before trying to parse
             if (jsonStr.trim().startsWith("{") && jsonStr.trim().endsWith("}")) {
                 JsonNode node = objectMapper.readTree(jsonStr);
                 String action = node.has("action") ? node.get("action").asText() : "general_query";
@@ -144,12 +171,10 @@ public class AgentService {
 
                 log.info("AgentService: Role: {}, Lang: {}, Action: {}, Product: {}, Qty: {}", role, language, action, product, quantity);
 
-                // Step 2.5: Role-based restriction
                 if (role.equalsIgnoreCase("MECHANIC") && action.equals("delete_product")) {
                     return language.equals("Hindi") ? "❌ आपके पास यह कार्य करने की अनुमति नहीं है।" : "❌ You do not have permission to perform this action.";
                 }
 
-                // Step 3: Execute Business Logic
                 switch (action) {
                     case "search_product":
                         if (product != null) {
@@ -160,9 +185,18 @@ public class AgentService {
                                         .map(p -> "• " + p.getName() + " (" + p.getPartNumber() + ") - ₹" + p.getSellingPrice() + " (Stock: " + p.getStock() + ")")
                                         .collect(Collectors.joining("\n"));
                                 
-                                return language.equals("Hindi") 
-                                        ? "मुझे आपके लिए ये पुर्जे मिले हैं:\n" + results 
-                                        : (language.equals("Marathi") ? "मला तुमच्यासाठी हे सुटे भाग सापडले आहेत:\n" + results : "I found these matching parts for you:\n" + results);
+                                String rawResponse = String.format(
+                                        "🔍 I found %d matching parts for you:\n\n%s\n\n" +
+                                        "💡 Suggestions:\n" +
+                                        "• You can ask me to create an invoice\n" +
+                                        "• Check availability for a specific part\n" +
+                                        "• Ask for similar or cheaper alternatives\n\n" +
+                                        "👉 What would you like to do next?",
+                                        matches.size(), results
+                                );
+                                String enhancedResponse = enhanceResponse(rawResponse, language, role, provider, userId);
+                                if (user != null) saveChatMessage(user, enhancedResponse, true);
+                                return enhancedResponse;
                             }
                         }
                         break;
@@ -184,33 +218,33 @@ public class AgentService {
                                         req.setSellerId(p.getWholesaler().getId());
                                         req.setItems(java.util.List.of(item));
                                         var orderDto = orderService.createOrder(req, userId);
-                                        if (language.equals("Hindi")) {
-                                            return String.format("✅ बिल बनाया गया: #%d • कुल: ₹%s", 
-                                                    orderDto.getId(), orderDto.getTotalAmount());
-                                        } else if (language.equals("Marathi")) {
-                                            return String.format("✅ बिल तयार झाले: #%d • एकूण: ₹%s", 
-                                                    orderDto.getId(), orderDto.getTotalAmount());
-                                        }
-                                        return String.format("✅ Invoice created: #%d • Total: ₹%s", 
-                                                orderDto.getId(), orderDto.getTotalAmount());
+                                        
+                                        String rawResponse = String.format(
+                                                "✅ Your invoice has been successfully created!\n\n" +
+                                                "🧾 Invoice ID: #%d\n" +
+                                                "💰 Total Amount: ₹%s\n\n" +
+                                                "💡 Next steps:\n" +
+                                                "• You can download or share the invoice\n" +
+                                                "• Track order status anytime\n\n" +
+                                                "👉 Need anything else?",
+                                                orderDto.getId(), orderDto.getTotalAmount()
+                                        );
+                                        String enhancedResponse = enhanceResponse(rawResponse, language, role, provider, userId);
+                                        if (user != null) saveChatMessage(user, enhancedResponse, true);
+                                        return enhancedResponse;
                                     } catch (Exception ex) {
-                                        LoggerFactory.getLogger(AgentService.class).error("Failed to create invoice: {}", ex.getMessage());
-                                        // Fall back to instructions if order creation fails
+                                        log.error("Failed to create invoice: {}", ex.getMessage());
                                     }
                                 }
-                                if (language.equals("Hindi")) {
-                                    return String.format("मैं आपके लिए %d x %s का बिल बनाने में मदद कर सकता हूँ।\nमैंने पुर्जे की पहचान की है: %s (₹%.2f)।\nकृपया आगे बढ़ने के लिए इस आइटम को अपनी कार्ट में जोड़ें।", 
-                                            quantity, p.getName(), p.getName(), p.getSellingPrice());
-                                } else if (language.equals("Marathi")) {
-                                    return String.format("मी तुम्हाला %d x %s चे बिल तयार करण्यास मदत करू शकतो.\nमी भाग ओळखला आहे: %s (₹%.2f).\nकृपया पुढे जाण्यासाठी ही वस्तू तुमच्या कार्टमध्ये जोडा.", 
-                                            quantity, p.getName(), p.getName(), p.getSellingPrice());
-                                }
-                                return String.format("I can help you create an invoice for %d x %s.\nI've identified the part as: %s (₹%.2f).\nPlease add this item to your cart to proceed.", 
+                                String rawResponse = String.format("I can help you create an invoice for %d x %s.\nI've identified the part as: %s (₹%.2f).\nPlease add this item to your cart to proceed.", 
                                         quantity, p.getName(), p.getName(), p.getSellingPrice());
+                                String enhancedResponse = enhanceResponse(rawResponse, language, role, provider, userId);
+                                if (user != null) saveChatMessage(user, enhancedResponse, true);
+                                return enhancedResponse;
                             }
-                            return language.equals("Hindi") ? "मुझे बिल बनाने के लिए सटीक पुर्जा '" + product + "' नहीं मिला।" : "I couldn't find the exact product '" + product + "' to create an invoice.";
+                            return enhanceResponse("I couldn't find the exact product '" + product + "' to create an invoice.", language, role, provider, userId);
                         }
-                        return language.equals("Hindi") ? "आप किस उत्पाद के लिए बिल बनाना चाहेंगे?" : "What product would you like to create an invoice for?";
+                        return enhanceResponse("What product would you like to create an invoice for?", language, role, provider, userId);
 
                     case "stock_prediction":
                         if (!role.equalsIgnoreCase("ADMIN") && !role.equalsIgnoreCase("SUPER_MANAGER")) {
@@ -218,26 +252,111 @@ public class AgentService {
                         }
                         List<String> stockAdvice = predictionService.getRestockSuggestions();
                         if (stockAdvice.isEmpty()) {
-                            return language.equals("Hindi") ? "✅ स्टॉक लेवल अभी ठीक लग रहे हैं।" : "✅ All stock levels look good for now.";
+                            return enhanceResponse("✅ All stock levels look good for now.", language, role, provider, userId);
                         }
                         String adviceStr = String.join("\n", stockAdvice);
-                        String stockPrompt = String.format("Language: %s\nStock Data: %s\nGive clear, concise restock advice in %s.", language, adviceStr, language);
-                        return aiService.askAI(stockPrompt, provider, null);
+                        return enhanceResponse("Here are the restock suggestions:\n" + adviceStr, language, role, provider, userId);
+
+                    case "get_recommendations":
+                        List<Object[]> topSelling = productRepository.getTopSellingProducts();
+                        if (topSelling.isEmpty()) {
+                            return enhanceResponse("I don't have enough sales data to make recommendations yet.", language, role, provider, userId);
+                        }
+                        String recommendations = topSelling.stream()
+                                .limit(5)
+                                .map(o -> "• " + o[0] + " (Sold: " + o[1] + ")")
+                                .collect(Collectors.joining("\n"));
+                        return enhanceResponse("🔥 Here are our top-selling parts right now:\n\n" + recommendations, language, role, provider, userId);
 
                     default:
                         break;
                 }
-            } else {
-                log.warn("AgentService: AI Response was not valid JSON, defaulting to general query. Response: {}", aiResponse);
             }
         } catch (Exception e) {
             log.error("AgentService: Error parsing AI action JSON: {}. AI Response was: {}", e.getMessage(), aiResponse);
         }
 
         // Default: Let the standard conversational AIService handle it
-        String conversationalPrompt = String.format("Role: %s\nLanguage: %s\nUser Query: %s\nPlease respond ONLY in %s.", 
-                role, language, userQuery, language);
-        return aiService.askAI(conversationalPrompt, provider, userId);
+        String historyText = getChatHistoryText(userId);
+        String conversationalPrompt = String.format(
+                "You are an intelligent spare parts assistant named Parts Mitra AI.\n" +
+                "User Role: %s\n" +
+                "Language: %s\n\n" +
+                "Conversation History:\n%s\n\n" +
+                "User Query: %s\n\n" +
+                "Instructions:\n" +
+                "- Respond in a natural, human-like way\n" +
+                "- Be helpful, polite, and slightly conversational\n" +
+                "- Provide useful suggestions or next steps\n" +
+                "- If product related, guide user to next action\n" +
+                "- Keep response clear and structured\n" +
+                "- Avoid robotic tone\n" +
+                "- Use bullet points if needed\n" +
+                "- Respond ONLY in %s\n\n" +
+                "Response:",
+                role, language, historyText, userQuery, language
+        );
+        String finalResponse = aiService.askAI(conversationalPrompt, provider, userId);
+        if (user != null) saveChatMessage(user, finalResponse, true);
+        return finalResponse;
+    }
+
+    private void saveChatMessage(User user, String content, boolean isBot) {
+        try {
+            ChatMessage msg = new ChatMessage();
+            msg.setUser(user);
+            msg.setContent(content);
+            msg.setBot(isBot);
+            chatMessageRepository.save(msg);
+        } catch (Exception e) {
+            log.error("Error saving chat message: {}", e.getMessage());
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public String getChatHistoryText(Long userId) {
+        if (userId == null) return "No history.";
+        try {
+            User user = userRepository.findById(userId).orElse(null);
+            if (user == null) return "No history.";
+            
+            Pageable lastFive = PageRequest.of(0, 5, Sort.by("createdAt").descending());
+            List<ChatMessage> history = chatMessageRepository.findByUserOrderByCreatedAtDesc(user, lastFive);
+            
+            // Reverse to get chronological order
+            List<ChatMessage> chronological = new ArrayList<>(history);
+            Collections.reverse(chronological);
+            
+            return chronological.stream()
+                    .map(m -> (m.isBot() ? "AI: " : "User: ") + m.getContent())
+                    .collect(Collectors.joining("\n"));
+        } catch (Exception e) {
+            log.error("Error fetching chat history: {}", e.getMessage());
+            return "Error loading history.";
+        }
+    }
+
+    private String enhanceResponse(String rawResponse, String language, String role, String provider, Long userId) {
+        try {
+            String prompt = String.format(
+                    "Improve the following response to be more helpful, natural, and smart for a spare parts app.\n\n" +
+                    "Role: %s\n" +
+                    "Language: %s\n\n" +
+                    "Rules:\n" +
+                    "- Keep meaning same\n" +
+                    "- Make it more human-like and conversational\n" +
+                    "- Use emojis where appropriate\n" +
+                    "- Add helpful suggestions if missing\n" +
+                    "- Improve formatting with bullet points if needed\n" +
+                    "- Respond ONLY in %s\n\n" +
+                    "Response to enhance:\n%s",
+                    role, language, language, rawResponse
+            );
+            return aiService.askAI(prompt, provider, userId);
+        } catch (Exception e) {
+            log.error("Error enhancing response: {}", e.getMessage());
+            return rawResponse;
+        }
     }
 
     private String detectLanguage(String text) {

@@ -91,6 +91,11 @@ public class ProductService extends ProductSubject {
     }
 
     @Transactional(readOnly = true)
+    public PaginatedResponse<ProductDto> searchProducts(String query, int page, int size) {
+        return searchProducts(query, page, size, "id", "desc");
+    }
+
+    @Transactional(readOnly = true)
     public PaginatedResponse<ProductDto> getWholesalerProducts(Long wholesalerId, int page, int size, String sortBy, String direction) {
         User wholesaler = userRepository.findById(wholesalerId)
                 .orElseThrow(() -> new RuntimeException("Wholesaler not found"));
@@ -373,6 +378,11 @@ public class ProductService extends ProductSubject {
     @Transactional
     public void emptyRecycleBin() {
         productRepository.deleteByDeletedTrue();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Object[]> getTopSellingProducts() {
+        return productRepository.getTopSellingProducts();
     }
 
     private ProductDto convertToDto(Product product) {

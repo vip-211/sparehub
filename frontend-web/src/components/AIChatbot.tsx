@@ -28,6 +28,8 @@ const AIChatbot: React.FC = () => {
   const [correction, setCorrection] = useState('');
   const [aiProvider, setAiProvider] = useState('gemini');
   const [isAiEnabled, setIsAiEnabled] = useState(true);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const cart = useCart();
   const navigate = useNavigate();
 
@@ -52,6 +54,25 @@ const AIChatbot: React.FC = () => {
     };
     fetchSettings();
   }, []);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (input.trim().length > 1) {
+        try {
+          const res = await api.get('products/suggest', { params: { query: input } });
+          setSuggestions(res.data || []);
+          setShowSuggestions(true);
+        } catch (e) {
+          setSuggestions([]);
+        }
+      } else {
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [input]);
 
   const sendPrompt = async (prompt: string) => {
     if (!prompt.trim()) return;
@@ -116,7 +137,35 @@ const AIChatbot: React.FC = () => {
 
     const prompt = input;
     setInput('');
+    setShowSuggestions(false);
+    
+    // Handle numbered quick replies
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg?.isBot && /^\d+$/.test(prompt)) {
+      const num = parseInt(prompt, 10);
+      // We could add logic here to map numbers to specific actions based on the last bot message
+      // For now, we just send it as is to the backend which should handle it
+    }
+
     await sendPrompt(prompt);
+  };
+
+  const renderText = (text: string) => {
+    return text.split('\n').map((line, i) => {
+      // Basic bold support
+      const parts = line.split(/(\*\*.*?\*\*)/g);
+      return (
+        <span key={i}>
+          {parts.map((part, j) => {
+            if (part.startsWith('**') && part.endsWith('**')) {
+              return <strong key={j}>{part.slice(2, -2)}</strong>;
+            }
+            return part;
+          })}
+          <br />
+        </span>
+      );
+    });
   };
 
   const handleQuick = async (type: 'stock' | 'invoice' | 'assist' | 'offers') => {
@@ -299,7 +348,7 @@ const AIChatbot: React.FC = () => {
                     {msg.isBot ? <Bot className="w-3 h-3" /> : <User className="w-3 h-3" />}
                     {msg.isBot ? 'Assistant' : 'You'}
                   </div>
-                  {msg.text}
+                  {renderText(msg.text)}
                 </div>
                 {msg.isBot && idx > 0 && (
                   <div className="flex items-center gap-2 mt-2 ml-1">
@@ -379,7 +428,23 @@ const AIChatbot: React.FC = () => {
           </div>
 
           {/* Input */}
-          <div className="p-5 bg-white border-t border-slate-100">
+          <div className="p-5 bg-white border-t border-slate-100 relative">
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="absolute bottom-full left-5 right-5 mb-2 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-[110] animate-in slide-in-from-bottom-2">
+                {suggestions.map((s, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      setInput(s);
+                      setShowSuggestions(false);
+                    }}
+                    className="w-full px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50 border-b border-slate-50 last:border-none transition-all"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-200 focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-50 transition-all duration-300">
               <input
                 type="text"
