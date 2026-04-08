@@ -21,6 +21,7 @@ import AdminCategories from './pages/AdminCategories';
 import MobileDashboard from './pages/MobileDashboard';
 import PendingApproval from './pages/PendingApproval';
 import { ROLE_MECHANIC, ROLE_RETAILER } from './services/constants';
+import Stock from './pages/Stock';
 
 const App: React.FC = () => {
   const { currentUser, logout } = useAuth();
@@ -112,6 +113,9 @@ const App: React.FC = () => {
                     <Link to="/admin-categories" className="text-gray-600 hover:text-primary-600 font-medium">
                       Categories
                     </Link>
+                    <Link to="/stock" className="text-gray-600 hover:text-primary-600 font-medium">
+                      Stock
+                    </Link>
                   </>
                 )}
                 {currentUser?.roles.includes(ROLE_WHOLESALER) && (
@@ -188,6 +192,16 @@ const App: React.FC = () => {
             path="/cart"
             element={
               !currentUser ? <Navigate to="/login" /> : (isPending ? <Navigate to="/pending-approval" /> : <Cart />)
+            }
+          />
+          <Route
+            path="/stock"
+            element={
+              !currentUser
+                ? <Navigate to="/login" />
+                : (isPending
+                    ? <Navigate to="/pending-approval" />
+                    : (isAdminOrSuper ? <Stock /> : <Navigate to="/shop" />))
             }
           />
           <Route

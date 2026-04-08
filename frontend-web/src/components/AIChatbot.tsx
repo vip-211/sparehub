@@ -31,6 +31,11 @@ const AIChatbot: React.FC = () => {
   const cart = useCart();
   const navigate = useNavigate();
 
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [quickType, setQuickType] = useState<'stock' | 'invoice' | null>(null);
+  const [quickPart, setQuickPart] = useState('');
+  const [quickQty, setQuickQty] = useState(1);
+
   useEffect(() => {
     const fetchSettings = async () => {
       try {
@@ -116,19 +121,17 @@ const AIChatbot: React.FC = () => {
 
   const handleQuick = async (type: 'stock' | 'invoice' | 'assist' | 'offers') => {
     if (type === 'stock') {
-      const q = window.prompt('Enter part name or number to check stock:');
-      if (q && q.trim()) {
-        await sendPrompt(`Check stock for ${q.trim()}`);
-      }
+      setQuickType('stock');
+      setQuickPart('');
+      setQuickQty(1);
+      setQuickOpen(true);
       return;
     }
     if (type === 'invoice') {
-      const p = window.prompt('Enter part name or number to create invoice:');
-      if (p && p.trim()) {
-        const qtyStr = window.prompt('Enter quantity (default 1):') || '1';
-        const qty = parseInt(qtyStr || '1', 10) || 1;
-        await sendPrompt(`Create invoice for ${qty} x ${p.trim()}`);
-      }
+      setQuickType('invoice');
+      setQuickPart('');
+      setQuickQty(1);
+      setQuickOpen(true);
       return;
     }
     if (type === 'assist') {
@@ -225,6 +228,63 @@ const AIChatbot: React.FC = () => {
               <X className="w-6 h-6 text-white group-hover/close:rotate-90 transition-transform duration-300" />
             </button>
           </div>
+
+          {quickOpen && (
+            <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+                <div className="p-5 border-b border-slate-100">
+                  <h3 className="font-bold text-lg text-slate-800">{quickType === 'stock' ? 'Check Stock' : 'Create Invoice'}</h3>
+                </div>
+                <div className="p-5 space-y-4">
+                  <div>
+                    <div className="text-[11px] font-bold uppercase text-slate-500 mb-1">Part name or number</div>
+                    <input
+                      value={quickPart}
+                      onChange={(e) => setQuickPart(e.target.value)}
+                      placeholder="e.g., Brake Pad 1234"
+                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-400"
+                    />
+                  </div>
+                  {quickType === 'invoice' && (
+                    <div>
+                      <div className="text-[11px] font-bold uppercase text-slate-500 mb-1">Quantity</div>
+                      <input
+                        type="number"
+                        min={1}
+                        value={quickQty}
+                        onChange={(e) => setQuickQty(parseInt(e.target.value || '1', 10) || 1)}
+                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-400"
+                      />
+                    </div>
+                  )}
+                </div>
+                <div className="p-5 bg-slate-50/50 flex gap-3">
+                  <button
+                    onClick={() => setQuickOpen(false)}
+                    className="flex-1 py-2.5 px-4 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-100 transition-all active:scale-95"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const q = quickPart.trim();
+                      if (!q) return;
+                      setQuickOpen(false);
+                      if (quickType === 'stock') {
+                        setMessages(prev => [...prev, { text: 'Opening stock page…', isBot: true }]);
+                        navigate(`/stock?q=${encodeURIComponent(q)}`);
+                      } else if (quickType === 'invoice') {
+                        await sendPrompt(`Create invoice for ${quickQty} x ${q}`);
+                      }
+                    }}
+                    className="flex-1 py-2.5 px-4 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all active:scale-95"
+                  >
+                    Continue
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Messages */}
           <div className="flex-grow p-5 overflow-y-auto space-y-5 bg-slate-50/50">
