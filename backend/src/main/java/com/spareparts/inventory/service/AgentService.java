@@ -35,17 +35,41 @@ public class AgentService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private FcmService fcmService;
+
     @Transactional
     public String processQuery(String userQuery, String provider, Long userId) {
         // Step 0: Get User Role and Language
         String role = "GUEST";
+        String userName = "A user";
         if (userId != null) {
             User user = userRepository.findById(userId).orElse(null);
-            if (user != null && user.getRole() != null) {
-                role = user.getRole().getName().name().replace("ROLE_", "");
+            if (user != null) {
+                userName = user.getName() != null ? user.getName() : "User " + userId;
+                if (user.getRole() != null) {
+                    role = user.getRole().getName().name().replace("ROLE_", "");
+                }
             }
         }
         String language = detectLanguage(userQuery);
+
+        // Step 0.5: Handle "Need Assistance"
+        String queryLower = userQuery.toLowerCase();
+        if (queryLower.contains("need assistance") || queryLower.contains("help support") || 
+            queryLower.contains("मदद चाहिए") || queryLower.contains("सहायता") || 
+            queryLower.contains("मदत हवी")) {
+            
+            String adminMsg = String.format("%s needs assistance with the AI chatbot. Query: \"%s\"", userName, userQuery);
+            fcmService.sendToAdminAndSuperManager("User Needs Assistance", adminMsg, null);
+            
+            if (language.equals("Hindi")) {
+                return "मैंने एडमिन को सूचित कर दिया है। वे जल्द ही आपसे संपर्क करेंगे। आपकी क्या सहायता कर सकता हूँ?";
+            } else if (language.equals("Marathi")) {
+                return "मी ॲडमिनला सूचित केले आहे. ते लवकरच तुमच्याशी संपर्क साधतील. मी तुम्हाला कशी मदत करू शकतो?";
+            }
+            return "I have notified the admin. They will get back to you shortly. How else can I assist you?";
+        }
 
         // Step 1: Detect action using AI
         String actionPrompt = String.format(

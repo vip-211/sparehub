@@ -191,8 +191,11 @@ public class AIService {
             return finalResponse;
 
         } catch (Exception e) {
-            log.error("AIService: Error processing request: {}", e.getMessage());
-            return "AI service error: " + e.getMessage();
+            log.error("AIService: Error processing request: {}. Falling back to local response.", e.getMessage());
+            // Robust Fallback: Never show error to user, use local search instead
+            String fallback = generateLocalResponse(prompt);
+            saveChatHistory(userId, prompt, fallback);
+            return fallback;
         }
     }
 
@@ -306,14 +309,14 @@ public class AIService {
                 inlineData.put("mime_type", mime);
                 inlineData.put("data", base64);
 
-                Map<String, Object> parts = new HashMap<>();
-                parts.put("parts", List.of(
+                Map<String, Object> content = new HashMap<>();
+                content.put("parts", List.of(
                         Map.of("text", fullPrompt),
                         Map.of("inline_data", inlineData)
                 ));
 
                 Map<String, Object> requestBody = new HashMap<>();
-                requestBody.put("contents", List.of(parts));
+                requestBody.put("contents", List.of(content));
 
                 // Use gemini-1.5-flash for image analysis as it supports multimodal
                 String visionUrl = GEMINI_API_URL.replace("gemini-1.5-flash", "gemini-1.5-flash"); // Just to be consistent with model name usage

@@ -22,7 +22,11 @@ public class SettingsController {
     @GetMapping("/public")
     public ResponseEntity<List<SystemSetting>> getPublicSettings() {
         return ResponseEntity.ok(systemSettingRepository.findAll().stream()
-                .filter(s -> s.getSettingKey().startsWith("ALLOWED_") || s.getSettingKey().equals("COMPANY_NAME") || s.getSettingKey().equals("LOGO_URL"))
+                .filter(s -> s.getSettingKey().startsWith("ALLOWED_") 
+                          || s.getSettingKey().equals("COMPANY_NAME") 
+                          || s.getSettingKey().equals("LOGO_URL")
+                          || s.getSettingKey().equals("AI_PROVIDER")
+                          || s.getSettingKey().equals("AI_CHATBOT_ENABLED"))
                 .toList());
     }
 

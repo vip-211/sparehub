@@ -51,7 +51,10 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
   Future<void> _handleSend() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
+    _sendMessage(text);
+  }
 
+  void _sendMessage(String text) async {
     setState(() {
       _messages.add({'text': text, 'isBot': false});
       _controller.clear();
@@ -61,7 +64,8 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
     _scrollToBottom();
 
     try {
-      final provider = SettingsService.getCachedRemoteSetting('AI_PROVIDER', 'gemini');
+      final provider =
+          SettingsService.getCachedRemoteSetting('AI_PROVIDER', 'gemini');
       final res = await _remoteClient.postJson(
         '/ai/chat',
         {'prompt': text},
@@ -75,51 +79,68 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
         });
       });
     } catch (e) {
-      try {
-        final List<Product> suggestions =
-            await _productService.searchProducts(text);
-        if (suggestions.isNotEmpty) {
-          final top = suggestions.take(5).toList();
-          final response = StringBuffer();
-          response.writeln(
-              "AI service is unavailable right now. Here are some matching parts:");
-          for (final p in top) {
-            response.writeln(
-                "- ${p.name} (${p.partNumber ?? 'N/A'}) • ₹${p.sellingPrice}");
-          }
-          setState(() {
-            _messages.add({
-              'text': response.toString(),
-              'isBot': true,
-              'prompt': text,
-            });
-          });
-        } else {
-          setState(() {
-            _messages.add({
-              'text':
-                  "AI service is currently unavailable and I couldn't find matching parts.",
-              'isBot': true,
-              'prompt': text,
-            });
-          });
-        }
-      } catch (_) {
-        setState(() {
-          _messages.add({
-            'text':
-                "AI service is currently unavailable. Please try again later.",
-            'isBot': true,
-            'prompt': text,
-          });
-        });
-      }
+      // ... fallback logic (already exists in original _handleSend, I'll keep it)
+      _handleSendError(text);
     } finally {
       setState(() {
         _isLoading = false;
       });
       _scrollToBottom();
     }
+  }
+
+  void _handleSendError(String text) async {
+    try {
+      final List<Product> suggestions =
+          await _productService.searchProducts(text);
+      if (suggestions.isNotEmpty) {
+        final top = suggestions.take(5).toList();
+        final response = StringBuffer();
+        response.writeln(
+            "AI service is unavailable right now. Here are some matching parts:");
+        for (final p in top) {
+          response.writeln(
+              "- ${p.name} (${p.partNumber ?? 'N/A'}) • ₹${p.sellingPrice}");
+        }
+        setState(() {
+          _messages.add({
+            'text': response.toString(),
+            'isBot': true,
+            'prompt': text,
+          });
+        });
+      } else {
+        setState(() {
+          _messages.add({
+            'text':
+                "AI service is currently unavailable and I couldn't find matching parts.",
+            'isBot': true,
+            'prompt': text,
+          });
+        });
+      }
+    } catch (_) {
+      setState(() {
+        _messages.add({
+          'text':
+              "AI service is currently unavailable. Please try again later.",
+          'isBot': true,
+          'prompt': text,
+        });
+      });
+    }
+  }
+
+  Widget _buildPredefinedChip(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ActionChip(
+        label: Text(text, style: const TextStyle(fontSize: 12)),
+        onPressed: () => _sendMessage(text),
+        backgroundColor: Colors.blue.shade50,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+    );
   }
 
   Future<void> _handlePhotoSearch() async {
@@ -645,6 +666,21 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
                                 fontStyle: FontStyle.italic,
                               ),
                             ),
+                          ],
+                        ),
+                    ),
+                    // Predefined Tabs
+                    if (_isOpen && !_isLoading)
+                      Container(
+                        height: 40,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: [
+                            _buildPredefinedChip('Check stock'),
+                            _buildPredefinedChip('Create invoice'),
+                            _buildPredefinedChip('Need assistance'),
+                            _buildPredefinedChip('Latest offers'),
                           ],
                         ),
                       ),

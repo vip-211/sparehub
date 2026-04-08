@@ -26,8 +26,27 @@ const AIChatbot: React.FC = () => {
   const [trainingPrompt, setTrainingPrompt] = useState('');
   const [originalResponse, setOriginalResponse] = useState('');
   const [correction, setCorrection] = useState('');
+  const [aiProvider, setAiProvider] = useState('gemini');
+  const [isAiEnabled, setIsAiEnabled] = useState(true);
   const cart = useCart();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await api.get('settings/public');
+        const settings = res.data || [];
+        const providerSetting = settings.find((s: any) => s.settingKey === 'AI_PROVIDER');
+        const enabledSetting = settings.find((s: any) => s.settingKey === 'AI_CHATBOT_ENABLED');
+        
+        if (providerSetting) setAiProvider(providerSetting.settingValue);
+        if (enabledSetting) setIsAiEnabled(enabledSetting.settingValue === 'true');
+      } catch (e) {
+        console.error('Error fetching AI settings', e);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const handleFeedback = async (prompt: string, response: string, isPositive: boolean) => {
     try {
@@ -78,7 +97,7 @@ const AIChatbot: React.FC = () => {
     setLoading(true);
 
     try {
-      const res = await api.post('ai/chat', { prompt: input }, { headers: { 'X-AI-Provider': 'local' } });
+      const res = await api.post('ai/chat', { prompt: input }, { headers: { 'X-AI-Provider': aiProvider } });
       const botMessage = { text: res.data.response, isBot: true, prompt: input };
       setMessages(prev => [...prev, botMessage]);
     } catch (error) {
@@ -137,6 +156,8 @@ const AIChatbot: React.FC = () => {
       setLoading(false);
     }
   };
+
+  if (!isAiEnabled) return null;
 
   return (
     <div className="fixed bottom-6 right-6 z-[100]">
