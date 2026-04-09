@@ -75,6 +75,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
     const RecycleBinScreen(),
     const VoiceTrainingScreen(),
     const ProfileScreen(),
+    const ManageCmsScreen(),
+    const ManageHomeLayoutScreen(),
   ];
 
   void _sendNotification() {
@@ -531,6 +533,24 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   selected: _selectedIndex == 11,
                   onTap: () {
                     setState(() => _selectedIndex = 11);
+                    Navigator.pop(context);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.edit_note),
+                  title: const Text('Home Page CMS'),
+                  selected: _selectedIndex == 12,
+                  onTap: () {
+                    setState(() => _selectedIndex = 12);
+                    Navigator.pop(context);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.view_quilt),
+                  title: const Text('Home Layout Editor'),
+                  selected: _selectedIndex == 13,
+                  onTap: () {
+                    setState(() => _selectedIndex = 13);
                     Navigator.pop(context);
                   },
                 ),
@@ -1075,6 +1095,217 @@ class _AdminOverviewScreenState extends State<AdminOverviewScreen> {
               color: Theme.of(context).colorScheme.onSurface,
               fontWeight: FontWeight.w700,
               fontSize: 13,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ManageHomeLayoutScreen extends StatefulWidget {
+  const ManageHomeLayoutScreen({super.key});
+
+  @override
+  State<ManageHomeLayoutScreen> createState() => _ManageHomeLayoutScreenState();
+}
+
+class _ManageHomeLayoutScreenState extends State<ManageHomeLayoutScreen> {
+  final ProductService _productService = ProductService();
+  List<String> _layout = [];
+  bool _isLoading = true;
+
+  final Map<String, String> _componentNames = {
+    'header': 'Header (Profile & Logo)',
+    'search_bar': 'Search Bar',
+    'categories': 'Categories (Brands)',
+    'banner': 'Promotional Banner',
+    'hot_deals': 'Hot Deals / Featured',
+  };
+
+  final Map<String, IconData> _componentIcons = {
+    'header': Icons.account_circle,
+    'search_bar': Icons.search,
+    'categories': Icons.grid_view,
+    'banner': Icons.ad_units,
+    'hot_deals': Icons.local_offer,
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLayout();
+  }
+
+  Future<void> _loadLayout() async {
+    setState(() => _isLoading = true);
+    final layoutStr = await _productService.getCmsSetting(
+        'mechanic_home_layout', 'header,search_bar,categories,banner,hot_deals');
+    setState(() {
+      _layout = layoutStr.split(',').where((s) => s.isNotEmpty).toList();
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _saveLayout() async {
+    setState(() => _isLoading = true);
+    await _productService.setCmsSetting('mechanic_home_layout', _layout.join(','));
+    setState(() => _isLoading = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Home layout updated successfully!')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) return const Center(child: CircularProgressIndicator());
+
+    final Map<String, String> componentNames = {
+      'header': 'Header (Profile & Logo)',
+      'search_bar': 'Search Bar',
+      'categories': 'Categories (Brands)',
+      'banner': 'Promotional Banner',
+      'hot_deals': 'Hot Deals / Featured',
+    };
+
+    final Map<String, IconData> componentIcons = {
+      'header': Icons.account_circle,
+      'search_bar': Icons.search,
+      'categories': Icons.grid_view,
+      'banner': Icons.ad_units,
+      'hot_deals': Icons.local_offer,
+    };
+
+    return Scaffold(
+      body: Row(
+        children: [
+          // Main Editor
+          Expanded(
+            flex: 2,
+            child: Column(
+              children: [
+                const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Text(
+                    'Drag and drop to reorder. Swipe left to remove.',
+                    style: TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                ),
+                Expanded(
+                  child: ReorderableListView(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    onReorder: (oldIndex, newIndex) {
+                      setState(() {
+                        if (newIndex > oldIndex) newIndex -= 1;
+                        final item = _layout.removeAt(oldIndex);
+                        _layout.insert(newIndex, item);
+                      });
+                    },
+                    children: List.generate(_layout.length, (index) {
+                      final comp = _layout[index];
+                      return Dismissible(
+                        key: ValueKey('$comp-$index'),
+                        direction: DismissDirection.endToStart,
+                        background: Container(
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 20),
+                          color: Colors.red,
+                          child: const Icon(Icons.delete, color: Colors.white),
+                        ),
+                        onDismissed: (direction) {
+                          setState(() {
+                            _layout.removeAt(index);
+                          });
+                        },
+                        child: Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                            leading: CircleAvatar(
+                              backgroundColor: Colors.blue.shade50,
+                              child: Icon(componentIcons[comp] ?? Icons.extension,
+                                  color: Colors.blue),
+                            ),
+                            title: Text(
+                              componentNames[comp] ?? comp,
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            trailing: const Icon(Icons.drag_handle, color: Colors.grey),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: ElevatedButton.icon(
+                    onPressed: _saveLayout,
+                    icon: const Icon(Icons.save),
+                    label: const Text('Save Home Layout'),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Component Library Sidebar
+          const VerticalDivider(width: 1),
+          Container(
+            width: 120,
+            color: Colors.grey.shade50,
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              children: [
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: Text('Add Items',
+                      style:
+                          TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                ),
+                const SizedBox(height: 12),
+                ...componentNames.entries.map((entry) {
+                  return Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          _layout.add(entry.key);
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(componentIcons[entry.key] ?? Icons.extension,
+                                color: Colors.blue, size: 24),
+                            const SizedBox(height: 4),
+                            Text(entry.value.split(' ')[0],
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(fontSize: 10)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ],
             ),
           ),
         ],
@@ -2571,6 +2802,46 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
     }
   }
 
+  Future<void> _markFeatured() async {
+    final ids = _selectedIds.toList();
+    if (ids.isEmpty) return;
+    try {
+      await _productService.updateFeaturedStatus(ids, true);
+      setState(() {
+        _selectionMode = false;
+        _selectedIds.clear();
+      });
+      _fetchProducts();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Products added to Home Layout')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update: $e')),
+      );
+    }
+  }
+
+  Future<void> _unmarkFeatured() async {
+    final ids = _selectedIds.toList();
+    if (ids.isEmpty) return;
+    try {
+      await _productService.updateFeaturedStatus(ids, false);
+      setState(() {
+        _selectionMode = false;
+        _selectedIds.clear();
+      });
+      _fetchProducts();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Products removed from Home Layout')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update: $e')),
+      );
+    }
+  }
+
   Future<void> _deleteSelected() async {
     final ids = _selectedIds.toList();
     if (ids.isEmpty) return;
@@ -2703,6 +2974,9 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
     );
     final stockController = TextEditingController(
       text: product?.stock.toString(),
+    );
+    final minQtyController = TextEditingController(
+      text: product?.offerMinQty?.toString() ?? '1',
     );
     final wholesalerController = TextEditingController(
       text: product?.wholesalerId.toString() ?? '1',
@@ -3071,6 +3345,12 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                 keyboardType: TextInputType.number,
               ),
               TextField(
+                controller: minQtyController,
+                decoration:
+                    const InputDecoration(labelText: 'Min Qty for Offer'),
+                keyboardType: TextInputType.number,
+              ),
+              TextField(
                 controller: wholesalerController,
                 decoration: const InputDecoration(labelText: 'Wholesaler ID'),
                 keyboardType: TextInputType.number,
@@ -3143,6 +3423,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                   mechanicPrice:
                       double.tryParse(mechanicPriceController.text) ?? 0,
                   stock: int.tryParse(stockController.text) ?? 0,
+                  offerMinQty: int.tryParse(minQtyController.text) ?? 1,
                   wholesalerId: int.tryParse(wholesalerController.text) ?? 1,
                   imagePath: finalImagePath,
                   enabled: productEnabled,
@@ -3613,6 +3894,16 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                       },
                       icon:
                           const Icon(Icons.select_all, color: Colors.redAccent),
+                    ),
+                    IconButton(
+                      tooltip: 'Add to Home Layout',
+                      onPressed: _selectedIds.isEmpty ? null : _markFeatured,
+                      icon: const Icon(Icons.home, color: Colors.blue),
+                    ),
+                    IconButton(
+                      tooltip: 'Remove from Home Layout',
+                      onPressed: _selectedIds.isEmpty ? null : _unmarkFeatured,
+                      icon: const Icon(Icons.home_outlined, color: Colors.blue),
                     ),
                     IconButton(
                       tooltip: 'Delete Selected',
@@ -5892,8 +6183,8 @@ class ManageCategoriesScreen extends StatefulWidget {
 }
 
 class _ManageCategoriesScreenState extends State<ManageCategoriesScreen> {
-  final RemoteClient _remote = RemoteClient();
-  List<dynamic> _categories = [];
+  final ProductService _productService = ProductService();
+  List<model.Category> _categories = [];
   bool _isLoading = true;
 
   @override
@@ -5905,7 +6196,7 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen> {
   Future<void> _fetchCategories() async {
     setState(() => _isLoading = true);
     try {
-      final res = await _remote.getList('/categories');
+      final res = await _productService.getCategories();
       setState(() {
         _categories = res.map((e) => model.Category.fromJson(e)).toList();
         _isLoading = false;
@@ -5923,77 +6214,155 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen> {
   void _showAddCategoryDialog({model.Category? category}) {
     final nameController =
         TextEditingController(text: category != null ? category.name : '');
-    final descriptionController = TextEditingController(
-        text: category != null ? category.description : '');
-    final imagePathController =
-        TextEditingController(text: category != null ? category.imagePath : '');
-    final imageLinkController =
-        TextEditingController(text: category != null ? category.imageLink : '');
+    final orderController = TextEditingController(
+        text: category != null ? category.displayOrder.toString() : '0');
+    String? imagePath = category?.imagePath;
+    int? iconCodePoint = category?.iconCodePoint;
+
+    final List<IconData> presetIcons = [
+      Icons.motorcycle,
+      Icons.settings_input_component,
+      Icons.directions_car,
+      Icons.stop_circle,
+      Icons.adjust,
+      Icons.opacity,
+      Icons.lightbulb,
+      Icons.battery_full,
+      Icons.architecture,
+      Icons.build,
+      Icons.handyman,
+      Icons.construction,
+      Icons.electric_moped,
+      Icons.minor_crash,
+    ];
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(category == null ? 'Add Category' : 'Edit Category'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Category Name'),
-              ),
-              TextField(
-                controller: descriptionController,
-                decoration: const InputDecoration(labelText: 'Description'),
-              ),
-              TextField(
-                controller: imagePathController,
-                decoration: const InputDecoration(labelText: 'Image Path'),
-              ),
-              TextField(
-                controller: imageLinkController,
-                decoration:
-                    const InputDecoration(labelText: 'Image Link (URL)'),
-              ),
-            ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(category == null ? 'Add Category' : 'Edit Category'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Category Image',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () async {
+                    final picker = ImagePicker();
+                    final XFile? image =
+                        await picker.pickImage(source: ImageSource.gallery);
+                    if (image != null) {
+                      final url = await _productService
+                          .uploadProductImage(image.path);
+                      if (url != null) {
+                        setDialogState(() {
+                          imagePath = url;
+                        });
+                      }
+                    }
+                  },
+                  child: Container(
+                    height: 100,
+                    width: 100,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(8),
+                      image: imagePath != null
+                          ? DecorationImage(
+                              image: getImageProvider(imagePath),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                    ),
+                    child: imagePath == null
+                        ? const Icon(Icons.add_a_photo,
+                            size: 40, color: Colors.grey)
+                        : null,
+                  ),
+                ),
+                if (imagePath != null)
+                  TextButton(
+                    onPressed: () => setDialogState(() => imagePath = null),
+                    child: const Text('Remove Image',
+                        style: TextStyle(color: Colors.red)),
+                  ),
+                const SizedBox(height: 16),
+                const Text('Or Select Material Icon',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: presetIcons.map((icon) {
+                    final isSelected = iconCodePoint == icon.codePoint;
+                    return GestureDetector(
+                      onTap: () =>
+                          setDialogState(() => iconCodePoint = icon.codePoint),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: isSelected ? Colors.blue : Colors.grey[200],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(icon,
+                            color: isSelected ? Colors.white : Colors.black),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'Category Name'),
+                ),
+                TextField(
+                  controller: orderController,
+                  decoration: const InputDecoration(labelText: 'Display Order'),
+                  keyboardType: TextInputType.number,
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () async {
+                if (nameController.text.isEmpty) return;
+                try {
+                  if (category == null) {
+                    final db = await DatabaseService().database;
+                    await db.insert('categories', {
+                      'name': nameController.text,
+                      'imagePath': imagePath,
+                      'displayOrder': int.tryParse(orderController.text) ?? 0,
+                      'iconCodePoint': iconCodePoint,
+                      'deleted': 0
+                    });
+                  } else {
+                    await _productService.updateCategory(category.id,
+                        name: nameController.text,
+                        imagePath: imagePath,
+                        displayOrder: int.tryParse(orderController.text),
+                        iconCodePoint: iconCodePoint);
+                  }
+                  Navigator.pop(ctx);
+                  _fetchCategories();
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error: $e')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () async {
-              if (nameController.text.isEmpty) return;
-              try {
-                if (category == null) {
-                  await _remote.postJson('/categories', {
-                    'name': nameController.text,
-                    'description': descriptionController.text,
-                    'imagePath': imagePathController.text,
-                    'imageLink': imageLinkController.text,
-                  });
-                } else {
-                  await _remote.putJson('/categories/${category.id}', {
-                    'id': category.id,
-                    'name': nameController.text,
-                    'description': descriptionController.text,
-                    'imagePath': imagePathController.text,
-                    'imageLink': imageLinkController.text,
-                  });
-                }
-                Navigator.pop(ctx);
-                _fetchCategories();
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e')),
-                  );
-                }
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
   }
@@ -6018,7 +6387,9 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen> {
     if (confirmed != true) return;
 
     try {
-      await _remote.delete('/categories/$id');
+      final db = await DatabaseService().database;
+      await db.update('categories', {'deleted': 1},
+          where: 'id = ?', whereArgs: [id]);
       _fetchCategories();
     } catch (e) {
       if (mounted) {
@@ -6039,26 +6410,25 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen> {
         child: ListView.builder(
           itemCount: _categories.length,
           itemBuilder: (ctx, i) {
-            final cat = _categories[i] as model.Category;
+            final cat = _categories[i];
             return Card(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: Colors.redAccent,
+                  backgroundColor: Colors.blue.shade50,
                   backgroundImage:
                       cat.imagePath != null && cat.imagePath!.isNotEmpty
-                          ? NetworkImage(cat.imagePath!)
+                          ? getImageProvider(cat.imagePath)
                           : null,
                   child: cat.imagePath == null || cat.imagePath!.isEmpty
-                      ? const Icon(Icons.category, color: Colors.white)
+                      ? const Icon(Icons.category, color: Colors.blue)
                       : null,
                 ),
                 title: Text(
                   cat.name,
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
-                subtitle:
-                    cat.description != null ? Text(cat.description!) : null,
+                subtitle: Text('Order: ${cat.displayOrder}'),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -6079,8 +6449,108 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddCategoryDialog(),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: Colors.blue,
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+class ManageCmsScreen extends StatefulWidget {
+  const ManageCmsScreen({super.key});
+
+  @override
+  State<ManageCmsScreen> createState() => _ManageCmsScreenState();
+}
+
+class _ManageCmsScreenState extends State<ManageCmsScreen> {
+  final ProductService _productService = ProductService();
+  final Map<String, TextEditingController> _controllers = {
+    'mechanic_home_title': TextEditingController(),
+    'mechanic_banner_text': TextEditingController(),
+    'mechanic_banner_btn': TextEditingController(),
+  };
+  bool _hideChatSupport = false;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    setState(() => _isLoading = true);
+    _controllers['mechanic_home_title']!.text = await _productService
+        .getCmsSetting('mechanic_home_title', 'Parts Mitra');
+    _controllers['mechanic_banner_text']!.text = await _productService
+        .getCmsSetting('mechanic_banner_text', 'Banner Text Here');
+    _controllers['mechanic_banner_btn']!.text = await _productService
+        .getCmsSetting('mechanic_banner_btn', 'Buy Now');
+    final hideChat = await _productService
+        .getCmsSetting('hide_chat_support', 'false');
+    setState(() {
+      _hideChatSupport = hideChat == 'true';
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _saveSettings() async {
+    setState(() => _isLoading = true);
+    for (var entry in _controllers.entries) {
+      await _productService.setCmsSetting(entry.key, entry.value.text);
+    }
+    await _productService.setCmsSetting('hide_chat_support', _hideChatSupport.toString());
+    setState(() => _isLoading = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Settings saved successfully!')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    return Scaffold(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(
+              controller: _controllers['mechanic_home_title'],
+              decoration: const InputDecoration(
+                  labelText: 'Home Page Title', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _controllers['mechanic_banner_text'],
+              decoration: const InputDecoration(
+                  labelText: 'Banner Text', border: OutlineInputBorder()),
+              maxLines: 2,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _controllers['mechanic_banner_btn'],
+              decoration: const InputDecoration(
+                  labelText: 'Banner Button Text',
+                  border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 16),
+            SwitchListTile(
+              title: const Text('Hide Chat Support globally'),
+              subtitle: const Text('When enabled, users will not see the AI Chatbot'),
+              value: _hideChatSupport,
+              onChanged: (val) => setState(() => _hideChatSupport = val),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _saveSettings,
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 50),
+              ),
+              child: const Text('Save Home Layout Settings'),
+            ),
+          ],
+        ),
       ),
     );
   }

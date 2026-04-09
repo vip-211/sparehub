@@ -29,14 +29,31 @@ const Shop: React.FC = () => {
     if (searchInput) searchInput.focus();
   });
   const currentUser = AuthService.getCurrentUser();
+  const isMechanic = currentUser?.roles?.includes(ROLE_MECHANIC);
   const location = useLocation();
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [categories, setCategories] = useState<any[]>([]);
 
   const isRestricted = currentUser?.roles?.includes(ROLE_ADMIN) || currentUser?.roles?.includes(ROLE_SUPER_MANAGER);
 
-  const getCategoryIcon = (name: string) => {
-    const n = name.toLowerCase();
+  const getCategoryIcon = (cat: any) => {
+    if (cat.imagePath || cat.imageLink) {
+      return (
+        <img 
+          src={getImageUrl(cat.imagePath || cat.imageLink)} 
+          alt={cat.name} 
+          className="w-5 h-5 rounded-md object-cover" 
+        />
+      );
+    }
+    if (cat.iconCodePoint) {
+      return (
+        <span className="material-icons text-[20px]">
+          {String.fromCharCode(cat.iconCodePoint)}
+        </span>
+      );
+    }
+    const n = cat.name.toLowerCase();
     if (n.includes('engine')) return <Settings className="w-5 h-5" />;
     if (n.includes('body')) return <Car className="w-5 h-5" />;
     if (n.includes('brake')) return <StopCircle className="w-5 h-5" />;
@@ -256,15 +273,11 @@ const Shop: React.FC = () => {
           {categories.map((c) => (
             <button
               key={c.id}
-              onClick={() => { setCategoryId(c.id); }}
+              onClick={() => { setCategoryId(c.id === categoryId ? null : c.id); }}
               className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-black border-2 transition-all ${categoryId === c.id ? 'bg-primary-600 text-white border-primary-600 shadow-lg shadow-primary-200 scale-105' : 'bg-white text-gray-700 border-gray-200 hover:border-primary-300'}`}
             >
-              {c.imageLink || c.imagePath ? (
-                <img src={getImageUrl(c.imageLink || c.imagePath)} alt="" className="w-5 h-5 object-cover rounded-full" />
-              ) : (
-                getCategoryIcon(c.name)
-              )}
-              {c.name}
+              {getCategoryIcon(c)}
+              {tp(c.name)}
             </button>
           ))}
         </div>
@@ -315,7 +328,7 @@ const Shop: React.FC = () => {
                   ) : (
                     <Package className="w-16 h-16 text-gray-300 group-hover:scale-110 transition duration-500" />
                   )}
-                  {!inStock && (
+                  {!inStock && !isMechanic && (
                     <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center">
                       <span className="bg-red-100 text-red-700 px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider">{t('shop.outOfStock')}</span>
                     </div>
@@ -331,13 +344,20 @@ const Shop: React.FC = () => {
                   <div className="flex justify-between items-start gap-2 mb-2">
                     <h3 className="text-xl font-black text-gray-900 leading-tight line-clamp-2">{tp(p.name)}</h3>
                   </div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${inStock ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>
-                      {inStock ? <CheckCircle2 className="w-3 h-3" /> : <Info className="w-3 h-3" />}
-                      {inStock ? 'In Stock' : 'Out of Stock'}
-                    </span>
-                    <span className="text-xs font-bold text-gray-400">#{p.partNumber}</span>
-                  </div>
+                  {!isMechanic && (
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${inStock ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>
+                        {inStock ? <CheckCircle2 className="w-3 h-3" /> : <Info className="w-3 h-3" />}
+                        {inStock ? 'In Stock' : 'Out of Stock'}
+                      </span>
+                      <span className="text-xs font-bold text-gray-400">#{p.partNumber}</span>
+                    </div>
+                  )}
+                  {isMechanic && (
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className="text-xs font-bold text-gray-400">#{p.partNumber}</span>
+                    </div>
+                  )}
                   
                   <div className="flex flex-col mb-4">
                     <span className="text-3xl font-black text-primary-600">₹{displayPrice}</span>
@@ -363,13 +383,13 @@ const Shop: React.FC = () => {
                         )
                       }
                       className={`w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-black text-lg transition-all shadow-xl active:scale-95 ${
-                        inStock 
+                        inStock || isMechanic
                           ? 'bg-primary-600 text-white hover:bg-primary-700 shadow-primary-200 hover:shadow-2xl' 
                           : 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
                       }`}
-                      disabled={!inStock}
+                      disabled={!inStock && !isMechanic}
                     >
-                      {inStock ? (
+                      {inStock || isMechanic ? (
                         <>
                           <ShoppingCart className="w-6 h-6" />
                           {t('shop.addToCart')}
@@ -438,16 +458,25 @@ const Shop: React.FC = () => {
                 </button>
               </div>
 
-              <div className="flex items-center gap-3 mb-6">
-                <span className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest ${selectedProduct.stock > 0 ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>
-                  {selectedProduct.stock > 0 ? 'In Stock' : 'Out of Stock'}
-                </span>
-                {selectedProduct.categoryName && (
+              {!isMechanic && (
+                <div className="flex items-center gap-3 mb-6">
+                  <span className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest ${selectedProduct.stock > 0 ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>
+                    {selectedProduct.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                  </span>
+                  {selectedProduct.categoryName && (
+                    <span className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-600 text-xs font-black uppercase tracking-widest">
+                      {selectedProduct.categoryName}
+                    </span>
+                  )}
+                </div>
+              )}
+              {isMechanic && selectedProduct.categoryName && (
+                <div className="flex items-center gap-3 mb-6">
                   <span className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-600 text-xs font-black uppercase tracking-widest">
                     {selectedProduct.categoryName}
                   </span>
-                )}
-              </div>
+                </div>
+              )}
 
               <div className="mb-8 flex-grow overflow-y-auto pr-2">
                 <h4 className="text-lg font-black text-gray-900 mb-3">Description</h4>
@@ -491,14 +520,14 @@ const Shop: React.FC = () => {
                       setSelectedProduct(null);
                     }}
                     className={`w-full py-5 rounded-2xl font-black text-xl flex items-center justify-center gap-3 shadow-2xl transition-all active:scale-95 ${
-                      selectedProduct.stock > 0 
+                      selectedProduct.stock > 0 || isMechanic
                         ? 'bg-primary-600 text-white hover:bg-primary-700 shadow-primary-200' 
                         : 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
                     }`}
-                    disabled={selectedProduct.stock <= 0}
+                    disabled={selectedProduct.stock <= 0 && !isMechanic}
                   >
                     <ShoppingCart className="w-7 h-7" />
-                    {selectedProduct.stock > 0 ? t('shop.addToCart') : 'Out of Stock'}
+                    {selectedProduct.stock > 0 || isMechanic ? t('shop.addToCart') : 'Out of Stock'}
                   </button>
                 )}
               </div>

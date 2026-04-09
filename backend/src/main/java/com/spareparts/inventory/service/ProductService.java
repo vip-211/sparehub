@@ -139,6 +139,7 @@ public class ProductService extends ProductSubject {
         product.setDescription(productDto.getDescription());
         product.setOfferMinQty(productDto.getOfferMinQty());
         product.setWholesaler(wholesaler);
+        product.setFeatured(productDto.isFeatured());
         
         // Auto-categorization logic
         Long categoryId = productDto.getCategoryId();
@@ -269,6 +270,7 @@ public class ProductService extends ProductSubject {
                     product.setMinOrderQty(1);
                 }
                 product.setWholesaler(wholesaler);
+                product.setFeatured(dto.isFeatured());
 
                 Long categoryId = dto.getCategoryId();
                 if (categoryId == null) {
@@ -313,6 +315,7 @@ public class ProductService extends ProductSubject {
         if (productDto.getMinOrderQty() != null) {
             product.setMinOrderQty(productDto.getMinOrderQty());
         }
+        product.setFeatured(productDto.isFeatured());
         product.setDescription(productDto.getDescription());
         
         if (productDto.getOfferType() != null) {
@@ -399,6 +402,21 @@ public class ProductService extends ProductSubject {
     }
 
     @Transactional(readOnly = true)
+    public List<ProductDto> getFeaturedProducts() {
+        return productRepository.findByFeaturedTrueAndDeletedFalse().stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void updateFeaturedStatus(List<Long> productIds, boolean isFeatured) {
+        if (productIds == null || productIds.isEmpty()) return;
+        List<Product> products = productRepository.findAllById(productIds);
+        products.forEach(p -> p.setFeatured(isFeatured));
+        productRepository.saveAll(products);
+    }
+
+    @Transactional(readOnly = true)
     public List<Object[]> getTopSellingProducts() {
         return productRepository.getTopSellingProducts();
     }
@@ -420,6 +438,7 @@ public class ProductService extends ProductSubject {
         dto.setImageLink(product.getImageLink());
         dto.setImageLinks(new java.util.ArrayList<>(product.getImageLinks()));
         dto.setMinOrderQty(product.getMinOrderQty());
+        dto.setFeatured(product.isFeatured());
         dto.setDescription(product.getDescription());
         dto.setWholesalerId(product.getWholesaler().getId());
         dto.setOfferType(product.getOfferType() != null ? product.getOfferType().name() : null);

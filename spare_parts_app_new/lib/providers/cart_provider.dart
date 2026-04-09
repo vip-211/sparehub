@@ -17,31 +17,38 @@ class CartProvider with ChangeNotifier {
     return total;
   }
 
-  void addItem(Product product, double price) {
+  void addItem(Product product, double price, {int? quantity}) {
+    final int qtyToAdd = quantity ?? 1;
     if (_items.containsKey(product.id)) {
       _items.update(
         product.id,
         (existing) => OrderItem(
           productId: existing.productId,
           productName: existing.productName,
-          quantity: existing.quantity + 1,
+          quantity: existing.quantity + qtyToAdd,
           price: existing.price,
           minQty: existing.minQty,
         ),
       );
     } else {
+      int initialQty = qtyToAdd;
+      if (quantity == null) {
+        // Only use offer logic if explicit quantity not provided
+        initialQty = (product.offerType != null &&
+                product.offerType != 'NONE' &&
+                (product.offerMinQty ?? 0) > 0)
+            ? (product.offerMinQty ?? 1)
+            : 1;
+      }
+      
       _items.putIfAbsent(
         product.id,
         () => OrderItem(
           productId: product.id,
           productName: product.name,
-          quantity: (product.offerType != null &&
-                  product.offerType != 'NONE' &&
-                  (product.offerMinQty ?? 0) > 0)
-              ? (product.offerMinQty ?? 1)
-              : 1,
+          quantity: initialQty,
           price: price,
-          minQty: product.offerMinQty,
+          minQty: product.minOrderQty > 1 ? product.minOrderQty : product.offerMinQty,
         ),
       );
     }

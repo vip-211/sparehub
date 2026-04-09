@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
+import { LayoutGrid, Settings, Trash2, Edit2, Move, Image as ImageIcon, Box } from 'lucide-react';
 
 type Category = { 
   id: number; 
@@ -7,6 +8,8 @@ type Category = {
   description?: string; 
   imagePath?: string; 
   imageLink?: string;
+  displayOrder?: number;
+  iconCodePoint?: number;
 };
 
 const AdminCategories: React.FC = () => {
@@ -15,6 +18,8 @@ const AdminCategories: React.FC = () => {
   const [description, setDescription] = useState('');
   const [imagePath, setImagePath] = useState('');
   const [imageLink, setImageLink] = useState('');
+  const [displayOrder, setDisplayOrder] = useState(0);
+  const [iconCodePoint, setIconCodePoint] = useState<number | undefined>(undefined);
   const [editing, setEditing] = useState<Category | null>(null);
   const [assignPartNumber, setAssignPartNumber] = useState('');
   const [assignCategoryId, setAssignCategoryId] = useState('');
@@ -45,7 +50,9 @@ const AdminCategories: React.FC = () => {
         name, 
         description, 
         imagePath, 
-        imageLink
+        imageLink,
+        displayOrder,
+        iconCodePoint
       };
       
       if (editing) {
@@ -67,6 +74,8 @@ const AdminCategories: React.FC = () => {
     setDescription('');
     setImagePath('');
     setImageLink('');
+    setDisplayOrder(0);
+    setIconCodePoint(undefined);
     setEditing(null);
   };
 
@@ -129,11 +138,13 @@ const AdminCategories: React.FC = () => {
                 setDescription(c.description || ''); 
                 setImagePath(c.imagePath || ''); 
                 setImageLink(c.imageLink || '');
+                setDisplayOrder(c.displayOrder || 0);
+                setIconCodePoint(c.iconCodePoint);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }} 
-              className="px-4 py-2 rounded-lg bg-primary-50 text-primary-700 hover:bg-primary-100 text-sm font-black transition-all border border-primary-100 active:scale-95"
+              className="p-2 rounded-lg bg-primary-50 text-primary-700 hover:bg-primary-100 transition-all"
             >
-              Edit
+              <Edit2 size={18} />
             </button>
             <button 
               onClick={(e) => {
@@ -141,9 +152,9 @@ const AdminCategories: React.FC = () => {
                 e.stopPropagation();
                 del(c.id);
               }} 
-              className="px-4 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 text-sm font-black transition-all border border-red-100 active:scale-95"
+              className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"
             >
-              Delete
+              <Trash2 size={18} />
             </button>
           </div>
       </div>
@@ -178,6 +189,22 @@ const AdminCategories: React.FC = () => {
               <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">External Image Link</label>
                 <input value={imageLink} onChange={(e) => setImageLink(e.target.value)} placeholder="https://..." className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Display Order</label>
+                <input type="number" value={displayOrder} onChange={(e) => setDisplayOrder(parseInt(e.target.value) || 0)} placeholder="0" className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all" />
+              </div>
+              <div className="md:col-span-2 space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Material Icon Code Point</label>
+                <div className="flex gap-4 items-center">
+                  <input type="number" value={iconCodePoint || ''} onChange={(e) => setIconCodePoint(e.target.value ? parseInt(e.target.value) : undefined)} placeholder="e.g. 59504" className="flex-grow border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all" />
+                  {iconCodePoint && (
+                    <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100">
+                      <span className="material-icons" style={{ fontSize: '24px' }}>{String.fromCharCode(iconCodePoint)}</span>
+                    </div>
+                  )}
+                </div>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Leave empty to use category name as fallback icon.</p>
               </div>
             </div>
             <div className="mt-6 flex gap-3">

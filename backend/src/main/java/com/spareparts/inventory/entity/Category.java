@@ -35,6 +35,12 @@ public class Category {
     @Column(length = 500)
     private String imageLink;
 
+    @Column(name = "display_order", columnDefinition = "integer default 0")
+    private Integer displayOrder = 0;
+
+    @Column(name = "icon_code_point")
+    private Integer iconCodePoint;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

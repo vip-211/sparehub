@@ -9,6 +9,7 @@ import 'retailer_orders_screen.dart';
 import 'notification_screen.dart';
 import '../widgets/ai_chatbot_widget.dart';
 import '../services/settings_service.dart';
+import '../services/product_service.dart';
 import '../widgets/cart_badge.dart';
 import '../widgets/notification_badge.dart';
 import '../services/auth_service.dart';
@@ -162,15 +163,6 @@ class _MechanicDashboardState extends State<MechanicDashboard> {
             ),
             actions: [
               IconButton(
-                icon: const Icon(Icons.inventory_2_outlined),
-                tooltip: 'Stock',
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const StockScreen()),
-                  );
-                },
-              ),
-              IconButton(
                 icon: const Icon(Icons.settings),
                 onPressed: () => Navigator.of(context).pushNamed('/settings'),
               ),
@@ -185,14 +177,18 @@ class _MechanicDashboardState extends State<MechanicDashboard> {
               const SizedBox(width: 8),
             ],
           ),
-          body: FutureBuilder<bool>(
-            future: SettingsService.isAiChatbotEnabled(),
+          body: FutureBuilder<List<dynamic>>(
+            future: Future.wait([
+              SettingsService.isAiChatbotEnabled(),
+              ProductService().getCmsSetting('hide_chat_support', 'false'),
+            ]),
             builder: (context, snap) {
-              final ai = snap.data ?? true;
+              final ai = snap.data?[0] ?? true;
+              final hideChat = snap.data?[1] == 'true';
               return Stack(
                 children: [
                   _buildPage(_selectedIndex),
-                  if (ai) const AIChatbotWidget(),
+                  if (ai && !hideChat) const AIChatbotWidget(),
                 ],
               );
             },

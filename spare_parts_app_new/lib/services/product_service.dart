@@ -288,6 +288,45 @@ class ProductService {
     return result;
   }
 
+  Future<List<Product>> getFeaturedProducts() async {
+    try {
+      if (Constants.useRemote) {
+        final list = await _remote.getList('/products/featured');
+        return list
+            .map((e) => Product.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      final db = await _dbService.database;
+      final List<Map<String, dynamic>> maps =
+          await db.query('products', where: 'isFeatured = 1 AND deleted = 0');
+      return maps.map((p) => Product.fromJson(p)).toList();
+    } catch (e) {
+      debugPrint('Get featured products error: $e');
+      return [];
+    }
+  }
+
+  Future<void> updateFeaturedStatus(List<int> productIds, bool isFeatured) async {
+    try {
+      if (Constants.useRemote) {
+        await _remote.postJson('/products/featured', {
+          'ids': productIds,
+          'isFeatured': isFeatured,
+        });
+        return;
+      }
+      final db = await _dbService.database;
+      await db.update(
+        'products',
+        {'isFeatured': isFeatured ? 1 : 0},
+        where: 'id IN (${productIds.join(',')})',
+      );
+    } catch (e) {
+      debugPrint('Update featured status error: $e');
+      rethrow;
+    }
+  }
+
   Future<List<Map<String, dynamic>>> getCategories() async {
     try {
       if (Constants.useRemote) {
@@ -295,10 +334,63 @@ class ProductService {
         return list.map((e) => e as Map<String, dynamic>).toList();
       }
       final db = await _dbService.database;
-      return await db.query('categories', where: 'deleted = 0');
+      return await db.query('categories',
+          where: 'deleted = 0', orderBy: 'displayOrder ASC');
     } catch (e) {
       debugPrint('Get categories error: $e');
       return [];
+    }
+  }
+
+  Future<void> updateCategory(int id,
+      {String? name, String? imagePath, int? displayOrder, int? iconCodePoint}) async {
+    try {
+      final Map<String, dynamic> data = {};
+      if (name != null) data['name'] = name;
+      if (imagePath != null) data['imagePath'] = imagePath;
+      if (displayOrder != null) data['displayOrder'] = displayOrder;
+      if (iconCodePoint != null) data['iconCodePoint'] = iconCodePoint;
+
+      if (Constants.useRemote) {
+        await _remote.putJson('/categories/$id', data);
+        return;
+      }
+      final db = await _dbService.database;
+      await db.update('categories', data, where: 'id = ?', whereArgs: [id]);
+    } catch (e) {
+      debugPrint('Update category error: $e');
+      rethrow;
+    }
+  }
+
+  Future<String> getCmsSetting(String key, String defaultValue) async {
+    try {
+      if (Constants.useRemote) {
+        final res = await _remote.getJson('/cms/settings/$key');
+        return res['value'] ?? defaultValue;
+      }
+      final db = await _dbService.database;
+      final rows = await db
+          .query('cms_settings', where: 'key = ?', whereArgs: [key], limit: 1);
+      if (rows.isNotEmpty) return rows.first['value'] as String;
+    } catch (e) {
+      debugPrint('Get CMS setting error: $e');
+    }
+    return defaultValue;
+  }
+
+  Future<void> setCmsSetting(String key, String value) async {
+    try {
+      if (Constants.useRemote) {
+        await _remote.putJson('/cms/settings/$key', {'value': value});
+        return;
+      }
+      final db = await _dbService.database;
+      await db.insert('cms_settings', {'key': key, 'value': value},
+          conflictAlgorithm: ConflictAlgorithm.replace);
+    } catch (e) {
+      debugPrint('Set CMS setting error: $e');
+      rethrow;
     }
   }
 

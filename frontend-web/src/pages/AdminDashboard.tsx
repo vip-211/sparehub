@@ -7,6 +7,7 @@ import { Users, ShoppingBag, BarChart2, CheckCircle, XCircle, Plus, Package, Use
 import { ROLE_SUPER_MANAGER, ROLE_ADMIN, ROLE_MECHANIC, ROLE_RETAILER, ROLE_WHOLESALER, ROLE_STAFF } from '../services/constants';
 import AuthService from '../services/auth.service';
 import Skeleton from '../components/Skeleton';
+import AdminCategories from './AdminCategories';
 import BarcodeScanner from '../components/BarcodeScanner';
 import { useExternalScanner } from '../hooks/useExternalScanner';
 import useSound from 'use-sound';
@@ -128,6 +129,84 @@ const AdminDashboard = () => {
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [productSearchTerm, setProductSearchTerm] = useState('');
   const [cashbackSearchTerm, setCashbackSearchTerm] = useState('');
+
+  const [cmsSettings, setCmsSettings] = useState<Record<string, string>>({
+    mechanic_home_title: '',
+    mechanic_banner_text: '',
+    mechanic_banner_btn: '',
+    hide_chat_support: 'false'
+  });
+  const [loadingCms, setLoadingCms] = useState(false);
+
+  const [homeLayout, setHomeLayout] = useState<string[]>([]);
+  const [loadingLayout, setLoadingLayout] = useState(false);
+
+  const fetchCmsSettings = async () => {
+    setLoadingCms(true);
+    try {
+      const keys = ['mechanic_home_title', 'mechanic_banner_text', 'mechanic_banner_btn', 'hide_chat_support'];
+      const results: Record<string, string> = {};
+      for (const key of keys) {
+        const res = await api.get(`/cms/settings/${key}`);
+        results[key] = res.data.value;
+      }
+      setCmsSettings(results);
+    } catch (err) {
+      console.error('Error fetching CMS settings:', err);
+    } finally {
+      setLoadingCms(false);
+    }
+  };
+
+  const saveCmsSettings = async () => {
+    setLoadingCms(true);
+    try {
+      for (const [key, value] of Object.entries(cmsSettings)) {
+        await api.put(`/cms/settings/${key}`, { value });
+      }
+      alert('CMS settings saved successfully!');
+    } catch (err) {
+      console.error('Error saving CMS settings:', err);
+      alert('Failed to save CMS settings');
+    } finally {
+      setLoadingCms(false);
+    }
+  };
+
+  const fetchHomeLayout = async () => {
+    setLoadingLayout(true);
+    try {
+      const res = await api.get('/cms/settings/mechanic_home_layout');
+      const layoutStr = res.data.value || 'header,search_bar,categories,banner,hot_deals';
+      setHomeLayout(layoutStr.split(',').filter(Boolean));
+    } catch (err) {
+      console.error('Error fetching home layout:', err);
+      setHomeLayout(['header', 'search_bar', 'categories', 'banner', 'hot_deals']);
+    } finally {
+      setLoadingLayout(false);
+    }
+  };
+
+  const saveHomeLayout = async () => {
+    setLoadingLayout(true);
+    try {
+      await api.put('/cms/settings/mechanic_home_layout', { value: homeLayout.join(',') });
+      alert('Home layout saved successfully!');
+    } catch (err) {
+      console.error('Error saving home layout:', err);
+      alert('Failed to save home layout');
+    } finally {
+      setLoadingLayout(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'cms') {
+      fetchCmsSettings();
+    } else if (activeTab === 'layout') {
+      fetchHomeLayout();
+    }
+  }, [activeTab]);
 
   const [showPointsDialog, setShowPointsDialog] = useState(false);
   const [pointsUser, setPointsUser] = useState<any>(null);
@@ -1206,6 +1285,8 @@ const AdminDashboard = () => {
           { id: 'categories', label: 'Categories', icon: Plus },
           { id: 'reports', label: 'Reports', icon: BarChart2 },
           { id: 'insights', label: 'AI Insights', icon: Cpu },
+          { id: 'cms', label: 'Home Page CMS', icon: List },
+          { id: 'layout', label: 'Layout Editor', icon: LayoutGrid },
           { id: 'settings', label: 'Settings', icon: Settings },
         ].map((tab) => (
           <button
@@ -2574,67 +2655,7 @@ const AdminDashboard = () => {
       )}
 
       {activeTab === 'categories' && (
-        <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-black text-gray-900">Manage Categories</h3>
-            <button
-              onClick={() => setShowAddCategory(true)}
-              className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 font-bold text-sm transition"
-            >
-              Add Category
-            </button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {(categories || []).map((category: any) => (
-              <div key={category.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden group hover:shadow-md transition-shadow cursor-default">
-                <div className="h-40 bg-gray-50 relative overflow-hidden">
-                  {category.imageLink || category.imagePath ? (
-                    <img src={getImageUrl(category.imageLink || category.imagePath)} alt={category.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-300">
-                      <Package size={48} />
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center gap-2">
-                    <button
-                      onClick={() => { setEditingCategory(category); setShowEditCategory(true); }}
-                      className="bg-white text-gray-900 px-4 py-2 rounded-lg font-bold text-xs opacity-0 group-hover:opacity-100 transition-all transform translate-y-4 group-hover:translate-y-0 hover:bg-primary-50 hover:text-primary-600"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={async () => {
-                        if (!window.confirm(`Delete category ${category.name}?`)) return;
-                        try {
-                          await api.delete(`/categories/${category.id}`);
-                          fetchCategories();
-                        } catch (err) {
-                          console.error(err);
-                          alert('Failed to delete category');
-                        }
-                      }}
-                      className="bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-xs opacity-0 group-hover:opacity-100 transition-all transform translate-y-4 group-hover:translate-y-0 hover:bg-red-700"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-                <div className="p-4 flex justify-between items-start">
-                  <div>
-                    <h4 className="font-black text-gray-900 text-lg">{category.name}</h4>
-                    <p className="text-gray-500 text-sm font-medium mt-1 line-clamp-2">{category.description || 'No description provided'}</p>
-                  </div>
-                  <button
-                    onClick={() => { setEditingCategory(category); setShowEditCategory(true); }}
-                    className="p-2 text-gray-400 hover:text-primary-600 transition-colors md:hidden"
-                  >
-                    <Settings size={20} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <AdminCategories />
       )}
 
       {activeTab === 'insights' && (
@@ -2742,6 +2763,237 @@ const AdminDashboard = () => {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {activeTab === 'cms' && (
+        <div className="max-w-4xl mx-auto space-y-8 pb-20">
+          <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+            <div className="px-8 py-6 border-b border-gray-100 bg-gray-50/50">
+              <h2 className="text-xl font-black text-gray-900 flex items-center gap-3">
+                <List size={24} className="text-primary-600" />
+                Home Page CMS
+              </h2>
+              <p className="text-gray-500 text-sm mt-1 font-medium">Manage text and visibility settings for the mechanic home page.</p>
+            </div>
+
+            {loadingCms ? (
+              <div className="p-20 text-center">
+                <Skeleton className="w-12 h-12 rounded-full mx-auto mb-4" />
+                <p className="text-gray-400 font-bold">Loading CMS settings...</p>
+              </div>
+            ) : (
+              <div className="p-8 space-y-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Home Page Title</label>
+                    <input
+                      type="text"
+                      value={cmsSettings.mechanic_home_title}
+                      onChange={(e) => setCmsSettings({ ...cmsSettings, mechanic_home_title: e.target.value })}
+                      className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-primary-500 outline-none transition-all"
+                      placeholder="e.g., Parts Mitra"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Banner Text</label>
+                    <textarea
+                      value={cmsSettings.mechanic_banner_text}
+                      onChange={(e) => setCmsSettings({ ...cmsSettings, mechanic_banner_text: e.target.value })}
+                      className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-primary-500 outline-none transition-all h-32"
+                      placeholder="Promotional text for the banner..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Banner Button Text</label>
+                    <input
+                      type="text"
+                      value={cmsSettings.mechanic_banner_btn}
+                      onChange={(e) => setCmsSettings({ ...cmsSettings, mechanic_banner_btn: e.target.value })}
+                      className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-primary-500 outline-none transition-all"
+                      placeholder="e.g., Buy Now"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-6 bg-gray-50 rounded-2xl border border-gray-100">
+                    <div>
+                      <h3 className="font-bold text-gray-900">Hide Chat Support globally</h3>
+                      <p className="text-xs text-gray-500 font-medium">When enabled, the AI Chatbot will be hidden for all users.</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={cmsSettings.hide_chat_support === 'true'}
+                        onChange={(e) => setCmsSettings({ ...cmsSettings, hide_chat_support: e.target.checked ? 'true' : 'false' })}
+                      />
+                      <div className="w-12 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                    </label>
+                  </div>
+                </div>
+
+                <button
+                  onClick={saveCmsSettings}
+                  className="w-full py-4 bg-primary-600 text-white rounded-2xl font-black text-lg shadow-xl shadow-primary-100 hover:bg-primary-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <Upload size={20} />
+                  Save CMS Settings
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'layout' && (
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 pb-20">
+          <div className="lg:col-span-2 space-y-8">
+            <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+              <div className="px-8 py-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                <div>
+                  <h2 className="text-xl font-black text-gray-900 flex items-center gap-3">
+                    <LayoutGrid size={24} className="text-primary-600" />
+                    Home Page Layout Editor
+                  </h2>
+                  <p className="text-gray-500 text-sm mt-1 font-medium">Drag and drop components to reorder the mechanic home page.</p>
+                </div>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={fetchHomeLayout}
+                    className="p-2.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all"
+                    title="Reset to saved"
+                  >
+                    <TrendingUp size={20} className="rotate-180" />
+                  </button>
+                </div>
+              </div>
+
+              {loadingLayout ? (
+                <div className="p-20 text-center">
+                  <Skeleton className="w-12 h-12 rounded-full mx-auto mb-4" />
+                  <p className="text-gray-400 font-bold">Loading layout configuration...</p>
+                </div>
+              ) : (
+                <div className="p-8 space-y-8">
+                  <div className="space-y-3 min-h-[400px] bg-gray-50/50 p-4 rounded-[2rem] border-2 border-dashed border-gray-200">
+                    {homeLayout.length === 0 && (
+                      <div className="h-full flex flex-col items-center justify-center text-gray-400 py-20">
+                        <Package size={48} className="mb-4 opacity-20" />
+                        <p className="font-bold">No components in layout</p>
+                        <p className="text-xs">Add components from the library on the right</p>
+                      </div>
+                    )}
+                    {homeLayout.map((comp, index) => {
+                      const names: Record<string, string> = {
+                        header: 'Header (Profile & Logo)',
+                        search_bar: 'Search Bar',
+                        categories: 'Categories (Brands)',
+                        banner: 'Promotional Banner',
+                        hot_deals: 'Hot Deals / Featured'
+                      };
+                      const icons: Record<string, any> = {
+                        header: Users,
+                        search_bar: Search,
+                        categories: LayoutGrid,
+                        banner: ShoppingBag,
+                        hot_deals: Star
+                      };
+                      const Icon = icons[comp] || Package;
+
+                      return (
+                        <div
+                          key={`${comp}-${index}`}
+                          draggable
+                          onDragStart={(e) => e.dataTransfer.setData('index', index.toString())}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => {
+                            const fromIndex = parseInt(e.dataTransfer.getData('index'));
+                            const newLayout = [...homeLayout];
+                            const [removed] = newLayout.splice(fromIndex, 1);
+                            newLayout.splice(index, 0, removed);
+                            setHomeLayout(newLayout);
+                          }}
+                          className="flex items-center gap-4 p-5 bg-white border-2 border-gray-100 rounded-2xl cursor-move hover:border-primary-200 hover:shadow-md transition-all group"
+                        >
+                          <div className="p-3 bg-gray-50 rounded-xl text-gray-400 group-hover:text-primary-600 group-hover:bg-primary-50 transition-colors">
+                            <Icon size={24} />
+                          </div>
+                          <div className="flex-grow">
+                            <h4 className="font-black text-gray-900">{names[comp] || comp}</h4>
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Section {index + 1}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button 
+                              onClick={() => {
+                                const newLayout = [...homeLayout];
+                                newLayout.splice(index, 1);
+                                setHomeLayout(newLayout);
+                              }}
+                              className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                            <div className="p-2 text-gray-300">
+                              <List size={20} />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <button
+                    onClick={saveHomeLayout}
+                    disabled={loadingLayout}
+                    className="w-full py-4 bg-primary-600 text-white rounded-2xl font-black text-lg shadow-xl shadow-primary-100 hover:bg-primary-700 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <Upload size={20} />
+                    {loadingLayout ? 'Saving...' : 'Save Home Layout'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Component Library Sidebar */}
+          <div className="space-y-6">
+            <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden sticky top-8">
+              <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50">
+                <h3 className="font-black text-gray-900 flex items-center gap-2">
+                  <Plus size={20} className="text-primary-600" />
+                  Component Library
+                </h3>
+                <p className="text-xs text-gray-500 font-medium mt-0.5">Click to add to layout</p>
+              </div>
+              <div className="p-6 space-y-3">
+                {[
+                  { id: 'header', name: 'Header (Profile & Logo)', icon: Users },
+                  { id: 'search_bar', name: 'Search Bar', icon: Search },
+                  { id: 'categories', name: 'Categories (Brands)', icon: LayoutGrid },
+                  { id: 'banner', name: 'Promotional Banner', icon: ShoppingBag },
+                  { id: 'hot_deals', name: 'Hot Deals / Featured', icon: Star },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setHomeLayout([...homeLayout, item.id])}
+                    className="w-full flex items-center gap-3 p-4 bg-gray-50 hover:bg-primary-50 border border-transparent hover:border-primary-100 rounded-2xl transition-all group text-left"
+                  >
+                    <div className="p-2.5 bg-white rounded-xl text-gray-400 group-hover:text-primary-600 shadow-sm">
+                      <item.icon size={20} />
+                    </div>
+                    <span className="font-bold text-gray-700 group-hover:text-primary-700 text-sm">{item.name}</span>
+                    <Plus size={16} className="ml-auto text-gray-300 group-hover:text-primary-400" />
+                  </button>
+                ))}
+              </div>
+              <div className="p-6 pt-0">
+                <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100">
+                  <p className="text-[10px] font-bold text-amber-700 uppercase tracking-widest leading-relaxed">
+                    Tip: You can add multiple instances of components like Banners or Hot Deals to create custom layouts.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

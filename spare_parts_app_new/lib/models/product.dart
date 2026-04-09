@@ -22,6 +22,7 @@ class Product {
   final int? offerMinQty;
   final List<String> imageLinks;
   final int minOrderQty;
+  final bool isFeatured;
 
   Product({
     required this.id,
@@ -47,6 +48,7 @@ class Product {
     this.offerMinQty,
     this.imageLinks = const [],
     this.minOrderQty = 1,
+    this.isFeatured = false,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
@@ -87,6 +89,8 @@ class Product {
               .toList() ??
           [],
       minOrderQty: json['minOrderQty'] ?? 1,
+      isFeatured:
+          json['isFeatured'] == 1 || json['isFeatured'] == true,
     );
   }
 
@@ -115,6 +119,7 @@ class Product {
       'offerMinQty': offerMinQty,
       'imageLinks': imageLinks,
       'minOrderQty': minOrderQty,
+      'isFeatured': isFeatured ? 1 : 0,
     };
   }
 
@@ -131,14 +136,18 @@ class Product {
     int? stock,
     int? wholesalerId,
     String? imagePath,
+    String? imageLink,
     String? description,
     bool? enabled,
     int? categoryId,
     String? categoryName,
+    String? categoryImagePath,
+    String? categoryImageLink,
     String? offerType,
     int? offerMinQty,
     List<String>? imageLinks,
     int? minOrderQty,
+    bool? isFeatured,
   }) {
     return Product(
       id: id ?? this.id,
@@ -153,14 +162,18 @@ class Product {
       stock: stock ?? this.stock,
       wholesalerId: wholesalerId ?? this.wholesalerId,
       imagePath: imagePath ?? this.imagePath,
+      imageLink: imageLink ?? this.imageLink,
       description: description ?? this.description,
       enabled: enabled ?? this.enabled,
       categoryId: categoryId ?? this.categoryId,
       categoryName: categoryName ?? this.categoryName,
+      categoryImagePath: categoryImagePath ?? this.categoryImagePath,
+      categoryImageLink: categoryImageLink ?? this.categoryImageLink,
       offerType: offerType ?? this.offerType,
       offerMinQty: offerMinQty ?? this.offerMinQty,
       imageLinks: imageLinks ?? this.imageLinks,
       minOrderQty: minOrderQty ?? this.minOrderQty,
+      isFeatured: isFeatured ?? this.isFeatured,
     );
   }
 }

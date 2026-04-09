@@ -322,6 +322,22 @@ public class ProductController {
         return ResponseEntity.ok(productService.getProductsByOfferType(type, page, size, sortBy, direction));
     }
 
+    @GetMapping("/featured")
+    public ResponseEntity<List<ProductDto>> getFeaturedProducts() {
+        return ResponseEntity.ok(productService.getFeaturedProducts());
+    }
+
+    @PostMapping("/featured")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    public ResponseEntity<?> updateFeaturedStatus(@RequestBody java.util.Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<Integer> idsInt = (List<Integer>) body.get("ids");
+        List<Long> ids = idsInt.stream().map(Integer::longValue).collect(Collectors.toList());
+        boolean isFeatured = (boolean) body.get("isFeatured");
+        productService.updateFeaturedStatus(ids, isFeatured);
+        return ResponseEntity.ok().build();
+    }
+
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('WHOLESALER') or hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
     public ResponseEntity<ProductDto> updateProduct(@PathVariable Long id, @Valid @RequestBody ProductDto productDto, Authentication authentication) {

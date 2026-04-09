@@ -4,6 +4,8 @@ class Category {
   final String? description;
   final String? imagePath;
   final String? imageLink;
+  final int displayOrder;
+  final int? iconCodePoint;
   final bool deleted;
 
   Category({
@@ -12,6 +14,8 @@ class Category {
     this.description,
     this.imagePath,
     this.imageLink,
+    this.displayOrder = 0,
+    this.iconCodePoint,
     this.deleted = false,
   });
 
@@ -22,6 +26,8 @@ class Category {
       description: json['description'],
       imagePath: json['imagePath'],
       imageLink: json['imageLink'],
+      displayOrder: (json['displayOrder'] as num? ?? 0).toInt(),
+      iconCodePoint: json['iconCodePoint'] != null ? (json['iconCodePoint'] as num).toInt() : null,
       deleted: json['deleted'] == true || json['deleted'] == 1,
     );
   }
@@ -33,6 +39,8 @@ class Category {
       'description': description,
       'imagePath': imagePath,
       'imageLink': imageLink,
+      'displayOrder': displayOrder,
+      'iconCodePoint': iconCodePoint,
       'deleted': deleted,
     };
   }

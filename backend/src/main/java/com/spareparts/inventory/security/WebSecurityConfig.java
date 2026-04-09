@@ -92,6 +92,7 @@ public class WebSecurityConfig {
                                 .requestMatchers("/api/test/**").permitAll()
                                 .requestMatchers("/api/files/display/**").permitAll()
                                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/categories/**").permitAll()
+                                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/cms/settings/**").permitAll()
                                 .requestMatchers("/api/settings/public").permitAll()
                                 .requestMatchers("/ws/**").permitAll()
                                 .requestMatchers("/error").permitAll()

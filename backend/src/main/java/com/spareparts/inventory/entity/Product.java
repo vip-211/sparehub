@@ -71,6 +71,9 @@ public class Product {
     @Column(columnDefinition = "integer default 1")
     private Integer minOrderQty = 1;
 
+    @Column(name = "is_featured", columnDefinition = "boolean default false")
+    private boolean isFeatured = false;
+
     @ElementCollection
     @CollectionTable(name = "product_images", joinColumns = @JoinColumn(name = "product_id"))
     @Column(name = "image_link")

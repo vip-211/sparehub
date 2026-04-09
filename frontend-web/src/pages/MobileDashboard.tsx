@@ -38,6 +38,10 @@ const MobileDashboard = () => {
   const { tp } = useLanguage();
   const [stats, setStats] = useState<any>(null);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const [cms, setCms] = useState<any>({});
+  const [layout, setLayout] = useState<string[]>([]);
+  const [hotDeals, setHotDeals] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [playNotification] = useSound('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
@@ -47,11 +51,17 @@ const MobileDashboard = () => {
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
-      const [ordersRes, usersRes, productsRes, salesRes] = await Promise.all([
+      const [ordersRes, usersRes, productsRes, salesRes, titleRes, bannerRes, btnRes, layoutRes, catRes, featuredRes] = await Promise.all([
         api.get('admin/orders'),
         api.get('admin/users'),
         api.get('products'),
-        api.get('admin/sales', { params: { type: period } })
+        api.get('admin/sales', { params: { type: period } }),
+        api.get('cms/settings/mechanic_home_title'),
+        api.get('cms/settings/mechanic_banner_text'),
+        api.get('cms/settings/mechanic_banner_btn'),
+        api.get('cms/settings/mechanic_home_layout'),
+        api.get('categories'),
+        api.get('products/featured')
       ]);
 
       const orders = ordersRes.data || [];
@@ -67,6 +77,14 @@ const MobileDashboard = () => {
       });
 
       setRecentOrders(orders.slice(0, 5));
+      setCms({
+        title: titleRes.data.value || 'Parts Mitra',
+        banner: bannerRes.data.value || '',
+        btn: btnRes.data.value || 'Buy Now'
+      });
+      setLayout((layoutRes.data.value || 'header,search_bar,categories,banner,hot_deals').split(',').filter(Boolean));
+      setCategories(catRes.data || []);
+      setHotDeals(featuredRes.data || []);
     } catch (err) {
       console.error("Failed to fetch dashboard data:", err);
     } finally {
@@ -137,6 +155,33 @@ const MobileDashboard = () => {
     { name: 'Sun', sales: 3490 },
   ];
 
+  const getCategoryIcon = (cat: any) => {
+    if (cat.imagePath || cat.imageLink) {
+      return (
+        <img 
+          src={getImageUrl(cat.imagePath || cat.imageLink)} 
+          alt={cat.name} 
+          className="w-10 h-10 rounded-full object-cover mb-2" 
+        />
+      );
+    }
+    if (cat.iconCodePoint) {
+      return (
+        <span className="material-icons text-[32px] mb-2 text-primary-600">
+          {String.fromCharCode(cat.iconCodePoint)}
+        </span>
+      );
+    }
+    return <Package className="mb-2 text-primary-600" size={32} />;
+  };
+
+  const getImageUrl = (path: string) => {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
+    const base = API_BASE_URL.endsWith('/api') ? API_BASE_URL.replace('/api', '') : API_BASE_URL;
+    return `${base}${path.startsWith('/') ? '' : '/'}${path}`;
+  };
+
   if (loading) {
     return (
       <div className="p-4 space-y-6 animate-pulse">
@@ -153,51 +198,99 @@ const MobileDashboard = () => {
   }
 
   return (
-    <div className="pb-20 md:pb-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6 px-1">
-        <div>
-          <h1 className="text-2xl font-black text-gray-900 tracking-tight">Overview</h1>
-          <p className="text-sm text-gray-500 font-medium">Welcome back to Parts Mitra</p>
-        </div>
-        <div className="flex gap-2">
-          <button className="p-2.5 bg-white rounded-xl shadow-sm border border-gray-100 text-gray-600 hover:bg-gray-50 transition">
-            <Search size={20} />
-          </button>
-          <button className="p-2.5 bg-white rounded-xl shadow-sm border border-gray-100 text-gray-600 hover:bg-gray-50 transition relative">
-            <Bell size={20} />
-            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-          </button>
-        </div>
-      </div>
-
-      {/* Stats Grid - Mobile Friendly */}
-      <div className="grid grid-cols-2 gap-4 mb-8">
-        <div className="bg-indigo-600 p-5 rounded-[2rem] text-white shadow-xl shadow-indigo-100 relative overflow-hidden group">
-          <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/10 rounded-full group-hover:scale-150 transition-transform duration-700"></div>
-          <ShoppingBag className="mb-3 opacity-80" size={24} />
-          <p className="text-xs font-bold uppercase tracking-wider opacity-70">Orders</p>
-          <p className="text-2xl font-black">{stats?.totalOrders}</p>
-        </div>
-        <div className="bg-blue-500 p-5 rounded-[2rem] text-white shadow-xl shadow-blue-100 relative overflow-hidden group">
-          <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/10 rounded-full group-hover:scale-150 transition-transform duration-700"></div>
-          <TrendingUp className="mb-3 opacity-80" size={24} />
-          <p className="text-xs font-bold uppercase tracking-wider opacity-70">Revenue</p>
-          <p className="text-2xl font-black">₹{(stats?.totalRevenue || 0).toLocaleString()}</p>
-        </div>
-        <div className="bg-amber-400 p-5 rounded-[2rem] text-white shadow-xl shadow-amber-100 relative overflow-hidden group">
-          <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/10 rounded-full group-hover:scale-150 transition-transform duration-700"></div>
-          <Clock className="mb-3 opacity-80" size={24} />
-          <p className="text-xs font-bold uppercase tracking-wider opacity-70">Pending</p>
-          <p className="text-2xl font-black">{stats?.pendingOrders}</p>
-        </div>
-        <div className="bg-rose-500 p-5 rounded-[2rem] text-white shadow-xl shadow-rose-100 relative overflow-hidden group">
-          <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/10 rounded-full group-hover:scale-150 transition-transform duration-700"></div>
-          <Package className="mb-3 opacity-80" size={24} />
-          <p className="text-xs font-bold uppercase tracking-wider opacity-70">Stock</p>
-          <p className="text-2xl font-black">{stats?.totalProducts}</p>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gray-50/50 p-6 md:p-8 space-y-8 pb-32">
+      {/* Dynamic Layout Rendering */}
+      {layout.map((section) => {
+        switch (section) {
+          case 'header':
+            return (
+              <div key="header" className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-3xl font-black text-gray-900 tracking-tight">{cms.title}</h1>
+                  <p className="text-gray-500 text-sm font-bold uppercase tracking-widest mt-1">Dashboard Overview</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button className="p-3 bg-white rounded-2xl shadow-sm border border-gray-100 text-gray-400 hover:text-primary-600 transition-all relative">
+                    <Bell size={24} />
+                    <span className="absolute top-3 right-3 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                  </button>
+                  <button className="p-3 bg-white rounded-2xl shadow-sm border border-gray-100 text-gray-400 hover:text-primary-600 transition-all md:hidden">
+                    <Menu size={24} />
+                  </button>
+                </div>
+              </div>
+            );
+          case 'search_bar':
+            return (
+              <div key="search_bar" className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <input 
+                  type="text" 
+                  placeholder={tp('dashboard.searchPlaceholder')}
+                  className="w-full bg-white border-2 border-gray-100 rounded-[2rem] pl-12 pr-6 py-4 font-bold text-gray-700 focus:border-primary-500 outline-none transition-all shadow-sm"
+                />
+              </div>
+            );
+          case 'categories':
+            return (
+              <div key="categories" className="space-y-4">
+                <h3 className="font-black text-gray-900 text-lg uppercase tracking-tight px-2">Bike Brands</h3>
+                <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
+                  {categories.map((cat) => (
+                    <div key={cat.id} className="flex-shrink-0 flex flex-col items-center justify-center w-24 h-24 bg-white rounded-3xl border border-gray-100 shadow-sm hover:border-primary-200 transition-all cursor-pointer">
+                      {getCategoryIcon(cat)}
+                      <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest text-center px-1 truncate w-full">{cat.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          case 'banner':
+            return (
+              <div key="banner" className="bg-gradient-to-br from-primary-600 to-indigo-700 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl shadow-primary-200">
+                <div className="relative z-10 space-y-4">
+                  <h2 className="text-2xl font-black leading-tight max-w-[200px] whitespace-pre-line">{cms.banner}</h2>
+                  <button className="bg-yellow-400 text-black px-6 py-2.5 rounded-full font-black text-sm uppercase tracking-widest shadow-lg active:scale-95 transition-all">
+                    {cms.btn}
+                  </button>
+                </div>
+                <div className="absolute -right-8 -bottom-8 opacity-20 transform -rotate-12 scale-150">
+                  <ShoppingBag size={160} />
+                </div>
+              </div>
+            );
+          case 'hot_deals':
+            return (
+              <div key="hot_deals" className="space-y-4">
+                <h3 className="font-black text-gray-900 text-lg uppercase tracking-tight px-2">Hot Deals ⚡</h3>
+                <div className="flex gap-6 overflow-x-auto pb-6 no-scrollbar">
+                  {hotDeals.map((deal) => (
+                    <div key={deal.id} className="flex-shrink-0 w-48 bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden group cursor-pointer hover:shadow-md transition-all">
+                      <div className="h-40 bg-gray-50 relative overflow-hidden">
+                        <img 
+                          src={getImageUrl(deal.imageLink || deal.imagePath)} 
+                          alt={deal.name}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                        />
+                        <div className="absolute top-3 left-3 bg-red-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg">Hot</div>
+                      </div>
+                      <div className="p-4 space-y-1">
+                        <h4 className="font-black text-gray-900 text-sm truncate">{deal.name}</h4>
+                        <p className="text-primary-600 font-black text-lg">₹{deal.sellingPrice.toLocaleString()}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-400 text-[10px] font-bold line-through">₹{deal.mrp.toLocaleString()}</span>
+                          <span className="text-green-500 text-[10px] font-black uppercase tracking-widest">{Math.round((1 - deal.sellingPrice/deal.mrp)*100)}% Off</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          default:
+            return null;
+        }
+      })}
 
       {/* Sales Chart */}
       <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 mb-8">

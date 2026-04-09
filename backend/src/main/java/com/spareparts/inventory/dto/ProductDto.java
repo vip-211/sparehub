@@ -43,6 +43,7 @@ public class ProductDto {
     private String imageLink;
     private java.util.List<String> imageLinks;
     private Integer minOrderQty;
+    private boolean isFeatured;
     private String description;
     
     private Long wholesalerId;

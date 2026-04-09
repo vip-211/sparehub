@@ -200,7 +200,7 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _ProductDetailSheet(product: product),
+      builder: (context) => ProductDetailSheet(product: product),
     );
   }
 
@@ -844,10 +844,11 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
               ),
             ],
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -948,15 +949,24 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                               return Padding(
                                 padding: const EdgeInsets.only(right: 8.0),
                                 child: FilterChip(
-                                  avatar: Icon(_getCategoryIcon(name),
-                                      size: 18,
-                                      color: isSelected
-                                          ? Theme.of(context)
-                                              .colorScheme
-                                              .onPrimary
-                                          : Theme.of(context)
-                                              .colorScheme
-                                              .primary),
+                                  avatar: cat['imagePath'] != null
+                                      ? CircleAvatar(
+                                          radius: 9,
+                                          backgroundImage: getImageProvider(cat['imagePath']),
+                                        )
+                                      : Icon(
+                                          cat['iconCodePoint'] != null
+                                              ? IconData(cat['iconCodePoint'] as int,
+                                                  fontFamily: 'MaterialIcons')
+                                              : _getCategoryIcon(name),
+                                          size: 18,
+                                          color: isSelected
+                                              ? Theme.of(context)
+                                                  .colorScheme
+                                                  .onPrimary
+                                              : Theme.of(context)
+                                                  .colorScheme
+                                                  .primary),
                                   label: Text(name),
                                   selected: isSelected,
                                   onSelected: (selected) =>
@@ -1270,45 +1280,46 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                                                               ),
                                                               const SizedBox(
                                                                   height: 6),
-                                                              Row(
-                                                                children: [
-                                                                  Icon(
-                                                                    Icons
-                                                                        .inventory_2_outlined,
-                                                                    size: 14,
-                                                                    color: isOutOfStock
-                                                                        ? Colors
-                                                                            .red
-                                                                        : (product.stock <=
-                                                                                5
-                                                                            ? Colors.orange
-                                                                            : Colors.grey),
-                                                                  ),
-                                                                  const SizedBox(
-                                                                      width: 4),
-                                                                  Text(
-                                                                    isOutOfStock
-                                                                        ? "Out of Stock"
-                                                                        : "Stock: ${product.stock}",
-                                                                    style:
-                                                                        TextStyle(
-                                                                      fontSize:
-                                                                          12,
+                                                              if (!isMechanic)
+                                                                Row(
+                                                                  children: [
+                                                                    Icon(
+                                                                      Icons
+                                                                          .inventory_2_outlined,
+                                                                      size: 14,
                                                                       color: isOutOfStock
                                                                           ? Colors
                                                                               .red
-                                                                          : (product.stock <= 5
-                                                                              ? Colors.orange.shade700
-                                                                              : Colors.grey.shade700),
-                                                                      fontWeight: product.stock <= 5
-                                                                          ? FontWeight
-                                                                              .bold
-                                                                          : FontWeight
-                                                                              .normal,
+                                                                          : (product.stock <=
+                                                                                  5
+                                                                              ? Colors.orange
+                                                                              : Colors.grey),
                                                                     ),
-                                                                  ),
-                                                                ],
-                                                              ),
+                                                                    const SizedBox(
+                                                                        width: 4),
+                                                                    Text(
+                                                                      isOutOfStock
+                                                                          ? "Out of Stock"
+                                                                          : "Stock: ${product.stock}",
+                                                                      style:
+                                                                          TextStyle(
+                                                                        fontSize:
+                                                                            12,
+                                                                        color: isOutOfStock
+                                                                            ? Colors
+                                                                                .red
+                                                                            : (product.stock <= 5
+                                                                                ? Colors.orange.shade700
+                                                                                : Colors.grey.shade700),
+                                                                        fontWeight: product.stock <= 5
+                                                                            ? FontWeight
+                                                                                .bold
+                                                                            : FontWeight
+                                                                                .normal,
+                                                                      ),
+                                                                    ),
+                                                                  ],
+                                                                ),
                                                             ],
                                                           ),
                                                         ),
@@ -1563,21 +1574,24 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
   }
 }
 
-class _ProductDetailSheet extends StatefulWidget {
+class ProductDetailSheet extends StatefulWidget {
   final Product product;
-  const _ProductDetailSheet({required this.product});
+  const ProductDetailSheet({required this.product});
 
   @override
-  State<_ProductDetailSheet> createState() => _ProductDetailSheetState();
+  State<ProductDetailSheet> createState() => ProductDetailSheetState();
 }
 
-class _ProductDetailSheetState extends State<_ProductDetailSheet> {
+class ProductDetailSheetState extends State<ProductDetailSheet> {
   int _currentImageIndex = 0;
 
   @override
   Widget build(BuildContext context) {
     final p = widget.product;
     final cart = Provider.of<CartProvider>(context, listen: false);
+    final user = Provider.of<AuthProvider>(context, listen: false).user;
+    final bool isMechanic = user?.roles.contains(Constants.roleMechanic) ?? false;
+
     final images = [p.imageLink ?? p.imagePath, ...p.imageLinks]
         .where((e) => e != null && e.isNotEmpty)
         .cast<String>()
@@ -1674,22 +1688,24 @@ class _ProductDetailSheetState extends State<_ProductDetailSheet> {
                   const SizedBox(height: 20),
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: p.stock > 0 ? Colors.blue.shade50 : Colors.red.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          p.stock > 0 ? 'IN STOCK' : 'OUT OF STOCK',
-                          style: TextStyle(
-                            fontSize: 12, 
-                            fontWeight: FontWeight.w900, 
-                            color: p.stock > 0 ? Colors.blue.shade700 : Colors.red.shade700
+                      if (!isMechanic)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: p.stock > 0 ? Colors.blue.shade50 : Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            p.stock > 0 ? 'IN STOCK' : 'OUT OF STOCK',
+                            style: TextStyle(
+                              fontSize: 12, 
+                              fontWeight: FontWeight.w900, 
+                              color: p.stock > 0 ? Colors.blue.shade700 : Colors.red.shade700
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
+                      if (!isMechanic && p.categoryName != null)
+                        const SizedBox(width: 12),
                       if (p.categoryName != null)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

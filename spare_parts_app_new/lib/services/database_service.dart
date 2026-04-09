@@ -19,7 +19,7 @@ class DatabaseService {
     String path = join(await getDatabasesPath(), 'spare_parts.db');
     final db = await openDatabase(
       path,
-      version: 18,
+      version: 22,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -198,6 +198,53 @@ class DatabaseService {
       try {
         await db.execute(
             'ALTER TABLE orders ADD COLUMN pointsEarned INTEGER DEFAULT 0');
+      } catch (_) {}
+    }
+    if (oldVersion < 19) {
+      try {
+        await db.execute(
+            'ALTER TABLE products ADD COLUMN isFeatured INTEGER DEFAULT 0');
+      } catch (_) {}
+    }
+    if (oldVersion < 20) {
+      // Add category image and display order
+      try {
+        await db.execute('ALTER TABLE categories ADD COLUMN imagePath TEXT');
+      } catch (_) {}
+      try {
+        await db.execute(
+            'ALTER TABLE categories ADD COLUMN displayOrder INTEGER DEFAULT 0');
+      } catch (_) {}
+
+      // Add CMS settings table
+      await db.execute('''
+        CREATE TABLE cms_settings(
+          key TEXT PRIMARY KEY,
+          value TEXT
+        )
+      ''');
+
+      // Seed default CMS values
+      await db.insert('cms_settings',
+          {'key': 'mechanic_home_title', 'value': 'Parts Mitra'});
+      await db.insert('cms_settings', {
+        'key': 'mechanic_banner_text',
+        'value': 'मार्केटमध्ये दर वाढले,\nparts mitra ॲप वर नाही.'
+      });
+      await db.insert('cms_settings',
+          {'key': 'mechanic_banner_btn', 'value': 'आता खरेदी करा'});
+    }
+    if (oldVersion < 21) {
+      // Seed default layout order
+      await db.insert('cms_settings', {
+        'key': 'mechanic_home_layout',
+        'value': 'header,search_bar,categories,banner,hot_deals'
+      });
+    }
+    if (oldVersion < 22) {
+      try {
+        await db.execute(
+            'ALTER TABLE categories ADD COLUMN iconCodePoint INTEGER');
       } catch (_) {}
     }
   }

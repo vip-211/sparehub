@@ -20,6 +20,18 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
         try (Connection conn = dataSource.getConnection();
              Statement stmt = conn.createStatement()) {
             stmt.executeUpdate("UPDATE notifications SET is_broadcast = 0 WHERE is_broadcast IS NULL");
+            
+            // Seed CMS settings if they don't exist
+            stmt.execute("CREATE TABLE IF NOT EXISTS system_settings (setting_key VARCHAR(255) PRIMARY KEY, setting_value TEXT NOT NULL)");
+            
+            String[] keys = {"mechanic_home_title", "mechanic_banner_text", "mechanic_banner_btn", "mechanic_home_layout", "hide_chat_support"};
+            String[] values = {"Parts Mitra", "मार्केटमध्ये दर वाढले,\nparts mitra ॲप वर नाही.", "आता खरेदी करा", "header,search_bar,categories,banner,hot_deals", "false"};
+            
+            for (int i = 0; i < keys.length; i++) {
+                String sql = String.format("INSERT INTO system_settings (setting_key, setting_value) SELECT '%s', '%s' WHERE NOT EXISTS (SELECT 1 FROM system_settings WHERE setting_key = '%s')", 
+                    keys[i], values[i], keys[i]);
+                stmt.execute(sql);
+            }
         } catch (Exception ignored) {
         }
     }

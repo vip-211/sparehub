@@ -15,6 +15,7 @@ import '../services/order_service.dart';
 import 'order_confirmation_screen.dart';
 import '../utils/image_utils.dart';
 import '../utils/constants.dart';
+import 'wholesaler_shop_screen.dart'; // For ProductDetailSheet
 
 import 'package:spare_parts_app/providers/auth_provider.dart';
 import 'package:spare_parts_app/screens/edit_product_screen.dart';
@@ -54,12 +55,34 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
   bool _isGridView = true;
   Timer? _debounce;
   bool _voiceAdding = false;
+  bool _isNavigatedFromHome = false;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    _fetchInitialData();
+    
+    // Check for initial query passed from home
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map) {
+        _isNavigatedFromHome = true;
+        final query = args['query'] as String?;
+        final catId = args['categoryId'] as int?;
+
+        if (catId != null) {
+          setState(() => _selectedCategoryId = catId);
+          _fetchInitialData();
+        } else if (query != null && query.isNotEmpty) {
+          _searchController.text = query;
+          _searchProducts(query);
+        } else {
+          _fetchInitialData();
+        }
+      } else {
+        _fetchInitialData();
+      }
+    });
   }
 
   void _onScroll() {
@@ -614,7 +637,12 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
             child: InkWell(
               borderRadius: BorderRadius.circular(28),
               onTap: () {
-                // Navigate to detail if needed
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (context) => ProductDetailSheet(product: p),
+                );
               },
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1172,29 +1200,22 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                                                               Navigator.of(
                                                                       context)
                                                                   .pop();
-                                                              cart.addItem(
-                                                                  product,
-                                                                  price);
-                                                              ScaffoldMessenger
-                                                                  .of(
-                                                                context,
-                                                              ).showSnackBar(
-                                                                SnackBar(
-                                                                  content: Text(
-                                                                    '${product.name} added to cart',
-                                                                  ),
-                                                                  duration:
-                                                                      const Duration(
-                                                                    seconds: 1,
-                                                                  ),
-                                                                  backgroundColor:
-                                                                      Colors
-                                                                          .blue,
-                                                                ),
+                                                              showModalBottomSheet(
+                                                                context:
+                                                                    context,
+                                                                isScrollControlled:
+                                                                    true,
+                                                                backgroundColor:
+                                                                    Colors
+                                                                        .transparent,
+                                                                builder: (context) =>
+                                                                    ProductDetailSheet(
+                                                                        product:
+                                                                            product),
                                                               );
                                                             },
                                                             child: const Text(
-                                                                'Add to Cart (Test)'),
+                                                                'View Detail'),
                                                           ),
                                                           TextButton(
                                                             onPressed: () {
@@ -1220,22 +1241,15 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                                                         ],
                                                       ),
                                                     );
-                                                  } else if (!isOutOfStock) {
-                                                    cart.addItem(
-                                                        product, price);
-                                                    ScaffoldMessenger.of(
-                                                            context)
-                                                        .showSnackBar(
-                                                      SnackBar(
-                                                        content: Text(
-                                                          '${product.name} added to cart',
-                                                        ),
-                                                        duration:
-                                                            const Duration(
-                                                                seconds: 1),
-                                                        backgroundColor:
-                                                            Colors.blue,
-                                                      ),
+                                                  } else {
+                                                    showModalBottomSheet(
+                                                      context: context,
+                                                      isScrollControlled: true,
+                                                      backgroundColor:
+                                                          Colors.transparent,
+                                                      builder: (context) =>
+                                                          ProductDetailSheet(
+                                                              product: product),
                                                     );
                                                   }
                                                 },
@@ -1532,6 +1546,49 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
           ],
         ],
       ),
+      bottomNavigationBar: _isNavigatedFromHome
+          ? NavigationBar(
+              selectedIndex: 1, // Search is index 1
+              onDestinationSelected: (index) {
+                if (index == 0) {
+                  Navigator.pop(context); // Go back to Home
+                } else if (index == 2) {
+                  Navigator.pushReplacementNamed(context, '/offers');
+                } else if (index == 3) {
+                  Navigator.pushReplacementNamed(context, '/orders');
+                } else if (index == 4) {
+                  Navigator.pushReplacementNamed(context, '/profile');
+                }
+              },
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.home_outlined),
+                  selectedIcon: Icon(Icons.home),
+                  label: 'Home',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.search_outlined),
+                  selectedIcon: Icon(Icons.search),
+                  label: 'Search',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.local_offer_outlined),
+                  selectedIcon: Icon(Icons.local_offer),
+                  label: 'Offers',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.shopping_bag_outlined),
+                  selectedIcon: Icon(Icons.shopping_bag),
+                  label: 'Orders',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.person_outline),
+                  selectedIcon: Icon(Icons.person),
+                  label: 'Profile',
+                ),
+              ],
+            )
+          : null,
     );
   }
 }
