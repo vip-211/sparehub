@@ -14,6 +14,7 @@ import '../widgets/notification_badge.dart';
 import '../services/auth_service.dart';
 import '../utils/app_theme.dart';
 import 'stock_screen.dart';
+import 'mechanic_home_screen.dart';
 
 class MechanicDashboard extends StatefulWidget {
   const MechanicDashboard({super.key});
@@ -30,12 +31,14 @@ class _MechanicDashboardState extends State<MechanicDashboard> {
   Widget _buildPage(int index) {
     switch (index) {
       case 0:
-        return const MechanicSearchScreen();
+        return const MechanicHomeScreen();
       case 1:
-        return const OffersScreen();
+        return const MechanicSearchScreen();
       case 2:
-        return const RetailerOrdersScreen();
+        return const OffersScreen();
       case 3:
+        return const RetailerOrdersScreen();
+      case 4:
       default:
         return const ProfileScreen();
     }
@@ -198,6 +201,11 @@ class _MechanicDashboardState extends State<MechanicDashboard> {
             selectedIndex: _selectedIndex,
             onDestinationSelected: _onItemTapped,
             destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home),
+                label: 'Home',
+              ),
               NavigationDestination(
                 icon: Icon(Icons.search_outlined),
                 selectedIcon: Icon(Icons.search),
