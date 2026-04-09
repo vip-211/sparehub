@@ -183,6 +183,9 @@ class _MechanicDashboardState extends State<MechanicDashboard> {
               ProductService().getCmsSetting('hide_chat_support', 'false'),
             ]),
             builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting && snap.data == null) {
+                return _buildPage(_selectedIndex);
+              }
               final ai = snap.data?[0] ?? true;
               final hideChat = snap.data?[1] == 'true';
               return Stack(

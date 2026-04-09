@@ -115,11 +115,15 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
           _homeTitle = homeTitle;
           _bannerText = bannerText;
           _bannerBtn = bannerBtn;
-          _layoutOrder = layoutStr.split(',').where((s) => s.isNotEmpty).toList();
+          final List<String> newLayout = layoutStr.split(',').where((s) => s.trim().isNotEmpty).toList();
+          if (newLayout.isNotEmpty) {
+            _layoutOrder = newLayout;
+          }
           _isLoading = false;
         });
       }
     } catch (e) {
+      debugPrint('Error loading mechanic home data: $e');
       if (mounted) setState(() => _isLoading = false);
     }
   }
