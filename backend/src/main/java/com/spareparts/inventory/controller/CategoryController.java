@@ -35,6 +35,9 @@ public class CategoryController {
         dto.setDescription(c.getDescription());
         dto.setImagePath(c.getImagePath());
         dto.setImageLink(c.getImageLink());
+        dto.setDisplayOrder(c.getDisplayOrder());
+        dto.setIconCodePoint(c.getIconCodePoint());
+        dto.setShowOnHome(c.getShowOnHome());
         return dto;
     }
 
@@ -67,6 +70,13 @@ public class CategoryController {
             c.setDescription(description);
             c.setImagePath((String) req.get("imagePath"));
             c.setImageLink((String) req.get("imageLink"));
+            if (req.containsKey("displayOrder")) c.setDisplayOrder((Integer) req.get("displayOrder"));
+            if (req.containsKey("iconCodePoint")) c.setIconCodePoint((Integer) req.get("iconCodePoint"));
+            if (req.containsKey("showOnHome")) {
+                Object show = req.get("showOnHome");
+                if (show instanceof Boolean) c.setShowOnHome((Boolean) show ? 1 : 0);
+                else if (show instanceof Integer) c.setShowOnHome((Integer) show);
+            }
 
             Category saved = categoryRepository.save(c);
             System.out.println("Category saved successfully: " + saved.getId());
@@ -88,6 +98,13 @@ public class CategoryController {
             if (req.containsKey("description")) c.setDescription((String) req.get("description"));
             if (req.containsKey("imagePath")) c.setImagePath((String) req.get("imagePath"));
             if (req.containsKey("imageLink")) c.setImageLink((String) req.get("imageLink"));
+            if (req.containsKey("displayOrder")) c.setDisplayOrder((Integer) req.get("displayOrder"));
+            if (req.containsKey("iconCodePoint")) c.setIconCodePoint((Integer) req.get("iconCodePoint"));
+            if (req.containsKey("showOnHome")) {
+                Object show = req.get("showOnHome");
+                if (show instanceof Boolean) c.setShowOnHome((Boolean) show ? 1 : 0);
+                else if (show instanceof Integer) c.setShowOnHome((Integer) show);
+            }
             
             return ResponseEntity.ok(convertToDto(categoryRepository.save(c)));
         } catch (Exception e) {

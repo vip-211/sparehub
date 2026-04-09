@@ -15,4 +15,7 @@ public class CategorySimpleDto {
     private String description;
     private String imagePath;
     private String imageLink;
+    private Integer displayOrder;
+    private Integer iconCodePoint;
+    private Integer showOnHome;
 }

@@ -141,6 +141,87 @@ const AdminDashboard = () => {
   const [homeLayout, setHomeLayout] = useState<string[]>([]);
   const [loadingLayout, setLoadingLayout] = useState(false);
 
+  const [banners, setBanners] = useState<any[]>([]);
+  const [loadingBanners, setLoadingBanners] = useState(false);
+  const [showAddBanner, setShowAddBanner] = useState(false);
+  const [showEditBanner, setShowEditBanner] = useState(false);
+  const [editingBanner, setEditingBanner] = useState<any>(null);
+  const [newBanner, setNewBanner] = useState({
+    title: '',
+    text: '',
+    imageUrl: '',
+    targetUrl: '',
+    displayOrder: 0,
+    active: true,
+    size: 'medium'
+  });
+
+  const fetchBanners = async () => {
+    setLoadingBanners(true);
+    try {
+      const res = await api.get('/banners');
+      setBanners(res.data);
+    } catch (err) {
+      console.error('Error fetching banners:', err);
+    } finally {
+      setLoadingBanners(false);
+    }
+  };
+
+  const handleAddBanner = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await api.post('/banners', newBanner);
+      setShowAddBanner(false);
+      setNewBanner({ title: '', text: '', imageUrl: '', targetUrl: '', displayOrder: 0, active: true, size: 'medium' });
+      fetchBanners();
+    } catch (err) {
+      alert('Failed to add banner');
+    }
+  };
+
+  const handleUpdateBanner = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await api.put(`/banners/${editingBanner.id}`, editingBanner);
+      setShowEditBanner(false);
+      setEditingBanner(null);
+      fetchBanners();
+    } catch (err) {
+      alert('Failed to update banner');
+    }
+  };
+
+  const deleteBanner = async (id: number) => {
+    if (!window.confirm('Are you sure?')) return;
+    try {
+      await api.delete(`/banners/${id}`);
+      fetchBanners();
+    } catch (err) {
+      alert('Failed to delete banner');
+    }
+  };
+
+  const handleBannerImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, isEdit = false) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await api.post('files/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      if (isEdit) {
+        setEditingBanner({ ...editingBanner, imageUrl: res.data.url });
+      } else {
+        setNewBanner({ ...newBanner, imageUrl: res.data.url });
+      }
+    } catch (err) {
+      alert('Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const fetchCmsSettings = async () => {
     setLoadingCms(true);
     try {
@@ -200,11 +281,26 @@ const AdminDashboard = () => {
     }
   };
 
+  const saveCategoryOrder = async (reorderedCategories: any[]) => {
+    try {
+      for (let i = 0; i < reorderedCategories.length; i++) {
+        const cat = reorderedCategories[i];
+        await api.put(`categories/${cat.id}`, { ...cat, displayOrder: i });
+      }
+      fetchCategories();
+      alert('Category order saved!');
+    } catch (err) {
+      alert('Failed to save category order');
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'cms') {
       fetchCmsSettings();
     } else if (activeTab === 'layout') {
       fetchHomeLayout();
+    } else if (activeTab === 'banners') {
+      fetchBanners();
     }
   }, [activeTab]);
 
@@ -1286,6 +1382,7 @@ const AdminDashboard = () => {
           { id: 'reports', label: 'Reports', icon: BarChart2 },
           { id: 'insights', label: 'AI Insights', icon: Cpu },
           { id: 'cms', label: 'Home Page CMS', icon: List },
+          { id: 'banners', label: 'Banners', icon: LayoutGrid },
           { id: 'layout', label: 'Layout Editor', icon: LayoutGrid },
           { id: 'settings', label: 'Settings', icon: Settings },
         ].map((tab) => (
@@ -2838,6 +2935,127 @@ const AdminDashboard = () => {
                   <Upload size={20} />
                   Save CMS Settings
                 </button>
+
+                <div className="pt-8 border-t border-gray-100">
+                  <h3 className="text-lg font-black text-gray-900 mb-4 flex items-center gap-2">
+                    <LayoutGrid size={20} className="text-primary-600" />
+                    Category Reordering
+                  </h3>
+                  <p className="text-xs text-gray-500 font-medium mb-4">Drag and drop to change category display order on the home page.</p>
+                  <div className="space-y-2 bg-gray-50 p-4 rounded-3xl border border-gray-100">
+                    {(categories || []).filter(c => c.showOnHome !== 0).sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)).map((cat, idx) => (
+                      <div 
+                        key={cat.id}
+                        draggable
+                        onDragStart={(e) => e.dataTransfer.setData('catIdx', idx.toString())}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          const fromIdx = parseInt(e.dataTransfer.getData('catIdx'));
+                          const filtered = (categories || []).filter(c => c.showOnHome !== 0).sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+                          const newOrder = [...filtered];
+                          const [removed] = newOrder.splice(fromIdx, 1);
+                          newOrder.splice(idx, 0, removed);
+                          saveCategoryOrder(newOrder);
+                        }}
+                        className="flex items-center gap-3 p-4 bg-white border border-gray-100 rounded-2xl cursor-move hover:border-primary-200 transition-all shadow-sm group"
+                      >
+                        <div className="text-gray-400 group-hover:text-primary-600 transition-colors">
+                          <Move size={18} />
+                        </div>
+                        <span className="font-bold text-gray-800 flex-grow">{cat.name}</span>
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50 px-2 py-1 rounded-lg">Position {idx + 1}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'banners' && (
+        <div className="max-w-6xl mx-auto space-y-8 pb-20">
+          <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+            <div className="px-8 py-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-black text-gray-900 flex items-center gap-3">
+                  <LayoutGrid size={24} className="text-primary-600" />
+                  Banner Management
+                </h2>
+                <p className="text-gray-500 text-sm mt-1 font-medium">Manage promotional banners for the mechanic app carousel.</p>
+              </div>
+              <button
+                onClick={() => setShowAddBanner(true)}
+                className="flex items-center gap-2 bg-primary-600 text-white px-6 py-3 rounded-2xl font-black text-sm shadow-lg shadow-primary-100 hover:bg-primary-700 transition-all active:scale-95"
+              >
+                <Plus size={20} />
+                Add New Banner
+              </button>
+            </div>
+
+            {loadingBanners ? (
+              <div className="p-20 text-center">
+                <Skeleton className="w-12 h-12 rounded-full mx-auto mb-4" />
+                <p className="text-gray-400 font-bold">Loading banners...</p>
+              </div>
+            ) : (
+              <div className="p-8">
+                {banners.length === 0 ? (
+                  <div className="text-center py-20 bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-200">
+                    <LayoutGrid size={48} className="mx-auto text-gray-300 mb-4 opacity-20" />
+                    <p className="text-gray-500 font-bold">No banners found</p>
+                    <p className="text-xs text-gray-400">Click "Add New Banner" to create your first promotion.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {banners.map((banner) => (
+                      <div key={banner.id} className="bg-white border-2 border-gray-100 rounded-[2rem] overflow-hidden group hover:border-primary-200 transition-all hover:shadow-xl hover:shadow-primary-50/50">
+                        <div className="relative aspect-[21/9] bg-gray-100 overflow-hidden">
+                          {banner.imageUrl ? (
+                            <img src={getImageUrl(banner.imageUrl)} alt={banner.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-300">
+                              <ShoppingBag size={32} />
+                            </div>
+                          )}
+                          <div className="absolute top-4 right-4 flex gap-2">
+                            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${banner.active ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500'}`}>
+                              {banner.active ? 'Active' : 'Inactive'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="p-6">
+                          <h3 className="font-black text-gray-900 text-lg mb-1 truncate">{banner.title}</h3>
+                          <p className="text-gray-500 text-xs font-medium mb-4 line-clamp-2 h-8">{banner.text || 'No description provided.'}</p>
+                          <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Order: {banner.displayOrder}</span>
+                              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Size: {banner.size}</span>
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => {
+                                  setEditingBanner(banner);
+                                  setShowEditBanner(true);
+                                }}
+                                className="p-2 text-primary-600 hover:bg-primary-50 rounded-xl transition-all"
+                              >
+                                <Settings size={18} />
+                              </button>
+                              <button
+                                onClick={() => deleteBanner(banner.id)}
+                                className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -3310,6 +3528,175 @@ const AdminDashboard = () => {
         </div>
       )}
 
+      {/* Banner Modals */}
+      {showAddBanner && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
+          <div className="bg-white rounded-[2.5rem] max-w-lg w-full p-10 shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center mb-8">
+              <h3 className="text-2xl font-black text-gray-900">Add New Banner</h3>
+              <button onClick={() => setShowAddBanner(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <XCircle size={24} className="text-gray-400" />
+              </button>
+            </div>
+            <form onSubmit={handleAddBanner} className="space-y-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Banner Title</label>
+                  <input
+                    type="text"
+                    className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-primary-500 outline-none transition-all"
+                    value={newBanner.title}
+                    onChange={e => setNewBanner({...newBanner, title: e.target.value})}
+                    placeholder="e.g. Summer Sale 2024"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Promotional Text</label>
+                  <textarea
+                    className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-primary-500 outline-none transition-all h-24"
+                    value={newBanner.text}
+                    onChange={e => setNewBanner({...newBanner, text: e.target.value})}
+                    placeholder="e.g. Get up to 50% off on all spare parts!"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Display Order</label>
+                    <input
+                      type="number"
+                      className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-primary-500 outline-none transition-all"
+                      value={newBanner.displayOrder}
+                      onChange={e => setNewBanner({...newBanner, displayOrder: parseInt(e.target.value) || 0})}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Size</label>
+                    <select
+                      className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-primary-500 outline-none transition-all"
+                      value={newBanner.size}
+                      onChange={e => setNewBanner({...newBanner, size: e.target.value})}
+                    >
+                      <option value="small">Small</option>
+                      <option value="medium">Medium</option>
+                      <option value="large">Large</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Banner Image</label>
+                  <div className="flex items-center gap-4">
+                    <label className="flex-1 flex items-center justify-center gap-2 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl p-4 hover:border-primary-400 hover:bg-primary-50 transition-all cursor-pointer group">
+                      <Upload size={20} className="text-gray-400 group-hover:text-primary-500" />
+                      <span className="text-sm font-bold text-gray-500 group-hover:text-primary-600">Upload Banner Image</span>
+                      <input type="file" className="hidden" accept="image/*" onChange={(e) => handleBannerImageUpload(e)} />
+                    </label>
+                    {newBanner.imageUrl && (
+                      <div className="w-16 h-16 rounded-xl border-2 border-gray-100 overflow-hidden shadow-sm">
+                        <img src={getImageUrl(newBanner.imageUrl)} className="w-full h-full object-cover" alt="Preview" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-4 pt-4">
+                <button type="button" onClick={() => setShowAddBanner(false)} className="flex-1 py-4 bg-gray-100 text-gray-600 rounded-2xl font-black hover:bg-gray-200 transition-all">Cancel</button>
+                <button type="submit" className="flex-1 py-4 bg-primary-600 text-white rounded-2xl font-black shadow-xl shadow-primary-100 hover:bg-primary-700 transition-all">Create Banner</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEditBanner && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
+          <div className="bg-white rounded-[2.5rem] max-w-lg w-full p-10 shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center mb-8">
+              <h3 className="text-2xl font-black text-gray-900">Edit Banner</h3>
+              <button onClick={() => setShowEditBanner(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <XCircle size={24} className="text-gray-400" />
+              </button>
+            </div>
+            <form onSubmit={handleUpdateBanner} className="space-y-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Banner Title</label>
+                  <input
+                    type="text"
+                    className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-primary-500 outline-none transition-all"
+                    value={editingBanner?.title}
+                    onChange={e => setEditingBanner({...editingBanner, title: e.target.value})}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Promotional Text</label>
+                  <textarea
+                    className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-primary-500 outline-none transition-all h-24"
+                    value={editingBanner?.text}
+                    onChange={e => setEditingBanner({...editingBanner, text: e.target.value})}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Display Order</label>
+                    <input
+                      type="number"
+                      className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-primary-500 outline-none transition-all"
+                      value={editingBanner?.displayOrder}
+                      onChange={e => setEditingBanner({...editingBanner, displayOrder: parseInt(e.target.value) || 0})}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Size</label>
+                    <select
+                      className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-primary-500 outline-none transition-all"
+                      value={editingBanner?.size}
+                      onChange={e => setEditingBanner({...editingBanner, size: e.target.value})}
+                    >
+                      <option value="small">Small</option>
+                      <option value="medium">Medium</option>
+                      <option value="large">Large</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                  <span className="font-bold text-gray-700">Active Status</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={editingBanner?.active}
+                      onChange={(e) => setEditingBanner({...editingBanner, active: e.target.checked})}
+                    />
+                    <div className="w-12 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                  </label>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Banner Image</label>
+                  <div className="flex items-center gap-4">
+                    <label className="flex-1 flex items-center justify-center gap-2 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl p-4 hover:border-primary-400 hover:bg-primary-50 transition-all cursor-pointer group">
+                      <Upload size={20} className="text-gray-400 group-hover:text-primary-500" />
+                      <span className="text-sm font-bold text-gray-500 group-hover:text-primary-600">Change Banner Image</span>
+                      <input type="file" className="hidden" accept="image/*" onChange={(e) => handleBannerImageUpload(e, true)} />
+                    </label>
+                    {editingBanner?.imageUrl && (
+                      <div className="w-16 h-16 rounded-xl border-2 border-gray-100 overflow-hidden shadow-sm">
+                        <img src={getImageUrl(editingBanner.imageUrl)} className="w-full h-full object-cover" alt="Preview" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-4 pt-4">
+                <button type="button" onClick={() => setShowEditBanner(false)} className="flex-1 py-4 bg-gray-100 text-gray-600 rounded-2xl font-black hover:bg-gray-200 transition-all">Cancel</button>
+                <button type="submit" className="flex-1 py-4 bg-primary-600 text-white rounded-2xl font-black shadow-xl shadow-primary-100 hover:bg-primary-700 transition-all">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Modals for Adding User/Product/Order */}
       {showAddUser && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -3597,6 +3984,21 @@ const AdminDashboard = () => {
                   ))}
                 </select>
               </div>
+              <div className="flex items-center justify-between p-4 bg-yellow-50 rounded-xl border border-yellow-100">
+                <div className="flex items-center gap-2">
+                  <Star size={18} className="text-yellow-600" />
+                  <span className="font-bold text-yellow-800">Featured Product</span>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={(newProduct as any).featured || false}
+                    onChange={(e) => setNewProduct({...newProduct, featured: e.target.checked} as any)}
+                  />
+                  <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500"></div>
+                </label>
+              </div>
               <div className="flex justify-end space-x-3 mt-6">
                 <button type="button" onClick={() => setShowAddProduct(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium">Cancel</button>
                 <button type="submit" className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 font-medium transition">Add Product</button>
@@ -3781,6 +4183,21 @@ const AdminDashboard = () => {
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
+              </div>
+              <div className="flex items-center justify-between p-4 bg-yellow-50 rounded-xl border border-yellow-100">
+                <div className="flex items-center gap-2">
+                  <Star size={18} className="text-yellow-600" />
+                  <span className="font-bold text-yellow-800">Featured Product</span>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={editingProduct.featured}
+                    onChange={(e) => setEditingProduct({...editingProduct, featured: e.target.checked})}
+                  />
+                  <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500"></div>
+                </label>
               </div>
               <div className="flex justify-end space-x-3 mt-6">
                 <button type="button" onClick={() => { setShowEditProduct(false); setEditingProduct(null); }} className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium">Cancel</button>

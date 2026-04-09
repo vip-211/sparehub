@@ -23,6 +23,7 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<Product> _hotDeals = [];
   List<Map<String, dynamic>> _categories = [];
+  List<Map<String, dynamic>> _banners = [];
   bool _isLoading = true;
   String _homeTitle = 'Parts Mitra';
   String _bannerText = 'मार्केटमध्ये दर वाढले,\nparts mitra ॲप वर नाही.';
@@ -88,6 +89,7 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
       final cats = allCats.where((c) => c['showOnHome'] == 1 || c['showOnHome'] == true).toList();
       final featured = await _productService.getFeaturedProducts();
       final products = await _productService.getAllProducts(page: 0, size: 10);
+      final banners = await _productService.getActiveBanners();
       
       final homeTitle = await _productService.getCmsSetting('mechanic_home_title', 'Parts Mitra');
       final bannerText = await _productService.getCmsSetting('mechanic_banner_text', 'मार्केटमध्ये दर वाढले,\nparts mitra ॲप वर नाही.');
@@ -105,6 +107,7 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
       if (mounted) {
         setState(() {
           _categories = cats;
+          _banners = banners;
           _hotDeals = featured.isNotEmpty
               ? featured
               : products.where((p) => p.mrp > p.sellingPrice).toList();
@@ -307,29 +310,80 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
   }
 
   Widget _buildBanner() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      height: 160,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Colors.blue, Colors.indigo]),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            left: 20, top: 30,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(_bannerText, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 10),
-                Text(_bannerBtn, style: const TextStyle(color: Colors.black, backgroundColor: Colors.yellow, fontWeight: FontWeight.bold)),
-              ],
+    if (_banners.isEmpty) {
+      // Fallback to static banner if no dynamic banners from DB
+      return Container(
+        margin: const EdgeInsets.all(16),
+        height: 160,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(colors: [Colors.blue, Colors.indigo]),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              left: 20, top: 30,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(_bannerText, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 10),
+                  Text(_bannerBtn, style: const TextStyle(color: Colors.black, backgroundColor: Colors.yellow, fontWeight: FontWeight.bold)),
+                ],
+              ),
             ),
-          ),
-          const Positioned(right: 10, bottom: 10, child: Opacity(opacity: 0.3, child: Icon(Icons.handyman, size: 100, color: Colors.white))),
-        ],
+            const Positioned(right: 10, bottom: 10, child: Opacity(opacity: 0.3, child: Icon(Icons.handyman, size: 100, color: Colors.white))),
+          ],
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 180,
+      child: PageView.builder(
+        itemCount: _banners.length,
+        itemBuilder: (context, index) {
+          final banner = _banners[index];
+          final String title = banner['title'] ?? '';
+          final String? text = banner['text'];
+          final String? imageUrl = banner['imageUrl'];
+          final String size = banner['size'] ?? 'medium';
+          
+          double height = 160;
+          if (size == 'small') height = 100;
+          if (size == 'large') height = 200;
+
+          return Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            height: height,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Colors.blueAccent, Colors.indigoAccent]),
+              borderRadius: BorderRadius.circular(20),
+              image: imageUrl != null ? DecorationImage(
+                image: getImageProvider(imageUrl),
+                fit: BoxFit.cover,
+                colorFilter: ColorFilter.mode(Colors.black.withOpacity(0.3), BlendMode.darken),
+              ) : null,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(title, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                  if (text != null && text.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(text, style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
