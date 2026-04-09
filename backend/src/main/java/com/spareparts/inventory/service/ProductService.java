@@ -9,13 +9,13 @@ import com.spareparts.inventory.entity.User;
 import com.spareparts.inventory.repository.ProductRepository;
 import com.spareparts.inventory.repository.UserRepository;
 import com.spareparts.inventory.repository.CategoryRepository;
-import com.spareparts.inventory.observer.InAppNotificationObserver;
+import com.spareparts.inventory.observer.ProductObserver;
 import com.spareparts.inventory.observer.ProductSubject;
-import com.spareparts.inventory.observer.WhatsAppNotificationObserver;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -40,10 +40,12 @@ public class ProductService extends ProductSubject {
     private CategoryRepository categoryRepository;
 
     @Autowired
-    private InAppNotificationObserver inAppNotificationObserver;
+    @Qualifier("inAppNotificationObserver")
+    private ProductObserver inAppNotificationObserver;
 
     @Autowired
-    private WhatsAppNotificationObserver whatsAppNotificationObserver;
+    @Qualifier("whatsAppNotificationObserver")
+    private ProductObserver whatsAppNotificationObserver;
 
     @PostConstruct
     public void init() {

@@ -24,7 +24,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 
 @SpringBootApplication
 @EnableScheduling
-@EnableAsync
+@EnableAsync(proxyTargetClass = true)
 public class InventoryApplication {
     public static void main(String[] args) {
         SpringApplication.run(InventoryApplication.class, args);
