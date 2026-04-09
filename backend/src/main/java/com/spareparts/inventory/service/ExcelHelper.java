@@ -21,7 +21,7 @@ public class ExcelHelper {
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "application/vnd.ms-excel"
     };
-    static String[] HEADERS = { "Name", "Part Number", "MRP", "Selling Price", "Stock", "Wholesaler Price", "Retailer Price", "Mechanic Price", "Rack Number", "Description" };
+    static String[] HEADERS = { "Name", "Part Number", "MRP", "Selling Price", "Stock", "Wholesaler Price", "Retailer Price", "Mechanic Price", "Rack Number", "Description", "Min Order Qty", "Image Links" };
     static String SHEET = "Products";
 
     public static boolean hasExcelFormat(MultipartFile file) {
@@ -58,6 +58,9 @@ public class ExcelHelper {
                 row.createCell(7).setCellValue(product.getMechanicPrice().doubleValue());
                 row.createCell(8).setCellValue(product.getRackNumber() != null ? product.getRackNumber() : "");
                 row.createCell(9).setCellValue(product.getDescription() != null ? product.getDescription() : "");
+                row.createCell(10).setCellValue(product.getMinOrderQty() != null ? product.getMinOrderQty() : 1);
+                String imageLinks = product.getImageLinks() != null ? String.join(";", product.getImageLinks()) : "";
+                row.createCell(11).setCellValue(imageLinks);
             }
 
             workbook.write(out);
@@ -219,6 +222,37 @@ public class ExcelHelper {
                                 product.setDescription(currentCell.getStringCellValue());
                             } else {
                                 product.setDescription(currentCell.toString());
+                            }
+                            break;
+                        case 10: // Min Order Qty
+                            if (currentCell.getCellType() == CellType.NUMERIC) {
+                                product.setMinOrderQty((int) currentCell.getNumericCellValue());
+                            } else {
+                                String val = currentCell.toString().trim().replaceAll("[^\\d]", "");
+                                if (val.isEmpty() || val.equals("null")) val = "1";
+                                try {
+                                    product.setMinOrderQty(Integer.parseInt(val));
+                                } catch (Exception e) {
+                                    product.setMinOrderQty(1);
+                                }
+                            }
+                            break;
+                        case 11: // Image Links
+                            String linksStr = "";
+                            if (currentCell.getCellType() == CellType.STRING) {
+                                linksStr = currentCell.getStringCellValue();
+                            } else {
+                                linksStr = currentCell.toString();
+                            }
+                            if (!linksStr.isEmpty() && !linksStr.equals("null")) {
+                                String[] links = linksStr.split(";");
+                                java.util.List<String> list = new java.util.ArrayList<>();
+                                for (String link : links) {
+                                    if (!link.trim().isEmpty()) {
+                                        list.add(link.trim());
+                                    }
+                                }
+                                product.setImageLinks(list);
                             }
                             break;
                         default:

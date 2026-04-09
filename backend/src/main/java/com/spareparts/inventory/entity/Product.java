@@ -68,6 +68,14 @@ public class Product {
     @Column(columnDefinition = "boolean default true")
     private boolean enabled = true;
 
+    @Column(columnDefinition = "integer default 1")
+    private Integer minOrderQty = 1;
+
+    @ElementCollection
+    @CollectionTable(name = "product_images", joinColumns = @JoinColumn(name = "product_id"))
+    @Column(name = "image_link")
+    private java.util.List<String> imageLinks = new java.util.ArrayList<>();
+
     @Size(max = 500)
     private String imagePath;
 

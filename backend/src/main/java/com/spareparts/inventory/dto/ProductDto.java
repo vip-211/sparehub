@@ -41,6 +41,8 @@ public class ProductDto {
     
     private String imagePath;
     private String imageLink;
+    private java.util.List<String> imageLinks;
+    private Integer minOrderQty;
     private String description;
     
     private Long wholesalerId;

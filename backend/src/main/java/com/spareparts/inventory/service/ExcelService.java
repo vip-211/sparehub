@@ -53,6 +53,8 @@ public class ExcelService {
                       e.setStock(p.getStock());
                       e.setRackNumber(p.getRackNumber());
                       e.setDescription(p.getDescription());
+                      e.setMinOrderQty(p.getMinOrderQty());
+                      e.setImageLinks(p.getImageLinks());
                       if (category != null) e.setCategory(category);
                       productRepository.save(e);
                   } else {

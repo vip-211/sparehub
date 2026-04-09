@@ -125,8 +125,20 @@ class ProductService {
           double retailerPrice = 0;
           double mechanicPrice = 0;
           int stock = 0;
+          int minOrderQty = 1;
+          List<String> imageLinks = [];
 
-          if (row.length >= 9) {
+          if (row.length >= 12) {
+            wholesalerPrice = double.tryParse(getVal(5)) ?? 0;
+            retailerPrice = double.tryParse(getVal(6)) ?? 0;
+            mechanicPrice = double.tryParse(getVal(7)) ?? 0;
+            stock = int.tryParse(getVal(8)) ?? 0;
+            minOrderQty = int.tryParse(getVal(10)) ?? 1;
+            String linksStr = getVal(11);
+            if (linksStr.isNotEmpty) {
+              imageLinks = linksStr.split(';').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+            }
+          } else if (row.length >= 9) {
             wholesalerPrice = double.tryParse(getVal(5)) ?? 0;
             retailerPrice = double.tryParse(getVal(6)) ?? 0;
             mechanicPrice = double.tryParse(getVal(7)) ?? 0;
@@ -149,6 +161,8 @@ class ProductService {
               stock: stock,
               wholesalerId: 1,
               categoryId: categoryId,
+              minOrderQty: minOrderQty,
+              imageLinks: imageLinks,
             ),
           );
         } catch (e) {
@@ -181,6 +195,9 @@ class ProductService {
       TextCellValue('Retailer Price'),
       TextCellValue('Mechanic Price'),
       TextCellValue('Stock'),
+      TextCellValue('Description'),
+      TextCellValue('Min Order Qty'),
+      TextCellValue('Image Links'),
     ]);
 
     final products = await getAllProducts();
@@ -195,6 +212,9 @@ class ProductService {
         DoubleCellValue(p.retailerPrice),
         DoubleCellValue(p.mechanicPrice),
         IntCellValue(p.stock),
+        TextCellValue(p.description ?? ''),
+        IntCellValue(p.minOrderQty),
+        TextCellValue(p.imageLinks.join(';')),
       ]);
     }
 

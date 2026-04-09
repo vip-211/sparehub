@@ -4,9 +4,14 @@ import api, { API_BASE_URL } from '../services/api';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { Package, ShoppingCart, TrendingUp, Upload } from 'lucide-react';
+import AuthService from '../services/auth.service';
+import { ROLE_ADMIN, ROLE_SUPER_MANAGER } from '../services/constants';
 
 const WholesalerDashboard = () => {
   const { tp } = useLanguage();
+  const currentUser = AuthService.getCurrentUser();
+  const isAdmin = currentUser?.roles?.includes(ROLE_ADMIN) || currentUser?.roles?.includes(ROLE_SUPER_MANAGER);
+  
   const [products, setProducts] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -177,10 +182,10 @@ const WholesalerDashboard = () => {
 
       <div className="flex overflow-x-auto no-scrollbar border-b border-gray-100 mb-8 gap-2 md:gap-8 pb-1">
         {[
-          { id: 'products', label: 'Products', icon: Package },
-          { id: 'orders', label: 'Orders', icon: ShoppingCart },
-          { id: 'upload', label: 'Bulk Upload', icon: Upload },
-        ].map((tab) => (
+          { id: 'products', label: 'Products', icon: Package, show: true },
+          { id: 'orders', label: 'Orders', icon: ShoppingCart, show: true },
+          { id: 'upload', label: 'Bulk Upload', icon: Upload, show: isAdmin },
+        ].filter(t => t.show).map((tab) => (
           <button
             key={tab.id}
             className={`flex items-center gap-2 px-4 py-3 font-bold text-sm whitespace-nowrap transition-all relative ${

@@ -119,6 +119,14 @@ public class ProductController {
     @PreAuthorize("hasRole('WHOLESALER') or hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
     public ResponseEntity<ProductDto> addProduct(@Valid @RequestBody ProductDto productDto, Authentication authentication) {
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SUPER_MANAGER"));
+        
+        // Only admin/super manager can fix minimum quantity
+        if (!isAdmin) {
+            productDto.setMinOrderQty(1);
+        }
+        
         return ResponseEntity.ok(productService.addProduct(productDto, userDetails.getId()));
     }
 
@@ -126,6 +134,13 @@ public class ProductController {
     @PreAuthorize("hasRole('WHOLESALER') or hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
     public ResponseEntity<?> addProductsBulk(@RequestBody List<ProductDto> productDtos, Authentication authentication) {
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SUPER_MANAGER"));
+
+        if (!isAdmin) {
+            productDtos.forEach(dto -> dto.setMinOrderQty(1));
+        }
+
         productService.addProductsBulk(productDtos, userDetails.getId());
         return ResponseEntity.ok().build();
     }
@@ -309,7 +324,14 @@ public class ProductController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('WHOLESALER') or hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
-    public ResponseEntity<ProductDto> updateProduct(@PathVariable Long id, @Valid @RequestBody ProductDto productDto) {
+    public ResponseEntity<ProductDto> updateProduct(@PathVariable Long id, @Valid @RequestBody ProductDto productDto, Authentication authentication) {
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SUPER_MANAGER"));
+
+        if (!isAdmin) {
+            // Wholesalers cannot change the minimum order quantity
+            productDto.setMinOrderQty(null); // ProductService will keep existing or default if null is handled
+        }
         return ResponseEntity.ok(productService.updateProduct(id, productDto));
     }
 

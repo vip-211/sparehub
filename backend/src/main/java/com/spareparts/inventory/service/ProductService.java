@@ -128,6 +128,12 @@ public class ProductService extends ProductSubject {
         product.setEnabled(productDto.isEnabled());
         product.setImagePath(productDto.getImagePath());
         product.setImageLink(productDto.getImageLink());
+        product.setImageLinks(productDto.getImageLinks() != null ? productDto.getImageLinks() : new java.util.ArrayList<>());
+        if (productDto.getMinOrderQty() != null) {
+            product.setMinOrderQty(productDto.getMinOrderQty());
+        } else if (product.getMinOrderQty() == null) {
+            product.setMinOrderQty(1);
+        }
         product.setDescription(productDto.getDescription());
         product.setOfferMinQty(productDto.getOfferMinQty());
         product.setWholesaler(wholesaler);
@@ -254,6 +260,12 @@ public class ProductService extends ProductSubject {
                 product.setEnabled(dto.isEnabled());
                 product.setImagePath(dto.getImagePath());
                 product.setImageLink(dto.getImageLink());
+                product.setImageLinks(dto.getImageLinks() != null ? dto.getImageLinks() : new java.util.ArrayList<>());
+                if (dto.getMinOrderQty() != null) {
+                    product.setMinOrderQty(dto.getMinOrderQty());
+                } else {
+                    product.setMinOrderQty(1);
+                }
                 product.setWholesaler(wholesaler);
 
                 Long categoryId = dto.getCategoryId();
@@ -295,6 +307,10 @@ public class ProductService extends ProductSubject {
         product.setEnabled(productDto.isEnabled());
         product.setImagePath(productDto.getImagePath());
         product.setImageLink(productDto.getImageLink());
+        product.setImageLinks(productDto.getImageLinks() != null ? productDto.getImageLinks() : new java.util.ArrayList<>());
+        if (productDto.getMinOrderQty() != null) {
+            product.setMinOrderQty(productDto.getMinOrderQty());
+        }
         product.setDescription(productDto.getDescription());
         
         if (productDto.getOfferType() != null) {
@@ -400,6 +416,8 @@ public class ProductService extends ProductSubject {
         dto.setEnabled(product.isEnabled());
         dto.setImagePath(product.getImagePath());
         dto.setImageLink(product.getImageLink());
+        dto.setImageLinks(new java.util.ArrayList<>(product.getImageLinks()));
+        dto.setMinOrderQty(product.getMinOrderQty());
         dto.setDescription(product.getDescription());
         dto.setWholesalerId(product.getWholesaler().getId());
         dto.setOfferType(product.getOfferType() != null ? product.getOfferType().name() : null);

@@ -20,6 +20,8 @@ class Product {
   final String? categoryImageLink;
   final String? offerType;
   final int? offerMinQty;
+  final List<String> imageLinks;
+  final int minOrderQty;
 
   Product({
     required this.id,
@@ -43,6 +45,8 @@ class Product {
     this.categoryImageLink,
     this.offerType,
     this.offerMinQty,
+    this.imageLinks = const [],
+    this.minOrderQty = 1,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
@@ -78,6 +82,11 @@ class Product {
       categoryImageLink: json['categoryImageLink'],
       offerType: json['offerType'],
       offerMinQty: (json['offerMinQty'] as num?)?.toInt(),
+      imageLinks: (json['imageLinks'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
+      minOrderQty: json['minOrderQty'] ?? 1,
     );
   }
 
@@ -104,6 +113,8 @@ class Product {
       'categoryImageLink': categoryImageLink,
       'offerType': offerType,
       'offerMinQty': offerMinQty,
+      'imageLinks': imageLinks,
+      'minOrderQty': minOrderQty,
     };
   }
 
@@ -126,6 +137,8 @@ class Product {
     String? categoryName,
     String? offerType,
     int? offerMinQty,
+    List<String>? imageLinks,
+    int? minOrderQty,
   }) {
     return Product(
       id: id ?? this.id,
@@ -146,6 +159,8 @@ class Product {
       categoryName: categoryName ?? this.categoryName,
       offerType: offerType ?? this.offerType,
       offerMinQty: offerMinQty ?? this.offerMinQty,
+      imageLinks: imageLinks ?? this.imageLinks,
+      minOrderQty: minOrderQty ?? this.minOrderQty,
     );
   }
 }

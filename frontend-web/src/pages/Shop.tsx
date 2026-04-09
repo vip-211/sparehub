@@ -130,6 +130,9 @@ const Shop: React.FC = () => {
     return p.sellingPrice || 0;
   };
 
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
   const filteredProducts = products.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     p.partNumber.toLowerCase().includes(searchTerm.toLowerCase())
@@ -287,12 +290,22 @@ const Shop: React.FC = () => {
           {filteredProducts.map((p) => {
             const displayPrice = getPriceForRole(p);
             const inStock = p.stock > 0;
+            const images = [p.imageLink || p.imagePath, ...(p.imageLinks || [])].filter(Boolean);
+            const mainImage = images.length > 0 ? getImageUrl(images[0]) : (p.categoryImageLink || p.categoryImagePath ? getImageUrl(p.categoryImageLink || p.categoryImagePath) : null);
+
             return (
-              <div key={p.id} className="group bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col h-full hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+              <div 
+                key={p.id} 
+                className="group bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col h-full hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+                onClick={() => {
+                  setSelectedProduct(p);
+                  setCurrentImageIndex(0);
+                }}
+              >
                 <div className="relative mb-4 aspect-square bg-gray-50 rounded-xl flex items-center justify-center overflow-hidden">
-                  {p.imagePath || p.imageLink || p.categoryImageLink || p.categoryImagePath ? (
+                  {mainImage ? (
                     <img 
-                      src={getImageUrl(p.imagePath || p.imageLink || p.categoryImageLink || p.categoryImagePath)} 
+                      src={mainImage} 
                       alt={tp(p.name)} 
                       className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
                       onError={(e) => {
@@ -370,6 +383,127 @@ const Shop: React.FC = () => {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Product Detail Modal */}
+      {selectedProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col md:flex-row">
+            {/* Image Gallery */}
+            <div className="w-full md:w-1/2 bg-gray-50 p-6 flex flex-col items-center justify-center">
+              <div className="relative w-full aspect-square rounded-2xl overflow-hidden mb-4 border border-gray-200 bg-white flex items-center justify-center">
+                {(() => {
+                  const images = [selectedProduct.imageLink || selectedProduct.imagePath, ...(selectedProduct.imageLinks || [])].filter(Boolean);
+                  if (images.length > 0) {
+                    return (
+                      <img 
+                        src={getImageUrl(images[currentImageIndex])} 
+                        alt={selectedProduct.name} 
+                        className="w-full h-full object-contain"
+                      />
+                    );
+                  }
+                  return <Package className="w-24 h-24 text-gray-300" />;
+                })()}
+              </div>
+              
+              {selectedProduct.imageLinks && selectedProduct.imageLinks.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto pb-2 w-full justify-center">
+                  {[selectedProduct.imageLink || selectedProduct.imagePath, ...selectedProduct.imageLinks].filter(Boolean).map((img, idx) => (
+                    <button 
+                      key={idx}
+                      onClick={() => setCurrentImageIndex(idx)}
+                      className={`w-16 h-16 rounded-lg border-2 flex-shrink-0 overflow-hidden transition-all ${currentImageIndex === idx ? 'border-primary-500 scale-105 shadow-md' : 'border-gray-200 opacity-70 hover:opacity-100'}`}
+                    >
+                      <img src={getImageUrl(img)} alt="" className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Product Info */}
+            <div className="w-full md:w-1/2 p-8 flex flex-col">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h2 className="text-3xl font-black text-gray-900 mb-2">{tp(selectedProduct.name)}</h2>
+                  <span className="text-sm font-bold text-gray-400">Part Number: #{selectedProduct.partNumber}</span>
+                </div>
+                <button 
+                  onClick={() => setSelectedProduct(null)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <Info className="w-6 h-6 text-gray-400" />
+                </button>
+              </div>
+
+              <div className="flex items-center gap-3 mb-6">
+                <span className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest ${selectedProduct.stock > 0 ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>
+                  {selectedProduct.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                </span>
+                {selectedProduct.categoryName && (
+                  <span className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-600 text-xs font-black uppercase tracking-widest">
+                    {selectedProduct.categoryName}
+                  </span>
+                )}
+              </div>
+
+              <div className="mb-8 flex-grow overflow-y-auto pr-2">
+                <h4 className="text-lg font-black text-gray-900 mb-3">Description</h4>
+                <p className="text-gray-600 leading-relaxed font-bold">
+                  {selectedProduct.description || 'No detailed description available for this part.'}
+                </p>
+                
+                {selectedProduct.rackNumber && (
+                  <div className="mt-4 p-4 bg-gray-50 rounded-2xl flex items-center justify-between border border-gray-100">
+                    <span className="text-sm font-bold text-gray-500 uppercase tracking-widest">Storage Location</span>
+                    <span className="text-lg font-black text-primary-600">{selectedProduct.rackNumber}</span>
+                  </div>
+                )}
+
+                {selectedProduct.minOrderQty > 1 && (
+                  <div className="mt-4 p-4 bg-amber-50 rounded-2xl flex items-center justify-between border border-amber-100">
+                    <span className="text-sm font-bold text-amber-700 uppercase tracking-widest">Min Order Qty</span>
+                    <span className="text-lg font-black text-amber-600">{selectedProduct.minOrderQty} Units</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-auto">
+                <div className="flex items-baseline gap-3 mb-6">
+                  <span className="text-4xl font-black text-primary-600">₹{getPriceForRole(selectedProduct)}</span>
+                  {selectedProduct.mrp > getPriceForRole(selectedProduct) && (
+                    <span className="text-xl text-gray-400 line-through font-bold">₹{selectedProduct.mrp}</span>
+                  )}
+                </div>
+
+                {!isRestricted && (
+                  <button
+                    onClick={() => {
+                      addItem({
+                        productId: selectedProduct.id,
+                        name: selectedProduct.name,
+                        partNumber: selectedProduct.partNumber,
+                        price: getPriceForRole(selectedProduct),
+                        wholesalerId: selectedProduct.wholesalerId,
+                      }, selectedProduct.minOrderQty || 1);
+                      setSelectedProduct(null);
+                    }}
+                    className={`w-full py-5 rounded-2xl font-black text-xl flex items-center justify-center gap-3 shadow-2xl transition-all active:scale-95 ${
+                      selectedProduct.stock > 0 
+                        ? 'bg-primary-600 text-white hover:bg-primary-700 shadow-primary-200' 
+                        : 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
+                    }`}
+                    disabled={selectedProduct.stock <= 0}
+                  >
+                    <ShoppingCart className="w-7 h-7" />
+                    {selectedProduct.stock > 0 ? t('shop.addToCart') : 'Out of Stock'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

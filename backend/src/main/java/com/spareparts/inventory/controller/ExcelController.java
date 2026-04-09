@@ -24,7 +24,7 @@ public class ExcelController {
     private ExcelService fileService;
 
     @PostMapping("/upload")
-    @PreAuthorize("hasRole('WHOLESALER') or hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
     public ResponseEntity<MessageResponse> uploadFile(
             @RequestParam("file") MultipartFile file, 
             @RequestParam(value = "categoryId", required = false) Long categoryId,
@@ -49,7 +49,7 @@ public class ExcelController {
     }
 
     @GetMapping("/download")
-    @PreAuthorize("hasRole('WHOLESALER') or hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
     public ResponseEntity<Resource> getFile() {
         String filename = "products.xlsx";
         InputStreamResource file = new InputStreamResource(fileService.load());

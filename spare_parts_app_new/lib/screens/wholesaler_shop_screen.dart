@@ -195,6 +195,15 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
     _applyFilters();
   }
 
+  void _showProductDetail(Product product) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _ProductDetailSheet(product: product),
+    );
+  }
+
   void _importExcel() async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -704,38 +713,40 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
         final price = _prices[p.id] ?? p.sellingPrice;
         final bool isOutOfStock = p.stock <= 0;
 
-        return Card(
-          clipBehavior: Clip.antiAlias,
-          elevation: 3,
-          color: Theme.of(context).colorScheme.surface,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                flex: 3,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image(
-                      image: getImageProvider(p.imagePath ??
-                          p.imageLink ??
-                          p.categoryImageLink ??
-                          p.categoryImagePath),
-                      fit: BoxFit.cover,
-                      errorBuilder: (c, e, s) => Container(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest,
-                        child: Icon(Icons.image_not_supported,
-                            size: 40,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant
-                                .withOpacity(0.3)),
+        return GestureDetector(
+          onTap: () => _showProductDetail(p),
+          child: Card(
+            clipBehavior: Clip.antiAlias,
+            elevation: 3,
+            color: Theme.of(context).colorScheme.surface,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image(
+                        image: getImageProvider(p.imagePath ??
+                            p.imageLink ??
+                            p.categoryImageLink ??
+                            p.categoryImagePath),
+                        fit: BoxFit.cover,
+                        errorBuilder: (c, e, s) => Container(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          child: Icon(Icons.image_not_supported,
+                              size: 40,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant
+                                  .withOpacity(0.3)),
+                        ),
                       ),
-                    ),
                     if (isOutOfStock)
                       Container(
                         color: Colors.black45,
@@ -848,11 +859,18 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
         future: userStr,
         builder: (context, snapshot) {
           bool isMechanic = false;
+          bool isAdmin = false;
           if (snapshot.hasData && snapshot.data != null) {
             final user = jsonDecode(snapshot.data!);
             final roles = user['roles'] as List<dynamic>?;
-            if (roles != null && roles.contains(Constants.roleMechanic)) {
-              isMechanic = true;
+            if (roles != null) {
+              if (roles.contains(Constants.roleMechanic)) {
+                isMechanic = true;
+              }
+              if (roles.contains(Constants.roleAdmin) ||
+                  roles.contains(Constants.roleSuperManager)) {
+                isAdmin = true;
+              }
             }
           }
 
@@ -1041,25 +1059,7 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                                                 child: InkWell(
                                                   borderRadius:
                                                       BorderRadius.circular(16),
-                                                  onTap: () {
-                                                    if (!isOutOfStock) {
-                                                      cart.addItem(
-                                                          product, price);
-                                                      ScaffoldMessenger.of(
-                                                              context)
-                                                          .showSnackBar(
-                                                        SnackBar(
-                                                          content: Text(
-                                                              '${product.name} added to cart'),
-                                                          duration:
-                                                              const Duration(
-                                                                  seconds: 1),
-                                                          backgroundColor:
-                                                              Colors.blue,
-                                                        ),
-                                                      );
-                                                    }
-                                                  },
+                                                  onTap: () => _showProductDetail(product),
                                                   child: Container(
                                                     decoration: BoxDecoration(
                                                       borderRadius:
@@ -1527,7 +1527,27 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                                 _showRequestDialog();
                               },
                             ),
-                            // Bulk Import/Export removed for mechanics and general users
+                            if (isAdmin) ...[
+                              const Divider(),
+                              ListTile(
+                                leading: const Icon(Icons.upload_file,
+                                    color: Colors.orange),
+                                title: const Text('Bulk Import (Excel)'),
+                                onTap: () {
+                                  Navigator.pop(ctx);
+                                  _importExcel();
+                                },
+                              ),
+                              ListTile(
+                                leading: const Icon(Icons.download,
+                                    color: Colors.green),
+                                title: const Text('Export Inventory (Excel)'),
+                                onTap: () {
+                                  Navigator.pop(ctx);
+                                  _exportExcel();
+                                },
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -1540,5 +1560,260 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
             ),
           );
         });
+  }
+}
+
+class _ProductDetailSheet extends StatefulWidget {
+  final Product product;
+  const _ProductDetailSheet({required this.product});
+
+  @override
+  State<_ProductDetailSheet> createState() => _ProductDetailSheetState();
+}
+
+class _ProductDetailSheetState extends State<_ProductDetailSheet> {
+  int _currentImageIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.product;
+    final cart = Provider.of<CartProvider>(context, listen: false);
+    final images = [p.imageLink ?? p.imagePath, ...p.imageLinks]
+        .where((e) => e != null && e.isNotEmpty)
+        .cast<String>()
+        .toList();
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.85,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Handle
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Image Gallery
+                  AspectRatio(
+                    aspectRatio: 1,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.grey.shade100),
+                      ),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          if (images.isNotEmpty)
+                            PageView.builder(
+                              itemCount: images.length,
+                              onPageChanged: (idx) => setState(() => _currentImageIndex = idx),
+                              itemBuilder: (context, idx) => InteractiveViewer(
+                                child: Image(
+                                  image: getImageProvider(images[idx]),
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            )
+                          else
+                            const Icon(Icons.image_not_supported, size: 80, color: Colors.grey),
+                          
+                          if (images.length > 1)
+                            Positioned(
+                              bottom: 16,
+                              left: 0,
+                              right: 0,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: List.generate(images.length, (idx) => Container(
+                                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: _currentImageIndex == idx ? Colors.green : Colors.grey.shade300,
+                                  ),
+                                )),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+                  Text(
+                    p.name,
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.black),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Part Number: #${p.partNumber}',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey.shade500),
+                  ),
+                  
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: p.stock > 0 ? Colors.blue.shade50 : Colors.red.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          p.stock > 0 ? 'IN STOCK' : 'OUT OF STOCK',
+                          style: TextStyle(
+                            fontSize: 12, 
+                            fontWeight: FontWeight.w900, 
+                            color: p.stock > 0 ? Colors.blue.shade700 : Colors.red.shade700
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      if (p.categoryName != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            p.categoryName!.toUpperCase(),
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.grey.shade600),
+                          ),
+                        ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 32),
+                  const Text(
+                    'Description',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.black),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    p.description ?? 'No detailed description available for this part.',
+                    style: TextStyle(fontSize: 15, height: 1.5, fontWeight: FontWeight.w600, color: Colors.grey.shade600),
+                  ),
+
+                  if (p.rackNumber != null) ...[
+                    const SizedBox(height: 24),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey.shade100),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('STORAGE LOCATION', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.grey)),
+                          Text(p.rackNumber!, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.green)),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  if (p.minOrderQty > 1) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.amber.shade100),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('MIN ORDER QUANTITY', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.amber)),
+                          Text('${p.minOrderQty} Units', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.amber)),
+                        ],
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 100), // Space for bottom bar
+                ],
+              ),
+            ),
+          ),
+
+          // Bottom Bar
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))],
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '₹${p.sellingPrice.toStringAsFixed(0)}',
+                        style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.green),
+                      ),
+                      if (p.mrp > p.sellingPrice)
+                        Text(
+                          '₹${p.mrp.toStringAsFixed(0)}',
+                          style: TextStyle(fontSize: 14, decoration: TextDecoration.lineThrough, color: Colors.grey.shade400, fontWeight: FontWeight.bold),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  flex: 2,
+                  child: ElevatedButton(
+                    onPressed: p.stock > 0 ? () {
+                      cart.addItem(p, p.sellingPrice, quantity: p.minOrderQty);
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('${p.name} added to cart'), backgroundColor: Colors.green),
+                      );
+                    } : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      p.stock > 0 ? 'ADD TO CART' : 'OUT OF STOCK',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
