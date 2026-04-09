@@ -22,7 +22,10 @@ public class Banner {
     private String title;
 
     @Column(length = 500)
-    private String imageUrl;
+    private String imagePath;
+
+    @Column(length = 500)
+    private String imageLink;
 
     @Column(length = 500)
     private String targetUrl;

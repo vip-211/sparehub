@@ -39,7 +39,8 @@ public class BannerController {
                 .orElseThrow(() -> new RuntimeException("Banner not found with id: " + id));
 
         banner.setTitle(bannerDetails.getTitle());
-        banner.setImageUrl(bannerDetails.getImageUrl());
+        banner.setImagePath(bannerDetails.getImagePath());
+        banner.setImageLink(bannerDetails.getImageLink());
         banner.setTargetUrl(bannerDetails.getTargetUrl());
         banner.setText(bannerDetails.getText());
         banner.setDisplayOrder(bannerDetails.getDisplayOrder());

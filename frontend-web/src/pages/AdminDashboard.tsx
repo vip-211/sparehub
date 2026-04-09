@@ -149,7 +149,8 @@ const AdminDashboard = () => {
   const [newBanner, setNewBanner] = useState({
     title: '',
     text: '',
-    imageUrl: '',
+    imagePath: '',
+    imageLink: '',
     targetUrl: '',
     displayOrder: 0,
     active: true,
@@ -173,7 +174,7 @@ const AdminDashboard = () => {
     try {
       await api.post('/banners', newBanner);
       setShowAddBanner(false);
-      setNewBanner({ title: '', text: '', imageUrl: '', targetUrl: '', displayOrder: 0, active: true, size: 'medium' });
+      setNewBanner({ title: '', text: '', imagePath: '', imageLink: '', targetUrl: '', displayOrder: 0, active: true, size: 'medium' });
       fetchBanners();
     } catch (err) {
       alert('Failed to add banner');
@@ -211,9 +212,9 @@ const AdminDashboard = () => {
     try {
       const res = await api.post('files/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       if (isEdit) {
-        setEditingBanner({ ...editingBanner, imageUrl: res.data.url });
+        setEditingBanner({ ...editingBanner, imagePath: res.data.url });
       } else {
-        setNewBanner({ ...newBanner, imageUrl: res.data.url });
+        setNewBanner({ ...newBanner, imagePath: res.data.url });
       }
     } catch (err) {
       alert('Upload failed');
@@ -3012,8 +3013,8 @@ const AdminDashboard = () => {
                     {banners.map((banner) => (
                       <div key={banner.id} className="bg-white border-2 border-gray-100 rounded-[2rem] overflow-hidden group hover:border-primary-200 transition-all hover:shadow-xl hover:shadow-primary-50/50">
                         <div className="relative aspect-[21/9] bg-gray-100 overflow-hidden">
-                          {banner.imageUrl ? (
-                            <img src={getImageUrl(banner.imageUrl)} alt={banner.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                          {banner.imageLink || banner.imagePath ? (
+                            <img src={getImageUrl(banner.imageLink || banner.imagePath)} alt={banner.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-gray-300">
                               <ShoppingBag size={32} />
@@ -3584,19 +3585,34 @@ const AdminDashboard = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Banner Image</label>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Banner Image Upload</label>
                   <div className="flex items-center gap-4">
                     <label className="flex-1 flex items-center justify-center gap-2 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl p-4 hover:border-primary-400 hover:bg-primary-50 transition-all cursor-pointer group">
                       <Upload size={20} className="text-gray-400 group-hover:text-primary-500" />
                       <span className="text-sm font-bold text-gray-500 group-hover:text-primary-600">Upload Banner Image</span>
                       <input type="file" className="hidden" accept="image/*" onChange={(e) => handleBannerImageUpload(e)} />
                     </label>
-                    {newBanner.imageUrl && (
+                    {newBanner.imagePath && (
                       <div className="w-16 h-16 rounded-xl border-2 border-gray-100 overflow-hidden shadow-sm">
-                        <img src={getImageUrl(newBanner.imageUrl)} className="w-full h-full object-cover" alt="Preview" />
+                        <img src={getImageUrl(newBanner.imagePath)} className="w-full h-full object-cover" alt="Preview" />
                       </div>
                     )}
                   </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">External Image Link</label>
+                  <input
+                    type="text"
+                    className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-primary-500 outline-none transition-all"
+                    value={newBanner.imageLink}
+                    onChange={e => setNewBanner({...newBanner, imageLink: e.target.value})}
+                    placeholder="https://example.com/image.jpg"
+                  />
+                  {newBanner.imageLink && (
+                    <div className="mt-2 w-full aspect-[21/9] rounded-xl border-2 border-gray-100 overflow-hidden shadow-sm">
+                      <img src={getImageUrl(newBanner.imageLink)} className="w-full h-full object-cover" alt="Preview Link" />
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex gap-4 pt-4">
@@ -3673,19 +3689,34 @@ const AdminDashboard = () => {
                   </label>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Banner Image</label>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Banner Image Upload</label>
                   <div className="flex items-center gap-4">
                     <label className="flex-1 flex items-center justify-center gap-2 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl p-4 hover:border-primary-400 hover:bg-primary-50 transition-all cursor-pointer group">
                       <Upload size={20} className="text-gray-400 group-hover:text-primary-500" />
                       <span className="text-sm font-bold text-gray-500 group-hover:text-primary-600">Change Banner Image</span>
                       <input type="file" className="hidden" accept="image/*" onChange={(e) => handleBannerImageUpload(e, true)} />
                     </label>
-                    {editingBanner?.imageUrl && (
+                    {editingBanner?.imagePath && (
                       <div className="w-16 h-16 rounded-xl border-2 border-gray-100 overflow-hidden shadow-sm">
-                        <img src={getImageUrl(editingBanner.imageUrl)} className="w-full h-full object-cover" alt="Preview" />
+                        <img src={getImageUrl(editingBanner.imagePath)} className="w-full h-full object-cover" alt="Preview" />
                       </div>
                     )}
                   </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">External Image Link</label>
+                  <input
+                    type="text"
+                    className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-primary-500 outline-none transition-all"
+                    value={editingBanner?.imageLink || ''}
+                    onChange={e => setEditingBanner({...editingBanner, imageLink: e.target.value})}
+                    placeholder="https://example.com/image.jpg"
+                  />
+                  {editingBanner?.imageLink && (
+                    <div className="mt-2 w-full aspect-[21/9] rounded-xl border-2 border-gray-100 overflow-hidden shadow-sm">
+                      <img src={getImageUrl(editingBanner.imageLink)} className="w-full h-full object-cover" alt="Preview Link" />
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex gap-4 pt-4">

@@ -347,12 +347,15 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
           final banner = _banners[index];
           final String title = banner['title'] ?? '';
           final String? text = banner['text'];
-          final String? imageUrl = banner['imageUrl'];
+          final String? imagePath = banner['imagePath'];
+          final String? imageLink = banner['imageLink'];
           final String size = banner['size'] ?? 'medium';
           
           double height = 160;
           if (size == 'small') height = 100;
           if (size == 'large') height = 200;
+
+          final String? effectiveImage = imageLink != null && imageLink.isNotEmpty ? imageLink : imagePath;
 
           return Container(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -361,8 +364,8 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
             decoration: BoxDecoration(
               gradient: const LinearGradient(colors: [Colors.blueAccent, Colors.indigoAccent]),
               borderRadius: BorderRadius.circular(20),
-              image: imageUrl != null ? DecorationImage(
-                image: getImageProvider(imageUrl),
+              image: effectiveImage != null ? DecorationImage(
+                image: getImageProvider(effectiveImage),
                 fit: BoxFit.cover,
                 colorFilter: ColorFilter.mode(Colors.black.withOpacity(0.3), BlendMode.darken),
               ) : null,
