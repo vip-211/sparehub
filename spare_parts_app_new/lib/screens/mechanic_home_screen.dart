@@ -84,7 +84,8 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
 
   Future<void> _loadData() async {
     try {
-      final cats = await _productService.getCategories();
+      final allCats = await _productService.getCategories();
+      final cats = allCats.where((c) => c['showOnHome'] == 1 || c['showOnHome'] == true).toList();
       final featured = await _productService.getFeaturedProducts();
       final products = await _productService.getAllProducts(page: 0, size: 10);
       

@@ -343,13 +343,14 @@ class ProductService {
   }
 
   Future<void> updateCategory(int id,
-      {String? name, String? imagePath, int? displayOrder, int? iconCodePoint}) async {
+      {String? name, String? imagePath, int? displayOrder, int? iconCodePoint, bool? showOnHome}) async {
     try {
       final Map<String, dynamic> data = {};
       if (name != null) data['name'] = name;
       if (imagePath != null) data['imagePath'] = imagePath;
       if (displayOrder != null) data['displayOrder'] = displayOrder;
       if (iconCodePoint != null) data['iconCodePoint'] = iconCodePoint;
+      if (showOnHome != null) data['showOnHome'] = showOnHome ? 1 : 0;
 
       if (Constants.useRemote) {
         await _remote.putJson('/categories/$id', data);

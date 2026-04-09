@@ -6,6 +6,7 @@ class Category {
   final String? imageLink;
   final int displayOrder;
   final int? iconCodePoint;
+  final bool showOnHome;
   final bool deleted;
 
   Category({
@@ -16,6 +17,7 @@ class Category {
     this.imageLink,
     this.displayOrder = 0,
     this.iconCodePoint,
+    this.showOnHome = true,
     this.deleted = false,
   });
 
@@ -28,6 +30,7 @@ class Category {
       imageLink: json['imageLink'],
       displayOrder: (json['displayOrder'] as num? ?? 0).toInt(),
       iconCodePoint: json['iconCodePoint'] != null ? (json['iconCodePoint'] as num).toInt() : null,
+      showOnHome: json['showOnHome'] == true || json['showOnHome'] == 1,
       deleted: json['deleted'] == true || json['deleted'] == 1,
     );
   }
@@ -41,6 +44,7 @@ class Category {
       'imageLink': imageLink,
       'displayOrder': displayOrder,
       'iconCodePoint': iconCodePoint,
+      'showOnHome': showOnHome ? 1 : 0,
       'deleted': deleted,
     };
   }

@@ -10,6 +10,7 @@ type Category = {
   imageLink?: string;
   displayOrder?: number;
   iconCodePoint?: number;
+  showOnHome?: boolean;
 };
 
 const AdminCategories: React.FC = () => {
@@ -20,6 +21,7 @@ const AdminCategories: React.FC = () => {
   const [imageLink, setImageLink] = useState('');
   const [displayOrder, setDisplayOrder] = useState(0);
   const [iconCodePoint, setIconCodePoint] = useState<number | undefined>(undefined);
+  const [showOnHome, setShowOnHome] = useState(true);
   const [editing, setEditing] = useState<Category | null>(null);
   const [assignPartNumber, setAssignPartNumber] = useState('');
   const [assignCategoryId, setAssignCategoryId] = useState('');
@@ -52,7 +54,8 @@ const AdminCategories: React.FC = () => {
         imagePath, 
         imageLink,
         displayOrder,
-        iconCodePoint
+        iconCodePoint,
+        showOnHome
       };
       
       if (editing) {
@@ -76,6 +79,7 @@ const AdminCategories: React.FC = () => {
     setImageLink('');
     setDisplayOrder(0);
     setIconCodePoint(undefined);
+    setShowOnHome(true);
     setEditing(null);
   };
 
@@ -140,6 +144,7 @@ const AdminCategories: React.FC = () => {
                 setImageLink(c.imageLink || '');
                 setDisplayOrder(c.displayOrder || 0);
                 setIconCodePoint(c.iconCodePoint);
+                setShowOnHome(c.showOnHome !== false);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }} 
               className="p-2 rounded-lg bg-primary-50 text-primary-700 hover:bg-primary-100 transition-all"
@@ -174,6 +179,16 @@ const AdminCategories: React.FC = () => {
           <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
             <h2 className="text-lg font-bold mb-4 text-gray-800">{editing ? 'Edit Category' : 'Create New Category'}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2 flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                <input 
+                  type="checkbox" 
+                  id="showOnHome"
+                  checked={showOnHome} 
+                  onChange={(e) => setShowOnHome(e.target.checked)}
+                  className="w-5 h-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500" 
+                />
+                <label htmlFor="showOnHome" className="text-sm font-bold text-gray-700 cursor-pointer">Show on Home Page</label>
+              </div>
               <div className="md:col-span-2 space-y-1">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Name</label>
                 <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Category name" className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all" />

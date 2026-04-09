@@ -83,7 +83,7 @@ const MobileDashboard = () => {
         btn: btnRes.data.value || 'Buy Now'
       });
       setLayout((layoutRes.data.value || 'header,search_bar,categories,banner,hot_deals').split(',').filter(Boolean));
-      setCategories(catRes.data || []);
+      setCategories((catRes.data || []).filter((c: any) => c.showOnHome !== false));
       setHotDeals(featuredRes.data || []);
     } catch (err) {
       console.error("Failed to fetch dashboard data:", err);

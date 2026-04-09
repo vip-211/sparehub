@@ -6218,6 +6218,7 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen> {
         text: category != null ? category.displayOrder.toString() : '0');
     String? imagePath = category?.imagePath;
     int? iconCodePoint = category?.iconCodePoint;
+    bool showOnHome = category?.showOnHome ?? true;
 
     final List<IconData> presetIcons = [
       Icons.motorcycle,
@@ -6322,6 +6323,13 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen> {
                   decoration: const InputDecoration(labelText: 'Display Order'),
                   keyboardType: TextInputType.number,
                 ),
+                const SizedBox(height: 16),
+                SwitchListTile(
+                  title: const Text('Show on Home Page'),
+                  subtitle: const Text('If disabled, this category will only appear in the full shop.'),
+                  value: showOnHome,
+                  onChanged: (val) => setDialogState(() => showOnHome = val),
+                ),
               ],
             ),
           ),
@@ -6340,6 +6348,7 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen> {
                       'imagePath': imagePath,
                       'displayOrder': int.tryParse(orderController.text) ?? 0,
                       'iconCodePoint': iconCodePoint,
+                      'showOnHome': showOnHome ? 1 : 0,
                       'deleted': 0
                     });
                   } else {
@@ -6347,7 +6356,8 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen> {
                         name: nameController.text,
                         imagePath: imagePath,
                         displayOrder: int.tryParse(orderController.text),
-                        iconCodePoint: iconCodePoint);
+                        iconCodePoint: iconCodePoint,
+                        showOnHome: showOnHome);
                   }
                   Navigator.pop(ctx);
                   _fetchCategories();

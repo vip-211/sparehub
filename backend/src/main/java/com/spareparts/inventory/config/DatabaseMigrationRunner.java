@@ -20,6 +20,11 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
         try (Connection conn = dataSource.getConnection();
              Statement stmt = conn.createStatement()) {
             stmt.executeUpdate("UPDATE notifications SET is_broadcast = 0 WHERE is_broadcast IS NULL");
+
+            try {
+                stmt.execute("ALTER TABLE categories ADD COLUMN showOnHome INTEGER DEFAULT 1");
+            } catch (Exception ignored) {
+            }
             
             // Seed CMS settings if they don't exist
             stmt.execute("CREATE TABLE IF NOT EXISTS system_settings (setting_key VARCHAR(255) PRIMARY KEY, setting_value TEXT NOT NULL)");

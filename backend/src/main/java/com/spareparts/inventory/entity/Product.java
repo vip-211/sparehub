@@ -72,7 +72,7 @@ public class Product {
     private Integer minOrderQty = 1;
 
     @Column(name = "is_featured", columnDefinition = "boolean default false")
-    private boolean isFeatured = false;
+    private boolean featured = false;
 
     @ElementCollection
     @CollectionTable(name = "product_images", joinColumns = @JoinColumn(name = "product_id"))

@@ -19,7 +19,7 @@ class DatabaseService {
     String path = join(await getDatabasesPath(), 'spare_parts.db');
     final db = await openDatabase(
       path,
-      version: 22,
+      version: 23,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -245,6 +245,12 @@ class DatabaseService {
       try {
         await db.execute(
             'ALTER TABLE categories ADD COLUMN iconCodePoint INTEGER');
+      } catch (_) {}
+    }
+    if (oldVersion < 23) {
+      try {
+        await db.execute(
+            'ALTER TABLE categories ADD COLUMN showOnHome INTEGER DEFAULT 1');
       } catch (_) {}
     }
   }

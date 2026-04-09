@@ -41,6 +41,9 @@ public class Category {
     @Column(name = "icon_code_point")
     private Integer iconCodePoint;
 
+    @Column(name = "show_on_home", columnDefinition = "integer default 1")
+    private Integer showOnHome = 1;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
