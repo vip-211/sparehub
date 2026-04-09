@@ -6,6 +6,7 @@ import com.spareparts.inventory.repository.NotificationRepository;
 import com.spareparts.inventory.repository.SystemSettingRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -21,6 +22,7 @@ public class InAppNotificationObserver implements ProductObserver {
     private SystemSettingRepository systemSettingRepository;
 
     @Override
+    @Async
     public void update(Product product) {
         String enabled = systemSettingRepository.getSettingValue("NOTIF_IN_APP_ENABLED", "true");
         if (!"true".equalsIgnoreCase(enabled)) {
@@ -43,6 +45,7 @@ public class InAppNotificationObserver implements ProductObserver {
         return "In-App Notification";
     }
 
+    @Async
     public void sendOfferNotification(Product product) {
         Notification notification = new Notification();
         String offerType = product.getOfferType().name().toLowerCase();

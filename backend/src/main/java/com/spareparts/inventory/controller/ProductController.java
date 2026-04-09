@@ -1,11 +1,10 @@
-
 package com.spareparts.inventory.controller;
 
 import com.spareparts.inventory.dto.PaginatedResponse;
 import com.spareparts.inventory.dto.ProductDto;
 import com.spareparts.inventory.dto.SuggestionDto;
 import com.spareparts.inventory.dto.ChatResponse;
-import com.spareparts.inventory.repository.ProductRepository;
+import com.spareparts.inventory.repository.SystemSettingRepository;
 import com.spareparts.inventory.entity.Product;
 import com.spareparts.inventory.security.UserDetailsImpl;
 import com.spareparts.inventory.service.ProductService;
@@ -27,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.Objects;
 import java.util.Collections;
+import java.util.stream.Stream;
 
 @RestController
 @RequestMapping("/api/products")
@@ -41,10 +41,11 @@ public class ProductController {
     private AgentService agentService;
     
     @Autowired(required = false)
-    private com.spareparts.inventory.repository.SystemSettingRepository systemSettingRepository;
+    private SystemSettingRepository systemSettingRepository;
     
     private static final ConcurrentHashMap<String, Deque<Long>> RATE = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, CacheEntry> CACHE = new ConcurrentHashMap<>();
+    private static final int MAX_CACHE_SIZE = 1000;
     
     private static record CacheEntry(Object body, long expiryMs) {}
 
@@ -52,6 +53,13 @@ public class ProductController {
     public void cleanCache() {
         long now = System.currentTimeMillis();
         CACHE.entrySet().removeIf(e -> now > e.getValue().expiryMs());
+        if (CACHE.size() > MAX_CACHE_SIZE) {
+            // Very simple LRU-ish cleanup: if still too big, clear half
+            List<String> keys = new ArrayList<>(CACHE.keySet());
+            for (int i = 0; i < keys.size() / 2; i++) {
+                CACHE.remove(keys.get(i));
+            }
+        }
         RATE.entrySet().removeIf(e -> {
             synchronized (e.getValue()) {
                 while (!e.getValue().isEmpty() && now - e.getValue().peekFirst() > getRateWindowMs()) {
@@ -301,7 +309,7 @@ public class ProductController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('WHOLESALER') or hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
-    public ResponseEntity<ProductDto> updateProduct(@PathVariable Long id, @Valid @RequestBody ProductDto productDto, Authentication authentication) {
+    public ResponseEntity<ProductDto> updateProduct(@PathVariable Long id, @Valid @RequestBody ProductDto productDto) {
         return ResponseEntity.ok(productService.updateProduct(id, productDto));
     }
 

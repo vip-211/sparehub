@@ -7,6 +7,7 @@ import com.spareparts.inventory.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -22,6 +23,7 @@ public class WhatsAppNotificationObserver implements ProductObserver {
     private UserRepository userRepository;
 
     @Override
+    @Async
     public void update(Product product) {
         String enabled = systemSettingRepository.getSettingValue("NOTIF_WHATSAPP_ENABLED", "false");
         if (!"true".equalsIgnoreCase(enabled)) {
@@ -45,6 +47,7 @@ public class WhatsAppNotificationObserver implements ProductObserver {
         return "WhatsApp Notification";
     }
 
+    @Async
     public void sendOfferNotification(Product product) {
         List<User> users = userRepository.findByDeletedFalse();
         int sentCount = 0;

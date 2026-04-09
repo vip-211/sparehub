@@ -56,13 +56,13 @@ public class AIService {
     @Autowired
     private UserRepository userRepository;
 
-    private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=";
+    @Autowired
+    private RestTemplate restTemplate;
+
+    private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=";
     private static final String OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
     private static final String OPENAI_TRANSCRIBE_URL = "https://api.openai.com/v1/audio/transcriptions";
 
-    private final RestTemplate restTemplate = new RestTemplate();
-
-    @Transactional
     public String askAI(String prompt, String provider, Long userId) {
         String requestedProvider = provider == null ? "" : provider.toLowerCase();
         // Debug Log: Check configuration and requested provider
