@@ -2927,6 +2927,51 @@ const AdminDashboard = () => {
                   </div>
                 </div>
               </div>
+
+              {/* AI Business Insights Section */}
+              <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                  <Cpu size={120} className="text-primary-600" />
+                </div>
+                
+                <div className="relative z-10">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="p-3 bg-primary-50 rounded-2xl text-primary-600 shadow-inner">
+                      <TrendingUp size={28} />
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-black text-gray-900">AI Business Analyst</h4>
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-0.5">Powered by Gemini 1.5 Flash</p>
+                    </div>
+                  </div>
+
+                  {dashboardData?.aiInsights ? (
+                    <div className="prose prose-slate max-w-none">
+                      <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100 leading-relaxed font-medium text-gray-700 whitespace-pre-wrap">
+                        {dashboardData.aiInsights}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 bg-gray-50/30 rounded-3xl border-2 border-dashed border-gray-100">
+                      <RotateCcw size={40} className="mx-auto text-gray-200 mb-4 animate-pulse" />
+                      <p className="font-black text-gray-400">Waiting for data to generate insights...</p>
+                      <button 
+                        onClick={fetchDashboardData}
+                        className="mt-4 text-sm font-black text-primary-600 hover:text-primary-700 underline underline-offset-4"
+                      >
+                        Try generating again
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="mt-8 flex items-center gap-3 p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
+                    <Bell size={18} className="text-indigo-600 shrink-0" />
+                    <p className="text-xs font-bold text-indigo-700">
+                      These insights are generated based on your last 30 days of sales, inventory levels, and customer behavior patterns.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </>
           )}
         </div>

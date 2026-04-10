@@ -88,6 +88,9 @@ public class AdminController {
         LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
         data.put("prediction", predictionService.predictDemand(orderRepository.findLast30Days(thirtyDaysAgo)));
         
+        // Add AI Business Insights
+        data.put("aiInsights", predictionService.getAIBusinessInsights());
+        
         return ResponseEntity.ok(data);
     }
 

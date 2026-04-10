@@ -6,6 +6,7 @@ import com.spareparts.inventory.entity.Product;
 import com.spareparts.inventory.repository.OrderRepository;
 import com.spareparts.inventory.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -93,13 +94,68 @@ public class PredictionService {
     }
 
     public String getAIStockAdvice(List<String> suggestions) {
+        if (suggestions == null || suggestions.isEmpty()) {
+            return "Inventory levels are currently healthy across all items. No immediate restock actions required.";
+        }
+        
         String data = String.join("\n", suggestions);
         String prompt = String.format(
                 "You are an expert inventory manager for Parts Mitra.\n" +
                 "Analyze these low stock alerts and predicted demands:\n%s\n\n" +
                 "Provide a professional recommendation on which items to reorder and in what priority.\n" +
-                "Keep it concise and actionable.", data);
-        
+                "Keep it concise and actionable using bullet points.",
+                data
+        );
+
         return aiService.askAI(prompt, "gemini", null);
+    }
+
+    public String getAIBusinessInsights() {
+        try {
+            LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
+            List<Order> recentOrders = orderRepository.findLast30Days(thirtyDaysAgo);
+            
+            if (recentOrders.isEmpty()) {
+                return "Not enough sales data in the last 30 days to generate business insights.";
+            }
+
+            List<Map<String, Object>> topSelling = orderRepository.findTopSellingProducts(PageRequest.of(0, 10));
+            List<Map<String, Object>> monthlySales = orderRepository.getMonthlySales();
+            List<String> restockAlerts = getRestockSuggestions();
+
+            StringBuilder data = new StringBuilder();
+            data.append("Monthly Sales Performance:\n");
+            for (Map<String, Object> sale : monthlySales) {
+                data.append("- ").append(sale.get("month")).append(": ₹").append(sale.get("total")).append("\n");
+            }
+
+            data.append("\nTop Selling Products:\n");
+            for (Map<String, Object> product : topSelling) {
+                data.append("- ").append(product.get("name")).append(": ").append(product.get("count")).append(" units\n");
+            }
+
+            data.append("\nLow Stock & Demand Prediction Alerts:\n");
+            for (String alert : restockAlerts) {
+                data.append("- ").append(alert).append("\n");
+            }
+
+            String prompt = String.format(
+                "You are a senior business analyst for Parts Mitra, a leading auto spare parts distributor.\n" +
+                "Based on the following 30-day performance data, provide 3-4 strategic business insights:\n\n" +
+                "%s\n\n" +
+                "Your analysis should include:\n" +
+                "1. Revenue trends and growth opportunities.\n" +
+                "2. Inventory optimization advice based on demand.\n" +
+                "3. Customer behavior or popular category focus.\n" +
+                "4. A clear 'Action Item' for the owner.\n\n" +
+                "Format with professional headers and clear bullet points. Keep it highly strategic and data-driven.",
+                data.toString()
+            );
+
+            return aiService.askAI(prompt, "gemini", null);
+        } catch (Exception e) {
+            log.error("Error generating AI business insights: {}", e.getMessage());
+            return "Unable to generate business insights at this moment. Please try again later.";
+        }
     }
 }
