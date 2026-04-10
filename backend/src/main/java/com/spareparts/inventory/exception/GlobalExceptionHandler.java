@@ -38,6 +38,15 @@ public class GlobalExceptionHandler {
                 .body(errors);
     }
 
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<MessageResponse> handleMethodNotSupported(org.springframework.web.HttpRequestMethodNotSupportedException ex, jakarta.servlet.http.HttpServletRequest request) {
+        log.warn("Method not supported: {} at {}", ex.getMessage(), request.getRequestURI());
+        return ResponseEntity
+                .status(HttpStatus.METHOD_NOT_ALLOWED)
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .body(new MessageResponse("Request method '" + ex.getMethod() + "' is not supported for this endpoint."));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<MessageResponse> handleGenericException(Exception ex) {
         log.error("Internal error caught: {}", ex.getMessage(), ex);

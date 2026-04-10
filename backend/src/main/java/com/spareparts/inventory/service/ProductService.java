@@ -4,10 +4,12 @@ package com.spareparts.inventory.service;
 import com.spareparts.inventory.dto.PaginatedResponse;
 import com.spareparts.inventory.dto.ProductDto;
 import com.spareparts.inventory.entity.Product;
+import com.spareparts.inventory.entity.ProductAlias;
 import com.spareparts.inventory.entity.Category;
 import com.spareparts.inventory.entity.User;
 import com.spareparts.inventory.entity.ProductImage;
 import com.spareparts.inventory.repository.ProductRepository;
+import com.spareparts.inventory.repository.ProductAliasRepository;
 import com.spareparts.inventory.repository.UserRepository;
 import com.spareparts.inventory.repository.CategoryRepository;
 import com.spareparts.inventory.observer.ProductObserver;
@@ -33,6 +35,9 @@ public class ProductService extends ProductSubject {
 
     @Autowired
     private ProductRepository productRepository;
+
+    @Autowired
+    private ProductAliasRepository productAliasRepository;
 
     @Autowired
     private UserRepository userRepository;
@@ -456,6 +461,58 @@ public class ProductService extends ProductSubject {
     @Transactional(readOnly = true)
     public List<Object[]> getTopSellingProducts() {
         return productRepository.getTopSellingProducts();
+    }
+
+    @Transactional(readOnly = true)
+    public ProductDto getProductById(Long id) {
+        return productRepository.findById(id)
+                .map(this::convertToDto)
+                .orElse(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductDto> getTrendingProducts() {
+        // Simple logic for trending: top selling or featured or with discount
+        List<Object[]> topSelling = getTopSellingProducts();
+        if (!topSelling.isEmpty()) {
+            List<Long> ids = topSelling.stream()
+                    .limit(20)
+                    .map(o -> (Long) o[0])
+                    .collect(Collectors.toList());
+            return productRepository.findAllById(ids).stream()
+                    .map(this::convertToDto)
+                    .collect(Collectors.toList());
+        }
+        return getFeaturedProducts();
+    }
+
+    @Transactional(readOnly = true)
+    public List<java.util.Map<String, Object>> getAliases(Long productId) {
+        return productAliasRepository.findByProductId(productId).stream()
+                .map(a -> {
+                    java.util.Map<String, Object> map = new java.util.HashMap<>();
+                    map.put("id", a.getId());
+                    map.put("alias", a.getAlias());
+                    map.put("pronunciation", a.getPronunciation());
+                    return map;
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void addAlias(Long productId, String alias, String pronunciation) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Product not found"));
+        ProductAlias a = new ProductAlias();
+        a.setProduct(product);
+        a.setAlias(alias);
+        a.setPronunciation(pronunciation);
+        productAliasRepository.save(a);
+    }
+
+    @Transactional
+    public void deleteAlias(Long id) {
+        productAliasRepository.deleteById(id);
     }
 
     private ProductDto convertToDto(Product product) {

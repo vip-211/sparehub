@@ -121,6 +121,7 @@ public class ProductController {
     @PreAuthorize("hasRole('WHOLESALER') or hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
     @CacheEvict(cacheNames = {"home_featured_products"}, allEntries = true)
     public ResponseEntity<ProductDto> addProduct(@Valid @RequestBody ProductDto productDto, Authentication authentication) {
+        if (productDto == null) return ResponseEntity.badRequest().build();
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         boolean isAdmin = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SUPER_MANAGER"));
@@ -137,6 +138,9 @@ public class ProductController {
     @PreAuthorize("hasRole('WHOLESALER') or hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
     @CacheEvict(cacheNames = {"home_featured_products"}, allEntries = true)
     public ResponseEntity<?> addProductsBulk(@RequestBody List<ProductDto> productDtos, Authentication authentication) {
+        if (productDtos == null || productDtos.isEmpty()) {
+            return ResponseEntity.badRequest().body("Products list cannot be empty");
+        }
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         boolean isAdmin = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SUPER_MANAGER"));
@@ -151,6 +155,9 @@ public class ProductController {
 
     @GetMapping("/suggest")
     public ResponseEntity<List<SuggestionDto>> suggest(@RequestParam String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
         try {
             // Fix: ensure we provide all 5 arguments to searchProducts, sort by stock to show available items first
             PaginatedResponse<ProductDto> response = productService.searchProducts(query, 0, 5, "stock", "desc");
@@ -178,6 +185,9 @@ public class ProductController {
     public ResponseEntity<List<String>> suggestWithContext(
             @RequestParam String query,
             Authentication authentication) {
+        if (query == null || query.trim().isEmpty()) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
         try {
             UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
             String history = agentService.getChatHistoryText(userDetails.getId());
@@ -223,7 +233,7 @@ public class ProductController {
 
             String bestSellers = topSelling.stream()
                     .limit(5)
-                    .map(o -> o[0] + " (Sold: " + o[1] + ")")
+                    .map(o -> o[1] + " (Sold: " + o[2] + ")")
                     .collect(Collectors.joining("\n"));
 
             String prompt = String.format(
@@ -245,6 +255,11 @@ public class ProductController {
 
     @GetMapping("/chat-suggest")
     public ResponseEntity<ChatResponse> chatSuggest(@RequestParam String query) {
+        if (query == null || query.trim().isEmpty()) {
+            ChatResponse empty = new ChatResponse();
+            empty.setMessage("What can I help you find?");
+            return ResponseEntity.ok(empty);
+        }
         try {
             PaginatedResponse<ProductDto> response = productService.searchProducts(query, 0, 3, "stock", "desc");
             ChatResponse res = new ChatResponse();
@@ -299,6 +314,9 @@ public class ProductController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "id") String sortBy,
             @RequestParam(defaultValue = "desc") String direction) {
+        if (query == null || query.trim().isEmpty()) {
+            return ResponseEntity.ok(new PaginatedResponse<>(Collections.emptyList(), page, size, 0, 0, true));
+        }
         String key = String.join("|", "search", query.trim().toLowerCase(), String.valueOf(page), String.valueOf(size), sortBy, direction);
         CacheEntry cached = CACHE.get(key);
         long now = System.currentTimeMillis();
@@ -323,7 +341,14 @@ public class ProductController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "id") String sortBy,
             @RequestParam(defaultValue = "desc") String direction) {
-        return ResponseEntity.ok(productService.getProductsByOfferType(type, page, size, sortBy, direction));
+        if (type == null || type.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(null);
+        }
+        try {
+            return ResponseEntity.ok(productService.getProductsByOfferType(type, page, size, sortBy, direction));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(null);
+        }
     }
 
     @GetMapping("/featured")
@@ -332,12 +357,26 @@ public class ProductController {
         return ResponseEntity.ok(productService.getFeaturedProducts());
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<ProductDto> getProductById(@PathVariable Long id) {
+        ProductDto productDto = productService.getProductById(id);
+        if (productDto != null) {
+            return ResponseEntity.ok(productDto);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     @PostMapping("/featured")
     @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
     @CacheEvict(cacheNames = {"home_featured_products"}, allEntries = true)
     public ResponseEntity<?> updateFeaturedStatus(@RequestBody java.util.Map<String, Object> body) {
+        if (body == null || !body.containsKey("ids") || !body.containsKey("isFeatured")) {
+            return ResponseEntity.badRequest().body("Missing required fields: ids, isFeatured");
+        }
         @SuppressWarnings("unchecked")
         List<Integer> idsInt = (List<Integer>) body.get("ids");
+        if (idsInt == null || idsInt.isEmpty()) return ResponseEntity.badRequest().body("ids cannot be null or empty");
         List<Long> ids = idsInt.stream().map(Integer::longValue).collect(Collectors.toList());
         boolean isFeatured = (boolean) body.get("isFeatured");
         productService.updateFeaturedStatus(ids, isFeatured);
@@ -348,6 +387,7 @@ public class ProductController {
     @PreAuthorize("hasRole('WHOLESALER') or hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
     @CacheEvict(cacheNames = {"home_featured_products"}, allEntries = true)
     public ResponseEntity<ProductDto> updateProduct(@PathVariable Long id, @Valid @RequestBody ProductDto productDto, Authentication authentication) {
+        if (productDto == null) return ResponseEntity.badRequest().build();
         boolean isAdmin = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SUPER_MANAGER"));
 
@@ -378,7 +418,37 @@ public class ProductController {
     @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
     @CacheEvict(cacheNames = {"home_featured_products"}, allEntries = true)
     public ResponseEntity<?> deleteProductsBulk(@RequestBody List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return ResponseEntity.badRequest().body("Ids list cannot be empty");
+        }
         productService.deleteProductsBulk(ids);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/trending")
+    public ResponseEntity<List<ProductDto>> getTrendingProducts() {
+        return ResponseEntity.ok(productService.getTrendingProducts());
+    }
+
+    @GetMapping("/{id}/aliases")
+    public ResponseEntity<List<java.util.Map<String, Object>>> getAliases(@PathVariable Long id) {
+        return ResponseEntity.ok(productService.getAliases(id));
+    }
+
+    @PostMapping("/{id}/aliases")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    public ResponseEntity<?> addAlias(@PathVariable Long id, @RequestBody java.util.Map<String, String> body) {
+        if (body == null || !body.containsKey("alias")) {
+            return ResponseEntity.badRequest().body("Alias is required");
+        }
+        productService.addAlias(id, body.get("alias"), body.get("pronunciation"));
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/aliases/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    public ResponseEntity<?> deleteAlias(@PathVariable Long id) {
+        productService.deleteAlias(id);
         return ResponseEntity.ok().build();
     }
 }

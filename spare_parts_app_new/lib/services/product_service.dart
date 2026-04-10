@@ -416,11 +416,18 @@ class ProductService {
   Future<Map<String, dynamic>> getActiveBanners() async {
     try {
       if (Constants.useRemote) {
-        final list = await _remote.getList('/banners/active');
+        final json = await _remote.getJson('/banners/active');
+        final banners = (json['banners'] as List<dynamic>? ?? [])
+            .map((e) => e as Map<String, dynamic>)
+            .toList();
+        final isCarousel = json['isCarousel'] is bool ? json['isCarousel'] as bool : banners.length > 1;
+        final speed = json['autoScrollSpeed'] is int
+            ? json['autoScrollSpeed'] as int
+            : int.tryParse('${json['autoScrollSpeed']}') ?? 3;
         return {
-          'banners': list.map((e) => e as Map<String, dynamic>).toList(),
-          'isCarousel': true,
-          'autoScrollSpeed': 3,
+          'banners': banners,
+          'isCarousel': isCarousel,
+          'autoScrollSpeed': speed,
         };
       }
       return {'banners': [], 'isCarousel': false, 'autoScrollSpeed': 3};

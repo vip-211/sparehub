@@ -665,17 +665,25 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
 
   void _onBannerBuyClick(Map<String, dynamic> banner) async {
     final productId = banner['productId'];
-    if (productId == null) return;
+    debugPrint('Banner Buy Clicked: productId=$productId');
+    if (productId == null) {
+      debugPrint('productId is null. Cannot proceed.');
+      return;
+    }
 
     try {
       final product = await _productService.getProductById(productId);
+      debugPrint('Product retrieved: $product');
       if (product == null) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Product not found')));
+        debugPrint('Product not found for productId: $productId');
         return;
       }
 
+      debugPrint('Product stock: ${product.stock}');
       if (product.stock <= 0) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Product is out of stock')));
+        debugPrint('Product is out of stock: ${product.stock}');
         return;
       }
 

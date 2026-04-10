@@ -49,8 +49,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         return searchProducts(name); // Assuming name is the query
     }
 
-    @Query("SELECT p.name, SUM(oi.quantity) as total " +
+    @Query("SELECT p.id, p.name, SUM(oi.quantity) as total " +
            "FROM OrderItem oi JOIN oi.product p " +
-           "GROUP BY p.name ORDER BY total DESC")
+           "GROUP BY p.id, p.name ORDER BY total DESC")
     List<Object[]> getTopSellingProducts();
 }
