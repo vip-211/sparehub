@@ -74,10 +74,9 @@ public class Product {
     @Column(name = "is_featured", columnDefinition = "boolean default false")
     private boolean featured = false;
 
-    @ElementCollection
-    @CollectionTable(name = "product_images", joinColumns = @JoinColumn(name = "product_id"))
-    @Column(name = "image_link")
-    private java.util.List<String> imageLinks = new java.util.ArrayList<>();
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("displayOrder ASC")
+    private java.util.List<ProductImage> images = new java.util.ArrayList<>();
 
     @Size(max = 500)
     private String imagePath;

@@ -51,6 +51,8 @@ const Cart: React.FC = () => {
             productName: i.name,
             quantity: i.quantity,
             price: i.price || 0,
+            bannerId: i.bannerId,
+            offerId: i.offerId
           })),
         };
         return api.post('orders', payload);
@@ -131,26 +133,36 @@ const Cart: React.FC = () => {
                     <tr key={i.productId} className="hover:bg-gray-50/50 transition">
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center relative">
                             <Package className="w-6 h-6 text-gray-400" />
+                            {i.isLocked && (
+                              <div className="absolute -top-2 -right-2 bg-primary-600 text-white p-1 rounded-full shadow-lg border-2 border-white">
+                                <Star size={10} className="fill-current" />
+                              </div>
+                            )}
                           </div>
                           <div>
-                            <div className="font-bold text-gray-900">{tp(i.name)}</div>
+                            <div className="font-bold text-gray-900 flex items-center gap-2">
+                              {tp(i.name)}
+                              {i.isLocked && <span className="text-[8px] bg-primary-50 text-primary-600 px-1.5 py-0.5 rounded uppercase font-black tracking-tighter">Offer Lock</span>}
+                            </div>
                             <div className="text-sm text-gray-500 font-medium">Part: {i.partNumber}</div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-5 whitespace-nowrap text-sm text-gray-600 font-medium">₹{i.price}</td>
                       <td className="px-6 py-5 whitespace-nowrap">
-                        <div className="flex items-center justify-center bg-gray-50 rounded-lg p-1 w-fit mx-auto">
+                        <div className={`flex items-center justify-center bg-gray-50 rounded-lg p-1 w-fit mx-auto ${i.isLocked ? 'opacity-60 cursor-not-allowed' : ''}`}>
                           <button
-                            onClick={() => updateQty(i.productId, Math.max(1, i.quantity - 1))}
-                            className="w-8 h-8 rounded-md bg-white border border-gray-200 shadow-sm flex items-center justify-center hover:bg-gray-50 text-gray-600 transition"
+                            onClick={() => !i.isLocked && updateQty(i.productId, Math.max(1, i.quantity - 1))}
+                            disabled={i.isLocked}
+                            className={`w-8 h-8 rounded-md bg-white border border-gray-200 shadow-sm flex items-center justify-center transition ${i.isLocked ? 'cursor-not-allowed' : 'hover:bg-gray-50 text-gray-600'}`}
                           ><Minus className="w-4 h-4" /></button>
                           <span className="w-10 text-center font-bold text-gray-900">{i.quantity}</span>
                           <button
-                            onClick={() => updateQty(i.productId, i.quantity + 1)}
-                            className="w-8 h-8 rounded-md bg-white border border-gray-200 shadow-sm flex items-center justify-center hover:bg-gray-50 text-gray-600 transition"
+                            onClick={() => !i.isLocked && updateQty(i.productId, i.quantity + 1)}
+                            disabled={i.isLocked}
+                            className={`w-8 h-8 rounded-md bg-white border border-gray-200 shadow-sm flex items-center justify-center transition ${i.isLocked ? 'cursor-not-allowed' : 'hover:bg-gray-50 text-gray-600'}`}
                           ><Plus className="w-4 h-4" /></button>
                         </div>
                       </td>
@@ -171,11 +183,19 @@ const Cart: React.FC = () => {
               {items.map((i) => (
                 <div key={i.productId} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
                   <div className="flex gap-4 mb-4">
-                    <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center shrink-0">
+                    <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center shrink-0 relative">
                       <Package className="w-8 h-8 text-gray-400" />
+                      {i.isLocked && (
+                        <div className="absolute -top-2 -right-2 bg-primary-600 text-white p-1 rounded-full shadow-lg border-2 border-white">
+                          <Star size={12} className="fill-current" />
+                        </div>
+                      )}
                     </div>
                     <div className="flex-grow">
-                      <div className="font-bold text-gray-900">{tp(i.name)}</div>
+                      <div className="font-bold text-gray-900 flex items-center gap-2">
+                        {tp(i.name)}
+                        {i.isLocked && <span className="text-[8px] bg-primary-50 text-primary-600 px-1 py-0.5 rounded uppercase font-black">Offer Lock</span>}
+                      </div>
                       <div className="text-sm text-gray-500">Part: {i.partNumber}</div>
                       <div className="text-primary-700 font-bold mt-1">₹{i.price}</div>
                     </div>
@@ -184,15 +204,17 @@ const Cart: React.FC = () => {
                     </button>
                   </div>
                   <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                    <div className="flex items-center bg-gray-50 rounded-lg p-1">
+                    <div className={`flex items-center bg-gray-50 rounded-lg p-1 ${i.isLocked ? 'opacity-60' : ''}`}>
                       <button
-                        onClick={() => updateQty(i.productId, Math.max(1, i.quantity - 1))}
-                        className="w-8 h-8 rounded-md bg-white border border-gray-200 flex items-center justify-center shadow-sm"
+                        onClick={() => !i.isLocked && updateQty(i.productId, Math.max(1, i.quantity - 1))}
+                        disabled={i.isLocked}
+                        className={`w-8 h-8 rounded-md bg-white border border-gray-200 flex items-center justify-center shadow-sm ${i.isLocked ? 'cursor-not-allowed' : ''}`}
                       ><Minus className="w-4 h-4" /></button>
                       <span className="w-10 text-center font-bold">{i.quantity}</span>
                       <button
-                        onClick={() => updateQty(i.productId, i.quantity + 1)}
-                        className="w-8 h-8 rounded-md bg-white border border-gray-200 flex items-center justify-center shadow-sm"
+                        onClick={() => !i.isLocked && updateQty(i.productId, i.quantity + 1)}
+                        disabled={i.isLocked}
+                        className={`w-8 h-8 rounded-md bg-white border border-gray-200 flex items-center justify-center shadow-sm ${i.isLocked ? 'cursor-not-allowed' : ''}`}
                       ><Plus className="w-4 h-4" /></button>
                     </div>
                     <div className="text-right">

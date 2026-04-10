@@ -16,10 +16,6 @@ import Stomp from 'stompjs';
 
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
 
-const Skeleton = ({ className }: { className?: string }) => (
-  <div className={`animate-pulse bg-gray-200 ${className}`}></div>
-);
-
 const AdminDashboard = () => {
   const { tp } = useLanguage();
   const currentUser = AuthService.getCurrentUser();
@@ -69,6 +65,7 @@ const AdminDashboard = () => {
     stock: '',
     wholesalerId: '',
     imagePath: '',
+    imageUrls: [] as string[],
     description: '',
     categoryId: '',
     discountPercent: '0'
@@ -154,8 +151,74 @@ const AdminDashboard = () => {
     targetUrl: '',
     displayOrder: 0,
     active: true,
-    size: 'medium'
+    size: 'medium',
+    buyEnabled: false,
+    productId: null,
+    minimumQuantity: 1,
+    quantityLocked: false,
+    fixedPrice: null,
+    buttonText: 'Buy Now'
   });
+
+  const [offers, setOffers] = useState<any[]>([]);
+  const [loadingOffers, setLoadingOffers] = useState(false);
+  const [showAddOffer, setShowAddOffer] = useState(false);
+  const [showEditOffer, setShowEditOffer] = useState(false);
+  const [editingOffer, setEditingOffer] = useState<any>(null);
+  const [newOffer, setNewOffer] = useState({
+    productId: '',
+    offerPrice: '',
+    minimumQuantity: 1,
+    isQuantityLocked: false,
+    isActive: true,
+    description: ''
+  });
+
+  const fetchOffers = async () => {
+    setLoadingOffers(true);
+    try {
+      const res = await api.get('/offers');
+      setOffers(res.data);
+    } catch (err) {
+      console.error('Error fetching offers:', err);
+    } finally {
+      setLoadingOffers(false);
+    }
+  };
+
+  const handleAddOffer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await api.post('/offers', newOffer);
+      setShowAddOffer(false);
+      setNewOffer({ productId: '', offerPrice: '', minimumQuantity: 1, isQuantityLocked: false, isActive: true, description: '' });
+      fetchOffers();
+    } catch (err) {
+      alert('Failed to add offer');
+    }
+  };
+
+  const handleUpdateOffer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await api.put(`/offers/${editingOffer.id}`, editingOffer);
+      setShowEditOffer(false);
+      setEditingOffer(null);
+      fetchOffers();
+    } catch (err) {
+      alert('Failed to update offer');
+    }
+  };
+
+  const deleteOffer = async (id: number) => {
+    if (!window.confirm('Are you sure you want to delete this offer?')) return;
+    try {
+      await api.delete(`/offers/${id}`);
+      fetchOffers();
+    } catch (err) {
+      alert('Failed to delete offer');
+    }
+  };
 
   const fetchBanners = async () => {
     setLoadingBanners(true);
@@ -302,6 +365,8 @@ const AdminDashboard = () => {
       fetchHomeLayout();
     } else if (activeTab === 'banners') {
       fetchBanners();
+    } else if (activeTab === 'offers') {
+      fetchOffers();
     }
   }, [activeTab]);
 
@@ -871,14 +936,15 @@ const AdminDashboard = () => {
         mechanicPrice: parseFloat(String(newProduct.mechanicPrice)) || 0,
         stock: parseInt(String(newProduct.stock)) || 0,
         wholesalerId: newProduct.wholesalerId ? parseInt(newProduct.wholesalerId as any) : 1,
-        categoryId: newProduct.categoryId ? parseInt(newProduct.categoryId as any) : undefined
+        categoryId: newProduct.categoryId ? parseInt(newProduct.categoryId as any) : undefined,
+        imageUrls: newProduct.imageUrls.filter(url => url.trim() !== '')
       });
       setShowAddProduct(false);
       const savedProduct = res.data;
       if (!newProduct.categoryId && savedProduct.categoryName) {
         alert(`Product auto-categorized as: ${savedProduct.categoryName}`);
       }
-      setNewProduct({ name: '', partNumber: '', mrp: '', sellingPrice: '', wholesalerPrice: '', retailerPrice: '', mechanicPrice: '', stock: '', imagePath: '', description: '', wholesalerId: '', categoryId: '' });
+      setNewProduct({ name: '', partNumber: '', mrp: '', sellingPrice: '', wholesalerPrice: '', retailerPrice: '', mechanicPrice: '', stock: '', imagePath: '', imageUrls: [], description: '', wholesalerId: '', categoryId: '' });
       fetchProducts();
     } catch (err) {
       console.error(err);
@@ -917,7 +983,8 @@ const AdminDashboard = () => {
         retailerPrice: parseFloat(String(editingProduct.retailerPrice)) || 0,
         mechanicPrice: parseFloat(String(editingProduct.mechanicPrice)) || 0,
         stock: parseInt(String(editingProduct.stock)) || 0,
-        categoryId: editingProduct.categoryId ? parseInt(editingProduct.categoryId as any) : undefined
+        categoryId: editingProduct.categoryId ? parseInt(editingProduct.categoryId as any) : undefined,
+        imageUrls: (editingProduct.imageUrls || []).filter((url: string) => url.trim() !== '')
       });
       setShowEditProduct(false);
       setEditingProduct(null);
@@ -1384,6 +1451,7 @@ const AdminDashboard = () => {
           { id: 'insights', label: 'AI Insights', icon: Cpu },
           { id: 'cms', label: 'Home Page CMS', icon: List },
           { id: 'banners', label: 'Banners', icon: LayoutGrid },
+          { id: 'offers', label: 'Offer Page', icon: Star },
           { id: 'layout', label: 'Layout Editor', icon: LayoutGrid },
           { id: 'settings', label: 'Settings', icon: Settings },
         ].map((tab) => (
@@ -2781,7 +2849,7 @@ const AdminDashboard = () => {
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                   <h4 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-6">Revenue Trends (Monthly)</h4>
                   <div className="h-80 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                       <LineChart data={dashboardData?.monthlySales || []}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
                         <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fontSize: 12, fontWeight: 'bold', fill: '#94A3B8'}} dy={10} />
@@ -2800,7 +2868,7 @@ const AdminDashboard = () => {
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                   <h4 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-6">Top Selling Products</h4>
                   <div className="h-80 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                       <BarChart data={dashboardData?.topSelling || []}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#94A3B8'}} dy={10} />
@@ -3046,6 +3114,99 @@ const AdminDashboard = () => {
                               </button>
                               <button
                                 onClick={() => deleteBanner(banner.id)}
+                                className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'offers' && (
+        <div className="max-w-6xl mx-auto space-y-8 pb-20">
+          <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+            <div className="px-8 py-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-black text-gray-900 flex items-center gap-3">
+                  <Star size={24} className="text-amber-500" />
+                  Offer Page Management
+                </h2>
+                <p className="text-gray-500 text-sm mt-1 font-medium">Configure special offers with minimum quantity controls.</p>
+              </div>
+              <button
+                onClick={() => setShowAddOffer(true)}
+                className="flex items-center gap-2 bg-amber-500 text-white px-6 py-3 rounded-2xl font-black text-sm shadow-lg shadow-amber-100 hover:bg-amber-600 transition-all active:scale-95"
+              >
+                <Plus size={20} />
+                Create New Offer
+              </button>
+            </div>
+
+            {loadingOffers ? (
+              <div className="p-20 text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto mb-4"></div>
+                <p className="text-gray-400 font-bold">Loading offers...</p>
+              </div>
+            ) : (
+              <div className="p-8">
+                {offers.length === 0 ? (
+                  <div className="text-center py-20 bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-200">
+                    <Star size={48} className="mx-auto text-gray-300 mb-4 opacity-20" />
+                    <p className="text-gray-500 font-bold">No active offers found</p>
+                    <p className="text-xs text-gray-400">Click "Create New Offer" to start.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {offers.map((offer) => (
+                      <div key={offer.id} className="bg-white border-2 border-gray-100 rounded-[2rem] overflow-hidden group hover:border-amber-200 transition-all hover:shadow-xl hover:shadow-amber-50/50">
+                        <div className="relative aspect-square bg-gray-100 overflow-hidden">
+                          {offer.product?.imagePath || offer.product?.imageLink ? (
+                            <img src={getImageUrl(offer.product?.imageLink || offer.product?.imagePath)} alt={offer.product?.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-300">
+                              <Package size={48} />
+                            </div>
+                          )}
+                          <div className="absolute top-4 right-4 flex flex-col gap-2">
+                            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${offer.active ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500'}`}>
+                              {offer.active ? 'Active' : 'Inactive'}
+                            </span>
+                            {offer.quantityLocked && (
+                              <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-red-100 text-red-600 flex items-center gap-1">
+                                <Star size={10} className="fill-current" /> Locked
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="p-6">
+                          <h3 className="font-black text-gray-900 text-lg mb-1 truncate">{offer.product?.name}</h3>
+                          <p className="text-amber-600 font-black text-xl mb-2">₹{offer.offerPrice?.toLocaleString() || offer.product?.sellingPrice?.toLocaleString()}</p>
+                          <div className="flex items-center gap-2 mb-4">
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50 px-2 py-1 rounded-lg">Min Qty: {offer.minimumQuantity}</span>
+                          </div>
+                          <p className="text-gray-500 text-xs font-medium mb-4 line-clamp-2 h-8">{offer.description || 'No description provided.'}</p>
+                          <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => {
+                                  setEditingOffer(offer);
+                                  setShowEditOffer(true);
+                                }}
+                                className="p-2 text-amber-600 hover:bg-amber-50 rounded-xl transition-all"
+                              >
+                                <Settings size={18} />
+                              </button>
+                              <button
+                                onClick={() => deleteOffer(offer.id)}
                                 className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all"
                               >
                                 <Trash2 size={18} />
@@ -3529,6 +3690,177 @@ const AdminDashboard = () => {
         </div>
       )}
 
+      {/* Offer Modals */}
+      {showAddOffer && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
+          <div className="bg-white rounded-[2.5rem] max-w-lg w-full p-10 shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center mb-8">
+              <h3 className="text-2xl font-black text-gray-900">Create New Offer</h3>
+              <button onClick={() => setShowAddOffer(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <XCircle size={24} className="text-gray-400" />
+              </button>
+            </div>
+            <form onSubmit={handleAddOffer} className="space-y-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Select Product</label>
+                  <select
+                    className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-amber-500 outline-none transition-all"
+                    value={newOffer.productId}
+                    onChange={e => setNewOffer({...newOffer, productId: e.target.value})}
+                    required
+                  >
+                    <option value="">Choose a product...</option>
+                    {(products || []).map((p: any) => (
+                      <option key={p.id} value={p.id}>{p.name} (Stock: {p.stock})</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Offer Price</label>
+                    <input
+                      type="number"
+                      className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-amber-500 outline-none transition-all"
+                      value={newOffer.offerPrice}
+                      onChange={e => setNewOffer({...newOffer, offerPrice: e.target.value})}
+                      placeholder="e.g. 500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Min Quantity</label>
+                    <input
+                      type="number"
+                      className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-amber-500 outline-none transition-all"
+                      value={newOffer.minimumQuantity}
+                      onChange={e => setNewOffer({...newOffer, minimumQuantity: parseInt(e.target.value) || 1})}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                  <div>
+                    <span className="font-bold text-gray-700 block">Lock Quantity</span>
+                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">User cannot change quantity</span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={newOffer.isQuantityLocked}
+                      onChange={(e) => setNewOffer({...newOffer, isQuantityLocked: e.target.checked})}
+                    />
+                    <div className="w-12 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                  </label>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Offer Description</label>
+                  <textarea
+                    className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-amber-500 outline-none transition-all h-24"
+                    value={newOffer.description}
+                    onChange={e => setNewOffer({...newOffer, description: e.target.value})}
+                    placeholder="Describe the offer details..."
+                  />
+                </div>
+              </div>
+              <div className="flex gap-4 pt-4">
+                <button type="button" onClick={() => setShowAddOffer(false)} className="flex-1 py-4 bg-gray-100 text-gray-600 rounded-2xl font-black hover:bg-gray-200 transition-all">Cancel</button>
+                <button type="submit" className="flex-1 py-4 bg-amber-500 text-white rounded-2xl font-black shadow-xl shadow-amber-100 hover:bg-amber-600 transition-all">Create Offer</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEditOffer && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
+          <div className="bg-white rounded-[2.5rem] max-w-lg w-full p-10 shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center mb-8">
+              <h3 className="text-2xl font-black text-gray-900">Edit Offer</h3>
+              <button onClick={() => setShowEditOffer(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <XCircle size={24} className="text-gray-400" />
+              </button>
+            </div>
+            <form onSubmit={handleUpdateOffer} className="space-y-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Product</label>
+                  <select
+                    className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-amber-500 outline-none transition-all"
+                    value={editingOffer?.product?.id}
+                    onChange={e => setEditingOffer({...editingOffer, productId: e.target.value})}
+                    required
+                  >
+                    {(products || []).map((p: any) => (
+                      <option key={p.id} value={p.id}>{p.name} (Stock: {p.stock})</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Offer Price</label>
+                    <input
+                      type="number"
+                      className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-amber-500 outline-none transition-all"
+                      value={editingOffer?.offerPrice}
+                      onChange={e => setEditingOffer({...editingOffer, offerPrice: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Min Quantity</label>
+                    <input
+                      type="number"
+                      className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-amber-500 outline-none transition-all"
+                      value={editingOffer?.minimumQuantity}
+                      onChange={e => setEditingOffer({...editingOffer, minimumQuantity: parseInt(e.target.value) || 1})}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                  <div>
+                    <span className="font-bold text-gray-700 block">Lock Quantity</span>
+                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">User cannot change quantity</span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={editingOffer?.quantityLocked}
+                      onChange={(e) => setEditingOffer({...editingOffer, isQuantityLocked: e.target.checked})}
+                    />
+                    <div className="w-12 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                  </label>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                  <span className="font-bold text-gray-700">Active Status</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={editingOffer?.active}
+                      onChange={(e) => setEditingOffer({...editingOffer, isActive: e.target.checked})}
+                    />
+                    <div className="w-12 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                  </label>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Offer Description</label>
+                  <textarea
+                    className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-amber-500 outline-none transition-all h-24"
+                    value={editingOffer?.description}
+                    onChange={e => setEditingOffer({...editingOffer, description: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-4 pt-4">
+                <button type="button" onClick={() => setShowEditOffer(false)} className="flex-1 py-4 bg-gray-100 text-gray-600 rounded-2xl font-black hover:bg-gray-200 transition-all">Cancel</button>
+                <button type="submit" className="flex-1 py-4 bg-amber-500 text-white rounded-2xl font-black shadow-xl shadow-amber-100 hover:bg-amber-600 transition-all">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Banner Modals */}
       {showAddBanner && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
@@ -3614,6 +3946,79 @@ const AdminDashboard = () => {
                     </div>
                   )}
                 </div>
+
+                <div className="pt-4 border-t border-gray-100">
+                  <div className="flex items-center justify-between p-4 bg-primary-50 rounded-2xl border border-primary-100">
+                    <div>
+                      <span className="font-black text-primary-900 block">Enable "Buy Now" Button</span>
+                      <span className="text-[10px] text-primary-600 font-bold uppercase">Allow users to purchase directly from banner</span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={newBanner.buyEnabled}
+                        onChange={(e) => setNewBanner({...newBanner, buyEnabled: e.target.checked})}
+                      />
+                      <div className="w-12 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                    </label>
+                  </div>
+                </div>
+
+                {newBanner.buyEnabled && (
+                  <div className="space-y-4 animate-in slide-in-from-top-2 duration-200">
+                    <div>
+                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Link to Product</label>
+                      <select
+                        className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-primary-500 outline-none transition-all"
+                        value={newBanner.productId || ''}
+                        onChange={e => setNewBanner({...newBanner, productId: parseInt(e.target.value) || null})}
+                        required
+                      >
+                        <option value="">Select a product...</option>
+                        {(products || []).map((p: any) => (
+                          <option key={p.id} value={p.id}>{p.name} (Stock: {p.stock})</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Button Text</label>
+                        <input
+                          type="text"
+                          className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-primary-500 outline-none transition-all"
+                          value={newBanner.buttonText}
+                          onChange={e => setNewBanner({...newBanner, buttonText: e.target.value})}
+                          placeholder="e.g. Buy Now"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Min Quantity</label>
+                        <input
+                          type="number"
+                          className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-primary-500 outline-none transition-all"
+                          value={newBanner.minimumQuantity}
+                          onChange={e => setNewBanner({...newBanner, minimumQuantity: parseInt(e.target.value) || 1})}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                      <div>
+                        <span className="font-bold text-gray-700 block">Lock Quantity</span>
+                        <span className="text-[10px] text-gray-400 font-bold uppercase">User cannot change quantity in cart</span>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="sr-only peer"
+                          checked={newBanner.quantityLocked}
+                          onChange={(e) => setNewBanner({...newBanner, quantityLocked: e.target.checked})}
+                        />
+                        <div className="w-12 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                      </label>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="flex gap-4 pt-4">
                 <button type="button" onClick={() => setShowAddBanner(false)} className="flex-1 py-4 bg-gray-100 text-gray-600 rounded-2xl font-black hover:bg-gray-200 transition-all">Cancel</button>
@@ -3718,6 +4123,79 @@ const AdminDashboard = () => {
                     </div>
                   )}
                 </div>
+
+                <div className="pt-4 border-t border-gray-100">
+                  <div className="flex items-center justify-between p-4 bg-primary-50 rounded-2xl border border-primary-100">
+                    <div>
+                      <span className="font-black text-primary-900 block">Enable "Buy Now" Button</span>
+                      <span className="text-[10px] text-primary-600 font-bold uppercase">Allow users to purchase directly from banner</span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={editingBanner?.buyEnabled || false}
+                        onChange={(e) => setEditingBanner({...editingBanner, buyEnabled: e.target.checked})}
+                      />
+                      <div className="w-12 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                    </label>
+                  </div>
+                </div>
+
+                {editingBanner?.buyEnabled && (
+                  <div className="space-y-4 animate-in slide-in-from-top-2 duration-200">
+                    <div>
+                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Link to Product</label>
+                      <select
+                        className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-primary-500 outline-none transition-all"
+                        value={editingBanner?.productId || ''}
+                        onChange={e => setEditingBanner({...editingBanner, productId: parseInt(e.target.value) || null})}
+                        required
+                      >
+                        <option value="">Select a product...</option>
+                        {(products || []).map((p: any) => (
+                          <option key={p.id} value={p.id}>{p.name} (Stock: {p.stock})</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Button Text</label>
+                        <input
+                          type="text"
+                          className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-primary-500 outline-none transition-all"
+                          value={editingBanner?.buttonText || 'Buy Now'}
+                          onChange={e => setEditingBanner({...editingBanner, buttonText: e.target.value})}
+                          placeholder="e.g. Buy Now"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Min Quantity</label>
+                        <input
+                          type="number"
+                          className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-primary-500 outline-none transition-all"
+                          value={editingBanner?.minimumQuantity || 1}
+                          onChange={e => setEditingBanner({...editingBanner, minimumQuantity: parseInt(e.target.value) || 1})}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                      <div>
+                        <span className="font-bold text-gray-700 block">Lock Quantity</span>
+                        <span className="text-[10px] text-gray-400 font-bold uppercase">User cannot change quantity in cart</span>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="sr-only peer"
+                          checked={editingBanner?.quantityLocked || false}
+                          onChange={(e) => setEditingBanner({...editingBanner, quantityLocked: e.target.checked})}
+                        />
+                        <div className="w-12 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                      </label>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="flex gap-4 pt-4">
                 <button type="button" onClick={() => setShowEditBanner(false)} className="flex-1 py-4 bg-gray-100 text-gray-600 rounded-2xl font-black hover:bg-gray-200 transition-all">Cancel</button>
@@ -3983,14 +4461,42 @@ const AdminDashboard = () => {
                 {newProduct.imagePath && <p className="text-xs text-blue-600 mt-1">Image uploaded!</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Product Image URL (Optional)</label>
-                <input
-                  type="text"
-                  className="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                  value={newProduct.imagePath || ''}
-                  onChange={e => setNewProduct({...newProduct, imagePath: e.target.value})}
-                  placeholder="https://example.com/image.jpg"
-                />
+                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Product Images (URLs)</label>
+                <div className="space-y-3">
+                  {newProduct.imageUrls.map((url, index) => (
+                    <div key={index} className="flex gap-2">
+                      <input
+                        type="url"
+                        className="flex-1 border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-primary-500 outline-none text-sm font-medium"
+                        value={url}
+                        onChange={(e) => {
+                          const newUrls = [...newProduct.imageUrls];
+                          newUrls[index] = e.target.value;
+                          setNewProduct({ ...newProduct, imageUrls: newUrls });
+                        }}
+                        placeholder="https://example.com/image.jpg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newUrls = newProduct.imageUrls.filter((_, i) => i !== index);
+                          setNewProduct({ ...newProduct, imageUrls: newUrls });
+                        }}
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setNewProduct({ ...newProduct, imageUrls: [...newProduct.imageUrls, ''] })}
+                    className="flex items-center gap-2 text-xs font-black text-primary-600 hover:text-primary-700 transition uppercase tracking-widest bg-primary-50 px-4 py-2 rounded-xl border border-primary-100"
+                  >
+                    <Plus size={16} />
+                    Add Image URL
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Description</label>
@@ -4183,14 +4689,42 @@ const AdminDashboard = () => {
                 {editingProduct.imagePath && <p className="text-xs text-blue-600 mt-1">Image uploaded!</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Product Image URL (Optional)</label>
-                <input
-                  type="text"
-                  className="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                  value={editingProduct.imagePath || ''}
-                  onChange={e => setEditingProduct({...editingProduct, imagePath: e.target.value})}
-                  placeholder="https://example.com/image.jpg"
-                />
+                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Product Images (URLs)</label>
+                <div className="space-y-3">
+                  {(editingProduct.imageUrls || []).map((url: string, index: number) => (
+                    <div key={index} className="flex gap-2">
+                      <input
+                        type="url"
+                        className="flex-1 border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-primary-500 outline-none text-sm font-medium"
+                        value={url}
+                        onChange={(e) => {
+                          const newUrls = [...(editingProduct.imageUrls || [])];
+                          newUrls[index] = e.target.value;
+                          setEditingProduct({ ...editingProduct, imageUrls: newUrls });
+                        }}
+                        placeholder="https://example.com/image.jpg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newUrls = (editingProduct.imageUrls || []).filter((_: any, i: number) => i !== index);
+                          setEditingProduct({ ...editingProduct, imageUrls: newUrls });
+                        }}
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setEditingProduct({ ...editingProduct, imageUrls: [...(editingProduct.imageUrls || []), ''] })}
+                    className="flex items-center gap-2 text-xs font-black text-primary-600 hover:text-primary-700 transition uppercase tracking-widest bg-primary-50 px-4 py-2 rounded-xl border border-primary-100"
+                  >
+                    <Plus size={16} />
+                    Add Image URL
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Description</label>

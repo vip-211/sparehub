@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api, { API_BASE_URL } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { 
@@ -16,7 +16,14 @@ import {
   Bell,
   Menu,
   Settings,
-  Plus
+  Plus,
+  ShoppingCart,
+  Zap,
+  Mic,
+  QrCode,
+  Star,
+  ArrowRight,
+  MessageSquare
 } from 'lucide-react';
 import Skeleton from '../components/Skeleton';
 import { 
@@ -33,6 +40,7 @@ import {
 import useSound from 'use-sound';
 import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
+import { useCart } from '../context/CartContext';
 
 const MobileDashboard = () => {
   const { tp } = useLanguage();
@@ -42,7 +50,11 @@ const MobileDashboard = () => {
   const [layout, setLayout] = useState<string[]>([]);
   const [hotDeals, setHotDeals] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [banners, setBanners] = useState<any[]>([]);
+  const [carouselInfo, setCarouselInfo] = useState({ isCarousel: false, autoScrollSpeed: 3 });
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [searchFocused, setSearchFocused] = useState(false);
 
   const [playNotification] = useSound('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
@@ -51,7 +63,7 @@ const MobileDashboard = () => {
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
-      const [ordersRes, usersRes, productsRes, salesRes, titleRes, bannerRes, btnRes, layoutRes, catRes, featuredRes] = await Promise.all([
+      const [ordersRes, usersRes, productsRes, salesRes, titleRes, bannerRes, btnRes, layoutRes, catRes, featuredRes, bannersRes] = await Promise.all([
         api.get('admin/orders'),
         api.get('admin/users'),
         api.get('products'),
@@ -61,7 +73,8 @@ const MobileDashboard = () => {
         api.get('cms/settings/mechanic_banner_btn'),
         api.get('cms/settings/mechanic_home_layout'),
         api.get('categories'),
-        api.get('products/featured')
+        api.get('products/featured'),
+        api.get('banners/active')
       ]);
 
       const orders = ordersRes.data || [];
@@ -82,9 +95,17 @@ const MobileDashboard = () => {
         banner: bannerRes.data.value || '',
         btn: btnRes.data.value || 'Buy Now'
       });
-      setLayout((layoutRes.data.value || 'header,search_bar,categories,banner,hot_deals').split(',').filter(Boolean));
+      setLayout((layoutRes.data.value || 'header,search_bar,categories,banner,hot_deals,recent_orders').split(',').filter(Boolean));
       setCategories((catRes.data || []).filter((c: any) => c.showOnHome !== false));
       setHotDeals(featuredRes.data || []);
+      
+      if (bannersRes.data) {
+        setBanners(bannersRes.data.banners || []);
+        setCarouselInfo({
+          isCarousel: bannersRes.data.isCarousel,
+          autoScrollSpeed: bannersRes.data.autoScrollSpeed
+        });
+      }
     } catch (err) {
       console.error("Failed to fetch dashboard data:", err);
     } finally {
@@ -97,6 +118,56 @@ const MobileDashboard = () => {
   }, [fetchDashboardData]);
 
   useEffect(() => {
+    if (!carouselInfo.isCarousel || banners.length <= 1) return;
+    
+    const timer = setInterval(() => {
+      setCurrentBannerIndex((prev) => (prev + 1) % banners.length);
+    }, carouselInfo.autoScrollSpeed * 1000);
+    
+    return () => clearInterval(timer);
+  }, [carouselInfo.isCarousel, carouselInfo.autoScrollSpeed, banners.length]);
+
+  const { addItem } = useCart();
+
+  const handleBannerBuyClick = async (banner: any) => {
+    if (!banner.productId) return;
+    try {
+      const res = await api.get(`products/${banner.productId}`);
+      const product = res.data;
+      if (product && product.stock > 0) {
+        addItem(
+          {
+            productId: product.id,
+            name: product.name,
+            price: banner.fixedPrice || product.sellingPrice,
+            partNumber: product.partNumber,
+            wholesalerId: product.wholesalerId
+          },
+          banner.minimumQuantity || 1,
+          banner.quantityLocked,
+          banner.id
+        );
+        alert(`${product.name} added to cart!`);
+      } else {
+        alert('Product out of stock');
+      }
+    } catch (err) {
+      console.error('Error in banner buy click:', err);
+    }
+  };
+
+  const handleQuickAdd = (p: any) => {
+    addItem({
+      productId: p.id,
+      name: p.name,
+      price: p.sellingPrice,
+      partNumber: p.partNumber,
+      wholesalerId: p.wholesalerId
+    }, 1);
+    alert(`${p.name} added to cart!`);
+  };
+
+  useEffect(() => {
     let stompClient: any = null;
     const getSocketUrl = () => {
       let baseUrl = API_BASE_URL.endsWith('/api/') 
@@ -106,10 +177,6 @@ const MobileDashboard = () => {
           : API_BASE_URL.endsWith('/')
             ? API_BASE_URL.substring(0, API_BASE_URL.length - 1)
             : API_BASE_URL;
-      
-      // If using https, we should use wss for pure WebSocket
-      // SockJS handles this automatically, but for pure WS we'd use:
-      // baseUrl.replace('http', 'ws') + '/ws'
       return `${baseUrl}/ws`;
     };
     
@@ -117,7 +184,7 @@ const MobileDashboard = () => {
       const socket = new SockJS(getSocketUrl());
       stompClient = Stomp.over(socket);
       stompClient.debug = () => {};
-      stompClient.reconnect_delay = 5000; // Auto-reconnect
+      stompClient.reconnect_delay = 5000;
 
       stompClient.connect({}, () => {
         stompClient.subscribe('/topic/orders', (message: any) => {
@@ -158,21 +225,16 @@ const MobileDashboard = () => {
   const getCategoryIcon = (cat: any) => {
     if (cat.imagePath || cat.imageLink) {
       return (
-        <img 
-          src={getImageUrl(cat.imagePath || cat.imageLink)} 
-          alt={cat.name} 
-          className="w-10 h-10 rounded-full object-cover mb-2" 
-        />
+        <div className="w-12 h-12 rounded-2xl bg-primary-50 p-2 group-hover:scale-110 transition-transform duration-300">
+          <img 
+            src={getImageUrl(cat.imagePath || cat.imageLink)} 
+            alt={cat.name} 
+            className="w-full h-full object-contain" 
+          />
+        </div>
       );
     }
-    if (cat.iconCodePoint) {
-      return (
-        <span className="material-icons text-[32px] mb-2 text-primary-600">
-          {String.fromCharCode(cat.iconCodePoint)}
-        </span>
-      );
-    }
-    return <Package className="mb-2 text-primary-600" size={32} />;
+    return <Package className="mb-2 text-primary-600 group-hover:scale-110 transition-transform duration-300" size={32} />;
   };
 
   const getImageUrl = (path: string) => {
@@ -184,208 +246,337 @@ const MobileDashboard = () => {
 
   if (loading) {
     return (
-      <div className="p-4 space-y-6 animate-pulse">
-        <div className="h-8 w-48 bg-gray-200 rounded-lg mb-6"></div>
-        <div className="grid grid-cols-2 gap-4">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="h-24 bg-gray-100 rounded-2xl"></div>
+      <div className="p-8 max-w-7xl mx-auto space-y-10 animate-pulse">
+        <div className="flex justify-between items-center">
+          <div className="space-y-2">
+            <div className="h-10 w-64 bg-gray-200 rounded-xl"></div>
+            <div className="h-4 w-40 bg-gray-100 rounded-lg"></div>
+          </div>
+          <div className="h-12 w-12 bg-gray-200 rounded-2xl"></div>
+        </div>
+        <div className="h-16 w-full bg-gray-100 rounded-[2rem]"></div>
+        <div className="flex gap-4 overflow-hidden">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="h-24 w-24 flex-shrink-0 bg-gray-100 rounded-3xl"></div>
           ))}
         </div>
-        <div className="h-64 bg-gray-100 rounded-2xl"></div>
-        <div className="h-48 bg-gray-100 rounded-2xl"></div>
+        <div className="h-64 w-full bg-gray-100 rounded-[3rem]"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/50 p-6 md:p-8 space-y-8 pb-32">
-      {/* Dynamic Layout Rendering */}
-      {layout.map((section) => {
-        switch (section) {
-          case 'header':
-            return (
-              <div key="header" className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-3xl font-black text-gray-900 tracking-tight">{cms.title}</h1>
-                  <p className="text-gray-500 text-sm font-bold uppercase tracking-widest mt-1">Dashboard Overview</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <button className="p-3 bg-white rounded-2xl shadow-sm border border-gray-100 text-gray-400 hover:text-primary-600 transition-all relative">
-                    <Bell size={24} />
-                    <span className="absolute top-3 right-3 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-                  </button>
-                  <button className="p-3 bg-white rounded-2xl shadow-sm border border-gray-100 text-gray-400 hover:text-primary-600 transition-all md:hidden">
-                    <Menu size={24} />
-                  </button>
-                </div>
-              </div>
-            );
-          case 'search_bar':
-            return (
-              <div key="search_bar" className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                <input 
-                  type="text" 
-                  placeholder={tp('dashboard.searchPlaceholder')}
-                  className="w-full bg-white border-2 border-gray-100 rounded-[2rem] pl-12 pr-6 py-4 font-bold text-gray-700 focus:border-primary-500 outline-none transition-all shadow-sm"
-                />
-              </div>
-            );
-          case 'categories':
-            return (
-              <div key="categories" className="space-y-4">
-                <h3 className="font-black text-gray-900 text-lg uppercase tracking-tight px-2">Bike Brands</h3>
-                <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
-                  {categories.map((cat) => (
-                    <div key={cat.id} className="flex-shrink-0 flex flex-col items-center justify-center w-24 h-24 bg-white rounded-3xl border border-gray-100 shadow-sm hover:border-primary-200 transition-all cursor-pointer">
-                      {getCategoryIcon(cat)}
-                      <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest text-center px-1 truncate w-full">{cat.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          case 'banner':
-            return (
-              <div key="banner" className="bg-gradient-to-br from-primary-600 to-indigo-700 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl shadow-primary-200">
-                <div className="relative z-10 space-y-4">
-                  <h2 className="text-2xl font-black leading-tight max-w-[200px] whitespace-pre-line">{cms.banner}</h2>
-                  <button className="bg-yellow-400 text-black px-6 py-2.5 rounded-full font-black text-sm uppercase tracking-widest shadow-lg active:scale-95 transition-all">
-                    {cms.btn}
-                  </button>
-                </div>
-                <div className="absolute -right-8 -bottom-8 opacity-20 transform -rotate-12 scale-150">
-                  <ShoppingBag size={160} />
-                </div>
-              </div>
-            );
-          case 'hot_deals':
-            return (
-              <div key="hot_deals" className="space-y-4">
-                <h3 className="font-black text-gray-900 text-lg uppercase tracking-tight px-2">Hot Deals ⚡</h3>
-                <div className="flex gap-6 overflow-x-auto pb-6 no-scrollbar">
-                  {hotDeals.map((deal) => (
-                    <div key={deal.id} className="flex-shrink-0 w-48 bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden group cursor-pointer hover:shadow-md transition-all">
-                      <div className="h-40 bg-gray-50 relative overflow-hidden">
-                        <img 
-                          src={getImageUrl(deal.imageLink || deal.imagePath)} 
-                          alt={deal.name}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
-                        />
-                        <div className="absolute top-3 left-3 bg-red-500 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg">Hot</div>
+    <div className="min-h-screen bg-[#F8FAFC] pb-32">
+      {/* Sticky Search Bar */}
+      <div className={`sticky top-0 z-50 transition-all duration-300 ${searchFocused ? 'bg-white/80 backdrop-blur-xl py-4 shadow-lg shadow-gray-100' : 'bg-transparent py-6'}`}>
+        <div className="max-w-7xl mx-auto px-6 md:px-8">
+          <div className="relative group">
+            <Search className={`absolute left-6 top-1/2 -translate-y-1/2 transition-colors ${searchFocused ? 'text-primary-600' : 'text-gray-400'}`} size={22} />
+            <input 
+              type="text" 
+              placeholder="Search spare parts, brands, or part numbers..."
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setSearchFocused(false)}
+              className="w-full bg-white border-2 border-gray-100 rounded-[2.5rem] pl-16 pr-24 py-5 font-bold text-gray-700 focus:border-primary-500 focus:ring-4 focus:ring-primary-50 focus:shadow-xl outline-none transition-all"
+            />
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+              <button className="p-2.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-full transition-all">
+                <Mic size={20} />
+              </button>
+              <button className="p-2.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-full transition-all">
+                <QrCode size={20} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6 md:px-8 space-y-12">
+        {/* Dynamic Layout Rendering */}
+        {layout.map((section) => {
+          switch (section) {
+            case 'header':
+              return (
+                <div key="header" className="flex items-center justify-between">
+                  <div>
+                    <h1 className="text-4xl font-black text-gray-900 tracking-tight leading-none">{cms.title}</h1>
+                    <p className="text-gray-400 text-sm font-bold uppercase tracking-[0.2em] mt-3 ml-1">Welcome back, Mechanic!</p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <button className="p-4 bg-white rounded-3xl shadow-sm border border-gray-100 text-gray-400 hover:text-primary-600 hover:shadow-xl transition-all relative group">
+                      <Bell size={26} />
+                      <span className="absolute top-4 right-4 w-3 h-3 bg-red-500 rounded-full border-2 border-white shadow-sm animate-pulse"></span>
+                    </button>
+                    <div className="w-14 h-14 bg-white rounded-3xl shadow-sm border border-gray-100 p-1 group cursor-pointer hover:shadow-xl transition-all">
+                      <div className="w-full h-full bg-primary-100 rounded-2xl flex items-center justify-center text-primary-600 overflow-hidden">
+                        <Users size={28} />
                       </div>
-                      <div className="p-4 space-y-1">
-                        <h4 className="font-black text-gray-900 text-sm truncate">{deal.name}</h4>
-                        <p className="text-primary-600 font-black text-lg">₹{deal.sellingPrice.toLocaleString()}</p>
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-400 text-[10px] font-bold line-through">₹{deal.mrp.toLocaleString()}</span>
-                          <span className="text-green-500 text-[10px] font-black uppercase tracking-widest">{Math.round((1 - deal.sellingPrice/deal.mrp)*100)}% Off</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            case 'categories':
+              return (
+                <div key="categories" className="space-y-6">
+                  <div className="flex items-center justify-between px-2">
+                    <h3 className="font-black text-gray-900 text-xl tracking-tight">Bike Brands</h3>
+                    <button className="text-xs font-black text-primary-600 uppercase tracking-widest hover:bg-primary-50 px-4 py-2 rounded-xl transition-all">View All</button>
+                  </div>
+                  <div className="flex gap-6 overflow-x-auto pb-4 no-scrollbar">
+                    {categories.map((cat) => (
+                      <div key={cat.id} className="group flex-shrink-0 flex flex-col items-center justify-center w-28 h-32 bg-white rounded-[2.5rem] border border-gray-100 shadow-sm hover:border-primary-200 hover:shadow-xl hover:shadow-primary-50 transition-all cursor-pointer">
+                        {getCategoryIcon(cat)}
+                        <span className="mt-3 text-[11px] font-black text-gray-600 uppercase tracking-tighter text-center px-2 truncate w-full group-hover:text-primary-700">{cat.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            case 'banner':
+              const currentBanner = banners[currentBannerIndex] || { title: cms.title, text: cms.banner, buttonText: cms.btn };
+              return (
+                <div key="banner" className="space-y-4">
+                  <div className="bg-gradient-to-br from-primary-600 to-indigo-800 rounded-[3.5rem] p-10 md:p-14 text-white relative overflow-hidden shadow-2xl shadow-primary-100 min-h-[220px] transition-all duration-700">
+                    <div className="relative z-10 flex flex-col md:flex-row justify-between items-center h-full gap-8">
+                      <div className="space-y-6 flex-1 text-center md:text-left">
+                        <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full">
+                          <Zap size={14} className="text-yellow-400 fill-yellow-400" />
+                          <span className="text-[10px] font-black uppercase tracking-widest">Limited Offer</span>
+                        </div>
+                        <h2 className="text-3xl md:text-4xl font-black leading-[1.1] max-w-md whitespace-pre-line">
+                          {currentBanner.title || currentBanner.text || cms.banner}
+                        </h2>
+                        <div className="flex flex-wrap justify-center md:justify-start gap-4">
+                          {currentBanner.buyEnabled ? (
+                            <button 
+                              onClick={() => handleBannerBuyClick(currentBanner)}
+                              className="bg-yellow-400 text-black px-10 py-4 rounded-[1.5rem] font-black text-sm uppercase tracking-widest shadow-xl shadow-yellow-400/20 active:scale-95 hover:bg-yellow-300 transition-all flex items-center gap-3"
+                            >
+                              <ShoppingCart size={18} />
+                              {currentBanner.buttonText || 'Buy Now'}
+                            </button>
+                          ) : (
+                            <button className="bg-white text-primary-700 px-10 py-4 rounded-[1.5rem] font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 hover:bg-gray-50 transition-all">
+                              {cms.btn}
+                            </button>
+                          )}
+                          <button className="bg-white/10 backdrop-blur-md text-white border border-white/20 px-8 py-4 rounded-[1.5rem] font-black text-sm uppercase tracking-widest hover:bg-white/20 transition-all">
+                            Details
+                          </button>
                         </div>
                       </div>
+                      {(currentBanner.imageLink || currentBanner.imagePath) && (
+                        <div className="w-48 h-48 md:w-64 md:h-64 rounded-[3rem] overflow-hidden border-8 border-white/10 shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-500">
+                          <img 
+                            src={getImageUrl(currentBanner.imageLink || currentBanner.imagePath)} 
+                            alt="Banner" 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
                     </div>
-                  ))}
+                    <div className="absolute -right-16 -bottom-16 opacity-10 transform -rotate-12 scale-150 pointer-events-none">
+                      <ShoppingBag size={300} />
+                    </div>
+                  </div>
+                  {banners.length > 1 && (
+                    <div className="flex justify-center gap-3">
+                      {banners.map((_, idx) => (
+                        <div 
+                          key={idx}
+                          className={`h-2 rounded-full transition-all duration-500 ${idx === currentBannerIndex ? 'w-12 bg-primary-600' : 'w-2 bg-gray-200 hover:bg-gray-300'}`}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </div>
-            );
-          default:
-            return null;
-        }
-      })}
+              );
+            case 'hot_deals':
+              return (
+                <div key="hot_deals" className="space-y-6">
+                  <div className="flex items-center justify-between px-2">
+                    <h3 className="font-black text-gray-900 text-xl tracking-tight flex items-center gap-3">
+                      Hot Deals
+                      <span className="bg-red-500 text-white text-[10px] px-2 py-1 rounded-lg animate-pulse">LIVE</span>
+                    </h3>
+                    <button className="text-xs font-black text-primary-600 uppercase tracking-widest hover:bg-primary-50 px-4 py-2 rounded-xl transition-all">See All Deals</button>
+                  </div>
+                  <div className="flex gap-8 overflow-x-auto pb-8 no-scrollbar">
+                    {hotDeals.map((deal) => (
+                      <div key={deal.id} className="flex-shrink-0 w-64 bg-white rounded-[3rem] border border-gray-100 shadow-sm overflow-hidden group cursor-pointer hover:shadow-2xl hover:shadow-primary-100 transition-all duration-500">
+                        <div className="h-56 bg-gray-50 relative overflow-hidden">
+                          <img 
+                            src={getImageUrl(deal.imageLink || deal.imagePath)} 
+                            alt={deal.name}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                          />
+                          <div className="absolute top-5 left-5 bg-white/90 backdrop-blur-md text-red-600 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg flex items-center gap-2">
+                            <Zap size={12} className="fill-current" />
+                            Hot
+                          </div>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleQuickAdd(deal); }}
+                            className="absolute bottom-4 right-4 p-4 bg-primary-600 text-white rounded-2xl shadow-xl shadow-primary-200 transform translate-y-20 group-hover:translate-y-0 transition-transform duration-500"
+                          >
+                            <Plus size={24} />
+                          </button>
+                        </div>
+                        <div className="p-8 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{deal.categoryName || 'Spare Part'}</span>
+                            <div className="flex items-center gap-1 text-amber-500">
+                              <Star size={12} className="fill-current" />
+                              <span className="text-[10px] font-black">4.8</span>
+                            </div>
+                          </div>
+                          <h4 className="font-black text-gray-900 text-lg truncate leading-tight">{deal.name}</h4>
+                          <div className="flex items-end justify-between">
+                            <div className="space-y-1">
+                              <p className="text-primary-600 font-black text-2xl leading-none">₹{deal.sellingPrice.toLocaleString()}</p>
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-400 text-xs font-bold line-through">₹{deal.mrp.toLocaleString()}</span>
+                                <span className="text-green-500 text-[10px] font-black uppercase tracking-widest">{Math.round((1 - deal.sellingPrice/deal.mrp)*100)}% Off</span>
+                              </div>
+                            </div>
+                            <div className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full ${deal.stock > 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                              {deal.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            case 'recent_orders':
+              return (
+                <div key="recent_orders" className="space-y-6">
+                  <div className="flex items-center justify-between px-2">
+                    <h3 className="font-black text-gray-900 text-xl tracking-tight">Recent Orders</h3>
+                    <button className="text-xs font-black text-primary-600 uppercase tracking-widest hover:bg-primary-50 px-4 py-2 rounded-xl transition-all">Track All</button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {(recentOrders || []).map((order) => (
+                      <div key={order.id} className="flex items-center justify-between p-6 bg-white border border-gray-100 rounded-[2.5rem] shadow-sm hover:shadow-xl hover:shadow-gray-100 transition-all duration-500 group cursor-pointer">
+                        <div className="flex items-center gap-5">
+                          <div className={`p-4 rounded-[1.5rem] transition-colors ${
+                            order.status === 'DELIVERED' ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'
+                          }`}>
+                            {order.status === 'DELIVERED' ? <CheckCircle size={24} /> : <Clock size={24} />}
+                          </div>
+                          <div>
+                            <p className="font-black text-gray-900 text-base">Order #{order.id}</p>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
+                              {new Date(order.orderDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })} • {order.items?.length || 0} Items
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right flex items-center gap-4">
+                          <div>
+                            <p className="font-black text-gray-900 text-lg">₹{(order.totalAmount || 0).toLocaleString()}</p>
+                            <p className={`text-[9px] font-black uppercase tracking-widest mt-1 ${order.status === 'DELIVERED' ? 'text-green-500' : 'text-amber-500'}`}>{order.status}</p>
+                          </div>
+                          <div className="p-2 bg-gray-50 rounded-xl text-gray-400 group-hover:bg-primary-600 group-hover:text-white group-hover:translate-x-1 transition-all">
+                            <ChevronRight size={20} />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            default:
+              return null;
+          }
+        })}
 
-      {/* Sales Chart */}
-      <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="font-black text-gray-900 text-lg uppercase tracking-tight">Sales Analytics</h3>
-          <select
-            className="text-xs font-bold text-gray-500 bg-gray-50 border-none rounded-lg px-2 py-1 outline-none"
-            value={period}
-            onChange={(e) => setPeriod(e.target.value as any)}
-          >
-            <option value="DAILY">Daily</option>
-            <option value="WEEKLY">Weekly</option>
-            <option value="MONTHLY">Monthly</option>
-          </select>
-        </div>
-        <div className="h-64 w-full" style={{ minHeight: '256px', position: 'relative', overflow: 'hidden' }}>
-          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.1}/>
-                  <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis 
-                dataKey="name" 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{fontSize: 10, fontWeight: 700, fill: '#94a3b8'}}
-                dy={10}
-              />
-              <YAxis hide />
-              <Tooltip 
-                contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}}
-                itemStyle={{fontSize: '12px', fontWeight: 900}}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="sales" 
-                stroke="#4f46e5" 
-                strokeWidth={4}
-                fillOpacity={1} 
-                fill="url(#colorSales)" 
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Recent Activity */}
-      <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="font-black text-gray-900 text-lg uppercase tracking-tight">Recent Orders</h3>
-          <button className="text-xs font-bold text-primary-600 uppercase tracking-widest hover:underline">View All</button>
-        </div>
-        <div className="space-y-4">
-          {(recentOrders || []).map((order) => (
-            <div key={order.id} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl hover:bg-gray-50 transition group cursor-pointer">
-              <div className="flex items-center gap-4">
-                <div className={`p-3 rounded-xl ${
-                  order.status === 'DELIVERED' ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'
-                }`}>
-                  {order.status === 'DELIVERED' ? <CheckCircle size={20} /> : <Clock size={20} />}
-                </div>
-                <div>
-                  <p className="font-black text-gray-900 text-sm">#{order.id} - {order.customerName}</p>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                    {new Date(order.orderDate).toLocaleDateString()} • {order.items?.length || 0} Items
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="font-black text-gray-900 text-sm">₹{(order.totalAmount || 0).toLocaleString()}</p>
-                <div className="flex items-center justify-end text-primary-600 group-hover:translate-x-1 transition-transform">
-                  <ChevronRight size={16} />
-                </div>
-              </div>
+        {/* Analytics Section - Refined */}
+        <div className="bg-white p-10 rounded-[3.5rem] shadow-sm border border-gray-100 mb-12">
+          <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-6">
+            <div>
+              <h3 className="font-black text-gray-900 text-2xl tracking-tight">Sales Performance</h3>
+              <p className="text-gray-400 text-sm font-bold uppercase tracking-widest mt-1">Real-time revenue tracking</p>
             </div>
-          ))}
+            <div className="flex items-center bg-gray-50 p-1.5 rounded-[1.5rem] border border-gray-100">
+              {(['DAILY', 'WEEKLY', 'MONTHLY'] as const).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPeriod(p)}
+                  className={`px-6 py-2.5 rounded-[1.2rem] text-[10px] font-black uppercase tracking-widest transition-all ${
+                    period === p ? 'bg-white text-primary-600 shadow-md' : 'text-gray-400 hover:text-gray-600'
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="h-[350px] w-full relative">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.15}/>
+                    <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f8fafc" />
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{fontSize: 11, fontWeight: 800, fill: '#cbd5e1'}}
+                  dy={15}
+                />
+                <YAxis hide />
+                <Tooltip 
+                  cursor={{ stroke: '#4f46e5', strokeWidth: 2, strokeDasharray: '5 5' }}
+                  contentStyle={{borderRadius: '24px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '16px 20px'}}
+                  itemStyle={{fontSize: '14px', fontWeight: 900, color: '#4f46e5'}}
+                  labelStyle={{fontSize: '10px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px'}}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="sales" 
+                  stroke="#4f46e5" 
+                  strokeWidth={5}
+                  fillOpacity={1} 
+                  fill="url(#colorSales)" 
+                  animationDuration={2000}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
-      {/* Quick Action FAB - Bottom Nav Style for Mobile */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center bg-white/80 backdrop-blur-xl border border-white/20 shadow-2xl rounded-full px-6 py-3 gap-8 z-50 md:hidden">
-        <button className="text-primary-600"><BarChart2 size={24} /></button>
-        <button className="text-gray-400 hover:text-primary-600 transition"><ShoppingBag size={24} /></button>
-        <div className="w-12 h-12 bg-primary-600 rounded-full flex items-center justify-center text-white shadow-lg shadow-primary-200 -mt-10">
-          <Plus size={28} />
+      {/* WhatsApp Quick Order Button */}
+      <a 
+        href="https://wa.me/91XXXXXXXXXX?text=I want to order some spare parts" 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className="fixed right-6 bottom-32 z-50 p-4 bg-[#25D366] text-white rounded-full shadow-2xl shadow-green-200 hover:scale-110 active:scale-95 transition-all animate-bounce"
+        title="Quick Order via WhatsApp"
+      >
+        <MessageSquare size={28} fill="currentColor" />
+      </a>
+
+      {/* Quick Action Bottom Nav - Modern Glassmorphism */}
+      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center bg-white/70 backdrop-blur-2xl border border-white/40 shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-[2.5rem] px-8 py-4 gap-10 z-50 transition-transform hover:scale-[1.02]">
+        <button className="text-primary-600 transition-transform active:scale-90" title="Dashboard"><BarChart2 size={26} /></button>
+        <button className="text-gray-400 hover:text-primary-600 transition-all active:scale-90" title="Shop"><ShoppingBag size={26} /></button>
+        <div className="relative -mt-14">
+          <div className="absolute inset-0 bg-primary-600 rounded-3xl blur-2xl opacity-30 animate-pulse"></div>
+          <button className="w-16 h-16 bg-primary-600 rounded-3xl flex items-center justify-center text-white shadow-2xl shadow-primary-200 relative z-10 active:scale-90 transition-transform" title="Quick Add">
+            <Plus size={32} strokeWidth={3} />
+          </button>
         </div>
-        <button className="text-gray-400 hover:text-primary-600 transition"><Users size={24} /></button>
-        <button className="text-gray-400 hover:text-primary-600 transition"><Settings size={24} /></button>
+        <button className="text-gray-400 hover:text-primary-600 transition-all active:scale-90" title="Cart"><ShoppingCart size={26} /></button>
+        <button className="text-gray-400 hover:text-primary-600 transition-all active:scale-90" title="Settings"><Settings size={26} /></button>
       </div>
     </div>
   );
 };
 
 export default MobileDashboard;
+

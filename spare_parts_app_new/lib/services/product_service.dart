@@ -408,6 +408,19 @@ class ProductService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getActiveOffers() async {
+    try {
+      if (Constants.useRemote) {
+        final list = await _remote.getList('/offers/active');
+        return list.map((e) => e as Map<String, dynamic>).toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Get active offers error: $e');
+      return [];
+    }
+  }
+
   Future<List<Product>> getProductsByCategory(int categoryId,
       {int page = 0, int size = 20}) async {
     try {

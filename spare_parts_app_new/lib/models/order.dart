@@ -4,6 +4,9 @@ class OrderItem {
   final int quantity;
   final double price;
   final int? minQty;
+  final bool isLocked;
+  final int? bannerId;
+  final int? offerId;
 
   OrderItem({
     required this.productId,
@@ -11,6 +14,9 @@ class OrderItem {
     required this.quantity,
     required this.price,
     this.minQty,
+    this.isLocked = false,
+    this.bannerId,
+    this.offerId,
   });
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
@@ -20,6 +26,9 @@ class OrderItem {
       quantity: json['quantity'],
       price: (json['price'] as num).toDouble(),
       minQty: (json['minQty'] as num?)?.toInt(),
+      isLocked: json['isLocked'] ?? false,
+      bannerId: json['bannerId'],
+      offerId: json['offerId'],
     );
   }
 
@@ -30,6 +39,9 @@ class OrderItem {
       'quantity': quantity,
       'price': price,
       'minQty': minQty,
+      'isLocked': isLocked,
+      'bannerId': bannerId,
+      'offerId': offerId,
     };
   }
 }

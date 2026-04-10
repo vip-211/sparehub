@@ -9,6 +9,8 @@ import com.spareparts.inventory.repository.OrderRequestRepository;
 import com.spareparts.inventory.repository.ProductRepository;
 import com.spareparts.inventory.repository.UserRepository;
 import com.spareparts.inventory.repository.SystemSettingRepository;
+import com.spareparts.inventory.repository.BannerRepository;
+import com.spareparts.inventory.repository.OfferRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +39,12 @@ public class OrderService {
 
     @Autowired
     private OrderRequestRepository orderRequestRepository;
+    
+    @Autowired
+    private BannerRepository bannerRepository;
+    
+    @Autowired
+    private OfferRepository offerRepository;
     
     @Autowired
     private FcmService fcmService;
@@ -150,16 +158,46 @@ public class OrderService {
             Product product = productRepository.findById(itemDto.getProductId())
                     .orElseThrow(() -> new RuntimeException("Product not found: " + itemDto.getProductId()));
 
-            if (product.getStock() < itemDto.getQuantity()) {
-                log.error("Insufficient stock for {}. Available: {}, Requested: {}", product.getName(), product.getStock(), itemDto.getQuantity());
+            int quantity = itemDto.getQuantity() != null ? itemDto.getQuantity() : 0;
+            
+            // Banner validation
+            if (itemDto.getBannerId() != null) {
+                Banner banner = bannerRepository.findById(itemDto.getBannerId())
+                        .orElseThrow(() -> new RuntimeException("Banner not found: " + itemDto.getBannerId()));
+                
+                if (banner.isBuyEnabled() && banner.getProductId().equals(product.getId())) {
+                    if (banner.isQuantityLocked() && quantity != banner.getMinimumQuantity()) {
+                        throw new RuntimeException("Banner offer requires exactly " + banner.getMinimumQuantity() + " units for " + product.getName());
+                    }
+                    if (quantity < banner.getMinimumQuantity()) {
+                        throw new RuntimeException("Banner offer requires minimum " + banner.getMinimumQuantity() + " units for " + product.getName());
+                    }
+                }
+            }
+
+            // Offer validation
+            if (itemDto.getOfferId() != null) {
+                Offer offer = offerRepository.findById(itemDto.getOfferId())
+                        .orElseThrow(() -> new RuntimeException("Offer not found: " + itemDto.getOfferId()));
+                
+                if (offer.isActive() && offer.getProduct().getId().equals(product.getId())) {
+                    if (offer.isQuantityLocked() && quantity != offer.getMinimumQuantity()) {
+                        throw new RuntimeException("Offer requires exactly " + offer.getMinimumQuantity() + " units for " + product.getName());
+                    }
+                    if (quantity < offer.getMinimumQuantity()) {
+                        throw new RuntimeException("Offer requires minimum " + offer.getMinimumQuantity() + " units for " + product.getName());
+                    }
+                }
+            }
+
+            if (product.getStock() < quantity) {
+                log.error("Insufficient stock for {}. Available: {}, Requested: {}", product.getName(), product.getStock(), quantity);
                 throw new RuntimeException("Insufficient stock for product: " + product.getName() + " (Available: " + product.getStock() + ")");
             }
 
             OrderItem orderItem = new OrderItem();
             orderItem.setOrder(order);
             orderItem.setProduct(product);
-            
-            int quantity = itemDto.getQuantity() != null ? itemDto.getQuantity() : 0;
             orderItem.setQuantity(quantity);
             
             // Determine price based on customer role

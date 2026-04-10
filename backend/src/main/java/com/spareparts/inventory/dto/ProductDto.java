@@ -41,7 +41,7 @@ public class ProductDto {
     
     private String imagePath;
     private String imageLink;
-    private java.util.List<String> imageLinks;
+    private java.util.List<String> imageUrls;
     private Integer minOrderQty;
     private boolean isFeatured;
     private String description;

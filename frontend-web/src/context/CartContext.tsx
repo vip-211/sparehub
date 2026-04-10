@@ -7,11 +7,14 @@ type CartItem = {
   partNumber?: string;
   quantity: number;
   wholesalerId?: number;
+  isLocked?: boolean;
+  bannerId?: number;
+  offerId?: number;
 };
 
 type CartContextValue = {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, 'quantity'>, qty?: number) => void;
+  addItem: (item: Omit<CartItem, 'quantity' | 'isLocked' | 'bannerId' | 'offerId'>, qty?: number, isLocked?: boolean, bannerId?: number, offerId?: number) => void;
   removeItem: (productId: number) => void;
   updateQty: (productId: number, qty: number) => void;
   clear: () => void;
@@ -37,15 +40,16 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {}
   }, [items]);
 
-  const addItem = (item: Omit<CartItem, 'quantity'>, qty: number = 1) => {
+  const addItem = (item: Omit<CartItem, 'quantity' | 'isLocked' | 'bannerId' | 'offerId'>, qty: number = 1, isLocked: boolean = false, bannerId?: number, offerId?: number) => {
     setItems((prev) => {
       const idx = prev.findIndex((p) => p.productId === item.productId);
       if (idx >= 0) {
+        if (prev[idx].isLocked) return prev; // Prevent updating locked items
         const next = [...prev];
         next[idx] = { ...next[idx], quantity: next[idx].quantity + qty };
         return next;
       }
-      return [...prev, { ...item, quantity: qty }];
+      return [...prev, { ...item, quantity: qty, isLocked, bannerId, offerId }];
     });
   };
 
@@ -55,7 +59,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateQty = (productId: number, qty: number) => {
     setItems((prev) =>
-      prev.map((p) => (p.productId === productId ? { ...p, quantity: Math.max(1, qty) } : p)),
+      prev.map((p) => {
+        if (p.productId === productId) {
+          if (p.isLocked) return p;
+          return { ...p, quantity: Math.max(1, qty) };
+        }
+        return p;
+      }),
     );
   };
 

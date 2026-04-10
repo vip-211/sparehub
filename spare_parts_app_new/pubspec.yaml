@@ -34,6 +34,9 @@ dependencies:
   flutter_svg: ^2.2.3
   animate_do: ^4.2.0
   flutter_colorpicker: ^1.1.0
+  shimmer: ^3.0.0
+  carousel_slider: ^5.0.0
+  photo_view: ^0.15.0
 
   # Scanner
   mobile_scanner: ^7.2.0

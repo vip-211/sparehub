@@ -2,12 +2,14 @@ package com.spareparts.inventory.controller;
 
 import com.spareparts.inventory.entity.Banner;
 import com.spareparts.inventory.repository.BannerRepository;
+import com.spareparts.inventory.repository.SystemSettingRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/banners")
@@ -16,14 +18,24 @@ public class BannerController {
     @Autowired
     private BannerRepository bannerRepository;
 
+    @Autowired
+    private SystemSettingRepository systemSettingRepository;
+
     @GetMapping
     public ResponseEntity<List<Banner>> getAllBanners() {
         return ResponseEntity.ok(bannerRepository.findAll());
     }
 
     @GetMapping("/active")
-    public ResponseEntity<List<Banner>> getActiveBanners() {
-        return ResponseEntity.ok(bannerRepository.findActiveBanners());
+    public ResponseEntity<Map<String, Object>> getActiveBanners() {
+        List<Banner> activeBanners = bannerRepository.findActiveBanners();
+        int speed = Integer.parseInt(systemSettingRepository.getSettingValue("banner_scroll_speed", "3"));
+        
+        return ResponseEntity.ok(Map.of(
+            "isCarousel", activeBanners.size() > 1,
+            "autoScrollSpeed", speed,
+            "banners", activeBanners
+        ));
     }
 
     @PostMapping
@@ -46,6 +58,14 @@ public class BannerController {
         banner.setDisplayOrder(bannerDetails.getDisplayOrder());
         banner.setActive(bannerDetails.isActive());
         banner.setSize(bannerDetails.getSize());
+        
+        // Buy button fields
+        banner.setBuyEnabled(bannerDetails.isBuyEnabled());
+        banner.setProductId(bannerDetails.getProductId());
+        banner.setMinimumQuantity(bannerDetails.getMinimumQuantity());
+        banner.setQuantityLocked(bannerDetails.isQuantityLocked());
+        banner.setFixedPrice(bannerDetails.getFixedPrice());
+        banner.setButtonText(bannerDetails.getButtonText());
 
         return ResponseEntity.ok(bannerRepository.save(banner));
     }

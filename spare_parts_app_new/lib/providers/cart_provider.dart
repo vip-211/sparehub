@@ -17,9 +17,10 @@ class CartProvider with ChangeNotifier {
     return total;
   }
 
-  void addItem(Product product, double price, {int? quantity}) {
+  void addItem(Product product, double price, {int? quantity, bool isLocked = false, int? bannerId, int? offerId}) {
     final int qtyToAdd = quantity ?? 1;
     if (_items.containsKey(product.id)) {
+      if (_items[product.id]!.isLocked) return; // Prevent updating locked items
       _items.update(
         product.id,
         (existing) => OrderItem(
@@ -28,6 +29,9 @@ class CartProvider with ChangeNotifier {
           quantity: existing.quantity + qtyToAdd,
           price: existing.price,
           minQty: existing.minQty,
+          isLocked: existing.isLocked,
+          bannerId: existing.bannerId,
+          offerId: existing.offerId,
         ),
       );
     } else {
@@ -49,6 +53,9 @@ class CartProvider with ChangeNotifier {
           quantity: initialQty,
           price: price,
           minQty: product.minOrderQty > 1 ? product.minOrderQty : product.offerMinQty,
+          isLocked: isLocked,
+          bannerId: bannerId,
+          offerId: offerId,
         ),
       );
     }
@@ -57,6 +64,7 @@ class CartProvider with ChangeNotifier {
 
   void addItemFromCart(int productId) {
     if (!_items.containsKey(productId)) return;
+    if (_items[productId]!.isLocked) return;
     _items.update(
       productId,
       (existing) => OrderItem(
@@ -64,6 +72,8 @@ class CartProvider with ChangeNotifier {
         productName: existing.productName,
         quantity: existing.quantity + 1,
         price: existing.price,
+        minQty: existing.minQty,
+        isLocked: existing.isLocked,
       ),
     );
     notifyListeners();
@@ -76,6 +86,7 @@ class CartProvider with ChangeNotifier {
 
   void decrementItem(int productId) {
     if (!_items.containsKey(productId)) return;
+    if (_items[productId]!.isLocked) return;
     final minQty = _items[productId]!.minQty ?? 1;
     if (_items[productId]!.quantity > minQty) {
       _items.update(
@@ -86,6 +97,7 @@ class CartProvider with ChangeNotifier {
           quantity: existing.quantity - 1,
           price: existing.price,
           minQty: existing.minQty,
+          isLocked: existing.isLocked,
         ),
       );
     } else {

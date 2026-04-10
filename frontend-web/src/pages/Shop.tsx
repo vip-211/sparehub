@@ -4,7 +4,8 @@ import { useCart } from '../context/CartContext';
 import { useLanguage } from '../context/LanguageContext';
 import AuthService from '../services/auth.service';
 import { ROLE_ADMIN, ROLE_MECHANIC, ROLE_RETAILER, ROLE_SUPER_MANAGER, ROLE_WHOLESALER } from '../services/constants';
-import { Search, ShoppingCart, Package, Info, CheckCircle2, Settings, Car, StopCircle, Disc, Droplets, Lightbulb, Battery, LayoutGrid, Mic, ScanBarcode, Keyboard } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Search, ShoppingCart, Package, Info, CheckCircle2, Settings, Car, StopCircle, Disc, Droplets, Lightbulb, Battery, LayoutGrid, Mic, ScanBarcode, Keyboard, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import Skeleton from '../components/Skeleton';
 import BarcodeScanner from '../components/BarcodeScanner';
@@ -407,134 +408,194 @@ const Shop: React.FC = () => {
       )}
 
       {/* Product Detail Modal */}
-      {selectedProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col md:flex-row">
-            {/* Image Gallery */}
-            <div className="w-full md:w-1/2 bg-gray-50 p-6 flex flex-col items-center justify-center">
-              <div className="relative w-full aspect-square rounded-2xl overflow-hidden mb-4 border border-gray-200 bg-white flex items-center justify-center">
-                {(() => {
-                  const images = [selectedProduct.imageLink || selectedProduct.imagePath, ...(selectedProduct.imageLinks || [])].filter(Boolean);
-                  if (images.length > 0) {
-                    return (
-                      <img 
-                        src={getImageUrl(images[currentImageIndex])} 
-                        alt={selectedProduct.name} 
-                        className="w-full h-full object-contain"
-                      />
-                    );
-                  }
-                  return <Package className="w-24 h-24 text-gray-300" />;
-                })()}
-              </div>
-              
-              {selectedProduct.imageLinks && selectedProduct.imageLinks.length > 0 && (
-                <div className="flex gap-2 overflow-x-auto pb-2 w-full justify-center">
-                  {[selectedProduct.imageLink || selectedProduct.imagePath, ...selectedProduct.imageLinks].filter(Boolean).map((img, idx) => (
-                    <button 
-                      key={idx}
-                      onClick={() => setCurrentImageIndex(idx)}
-                      className={`w-16 h-16 rounded-lg border-2 flex-shrink-0 overflow-hidden transition-all ${currentImageIndex === idx ? 'border-primary-500 scale-105 shadow-md' : 'border-gray-200 opacity-70 hover:opacity-100'}`}
-                    >
-                      <img src={getImageUrl(img)} alt="" className="w-full h-full object-cover" />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+      <AnimatePresence>
+        {selectedProduct && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedProduct(null)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-white rounded-[2.5rem] w-full max-w-5xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col md:flex-row relative z-10"
+            >
+              <button 
+                onClick={() => setSelectedProduct(null)}
+                className="absolute top-6 right-6 p-3 hover:bg-gray-100 rounded-2xl transition-all z-20 bg-white/80 backdrop-blur-md shadow-sm border border-gray-100"
+              >
+                <X className="w-6 h-6 text-gray-400" />
+              </button>
 
-            {/* Product Info */}
-            <div className="w-full md:w-1/2 p-8 flex flex-col">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h2 className="text-3xl font-black text-gray-900 mb-2">{tp(selectedProduct.name)}</h2>
-                  <span className="text-sm font-bold text-gray-400">Part Number: #{selectedProduct.partNumber}</span>
+              {/* Image Gallery */}
+              <div className="w-full md:w-3/5 bg-gray-50 p-8 flex flex-col">
+                <div className="relative flex-grow flex items-center justify-center bg-white rounded-3xl border border-gray-100 overflow-hidden group">
+                  {(() => {
+                    const images = [selectedProduct.imageLink || selectedProduct.imagePath, ...(selectedProduct.imageUrls || [])].filter(Boolean);
+                    if (images.length > 0) {
+                      return (
+                        <>
+                          <motion.img 
+                            key={currentImageIndex}
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                            src={getImageUrl(images[currentImageIndex])} 
+                            alt={selectedProduct.name} 
+                            className="w-full h-full object-contain p-8"
+                          />
+                          
+                          {images.length > 1 && (
+                            <>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+                                }}
+                                className="absolute left-4 p-3 bg-white/90 backdrop-blur shadow-xl rounded-2xl border border-gray-100 opacity-0 group-hover:opacity-100 transition-all hover:scale-110 active:scale-95"
+                              >
+                                <ChevronLeft className="w-6 h-6 text-gray-700" />
+                              </button>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+                                }}
+                                className="absolute right-4 p-3 bg-white/90 backdrop-blur shadow-xl rounded-2xl border border-gray-100 opacity-0 group-hover:opacity-100 transition-all hover:scale-110 active:scale-95"
+                              >
+                                <ChevronRight className="w-6 h-6 text-gray-700" />
+                              </button>
+                              
+                              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5 px-3 py-1.5 bg-black/10 backdrop-blur-md rounded-full">
+                                {images.map((_, idx) => (
+                                  <div 
+                                    key={idx}
+                                    className={`h-1.5 rounded-full transition-all duration-300 ${currentImageIndex === idx ? 'w-6 bg-primary-600' : 'w-1.5 bg-white'}`}
+                                  />
+                                ))}
+                              </div>
+                            </>
+                          )}
+                        </>
+                      );
+                    }
+                    return <Package className="w-32 h-32 text-gray-200" />;
+                  })()}
                 </div>
-                <button 
-                  onClick={() => setSelectedProduct(null)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                >
-                  <Info className="w-6 h-6 text-gray-400" />
-                </button>
-              </div>
-
-              {!isMechanic && (
-                <div className="flex items-center gap-3 mb-6">
-                  <span className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest ${selectedProduct.stock > 0 ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>
-                    {selectedProduct.stock > 0 ? 'In Stock' : 'Out of Stock'}
-                  </span>
-                  {selectedProduct.categoryName && (
-                    <span className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-600 text-xs font-black uppercase tracking-widest">
-                      {selectedProduct.categoryName}
-                    </span>
-                  )}
-                </div>
-              )}
-              {isMechanic && selectedProduct.categoryName && (
-                <div className="flex items-center gap-3 mb-6">
-                  <span className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-600 text-xs font-black uppercase tracking-widest">
-                    {selectedProduct.categoryName}
-                  </span>
-                </div>
-              )}
-
-              <div className="mb-8 flex-grow overflow-y-auto pr-2">
-                <h4 className="text-lg font-black text-gray-900 mb-3">Description</h4>
-                <p className="text-gray-600 leading-relaxed font-bold">
-                  {selectedProduct.description || 'No detailed description available for this part.'}
-                </p>
                 
-                {selectedProduct.rackNumber && (
-                  <div className="mt-4 p-4 bg-gray-50 rounded-2xl flex items-center justify-between border border-gray-100">
-                    <span className="text-sm font-bold text-gray-500 uppercase tracking-widest">Storage Location</span>
-                    <span className="text-lg font-black text-primary-600">{selectedProduct.rackNumber}</span>
-                  </div>
-                )}
-
-                {selectedProduct.minOrderQty > 1 && (
-                  <div className="mt-4 p-4 bg-amber-50 rounded-2xl flex items-center justify-between border border-amber-100">
-                    <span className="text-sm font-bold text-amber-700 uppercase tracking-widest">Min Order Qty</span>
-                    <span className="text-lg font-black text-amber-600">{selectedProduct.minOrderQty} Units</span>
+                {selectedProduct.imageUrls && selectedProduct.imageUrls.length > 0 && (
+                  <div className="flex gap-4 mt-6 overflow-x-auto pb-2 px-2 scrollbar-hide justify-center">
+                    {[selectedProduct.imageLink || selectedProduct.imagePath, ...selectedProduct.imageUrls].filter(Boolean).map((img, idx) => (
+                      <button 
+                        key={idx}
+                        onClick={() => setCurrentImageIndex(idx)}
+                        className={`w-20 h-20 rounded-2xl border-4 flex-shrink-0 overflow-hidden transition-all relative group ${currentImageIndex === idx ? 'border-primary-500 scale-110 shadow-lg' : 'border-white hover:border-gray-200'}`}
+                      >
+                        <img src={getImageUrl(img)} alt="" className="w-full h-full object-cover" />
+                        {currentImageIndex !== idx && <div className="absolute inset-0 bg-white/40 group-hover:bg-transparent transition-colors" />}
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
 
-              <div className="mt-auto">
-                <div className="flex items-baseline gap-3 mb-6">
-                  <span className="text-4xl font-black text-primary-600">₹{getPriceForRole(selectedProduct)}</span>
-                  {selectedProduct.mrp > getPriceForRole(selectedProduct) && (
-                    <span className="text-xl text-gray-400 line-through font-bold">₹{selectedProduct.mrp}</span>
-                  )}
+              {/* Product Info */}
+              <div className="w-full md:w-2/5 p-10 flex flex-col bg-white">
+                <div className="mb-8">
+                  <div className="flex items-center gap-2 mb-3">
+                    {selectedProduct.categoryName && (
+                      <span className="px-3 py-1 bg-primary-50 text-primary-700 text-[10px] font-black uppercase tracking-widest rounded-lg">
+                        {tp(selectedProduct.categoryName)}
+                      </span>
+                    )}
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                      Part #{selectedProduct.partNumber}
+                    </span>
+                  </div>
+                  <h2 className="text-4xl font-black text-gray-900 leading-tight mb-4">{tp(selectedProduct.name)}</h2>
+                  
+                  <div className="flex items-baseline gap-4 mb-6">
+                    <span className="text-5xl font-black text-primary-600">₹{getPriceForRole(selectedProduct)}</span>
+                    {selectedProduct.mrp > getPriceForRole(selectedProduct) && (
+                      <span className="text-xl text-gray-300 line-through font-bold">₹{selectedProduct.mrp}</span>
+                    )}
+                  </div>
                 </div>
 
-                {!isRestricted && (
-                  <button
-                    onClick={() => {
-                      addItem({
-                        productId: selectedProduct.id,
-                        name: selectedProduct.name,
-                        partNumber: selectedProduct.partNumber,
-                        price: getPriceForRole(selectedProduct),
-                        wholesalerId: selectedProduct.wholesalerId,
-                      }, selectedProduct.minOrderQty || 1);
-                      setSelectedProduct(null);
-                    }}
-                    className={`w-full py-5 rounded-2xl font-black text-xl flex items-center justify-center gap-3 shadow-2xl transition-all active:scale-95 ${
-                      selectedProduct.stock > 0 || isMechanic
-                        ? 'bg-primary-600 text-white hover:bg-primary-700 shadow-primary-200' 
-                        : 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
-                    }`}
-                    disabled={selectedProduct.stock <= 0 && !isMechanic}
-                  >
-                    <ShoppingCart className="w-7 h-7" />
-                    {selectedProduct.stock > 0 || isMechanic ? t('shop.addToCart') : 'Out of Stock'}
-                  </button>
-                )}
+                <div className="flex-grow overflow-y-auto pr-4 mb-8 custom-scrollbar">
+                  <div className="space-y-6">
+                    <div>
+                      <h4 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Description</h4>
+                      <p className="text-gray-600 leading-relaxed font-bold text-lg">
+                        {selectedProduct.description || 'No detailed description available for this part.'}
+                      </p>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      {selectedProduct.rackNumber && (
+                        <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                          <span className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Storage</span>
+                          <span className="text-lg font-black text-gray-900">{selectedProduct.rackNumber}</span>
+                        </div>
+                      )}
+                      {!isMechanic && (
+                        <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                          <span className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Stock</span>
+                          <span className={`text-lg font-black ${selectedProduct.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {selectedProduct.stock > 0 ? `${selectedProduct.stock} Units` : 'Out of Stock'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedProduct.minOrderQty > 1 && (
+                      <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex items-center justify-between">
+                        <span className="text-xs font-black text-amber-700 uppercase tracking-widest">Minimum Order</span>
+                        <span className="text-lg font-black text-amber-600">{selectedProduct.minOrderQty} Units</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-auto space-y-4">
+                  {!isRestricted && (
+                    <button
+                      disabled={selectedProduct.stock <= 0 && !isMechanic}
+                      onClick={() =>
+                        addItem(
+                          {
+                            productId: selectedProduct.id,
+                            name: selectedProduct.name,
+                            partNumber: selectedProduct.partNumber,
+                            price: getPriceForRole(selectedProduct),
+                            wholesalerId: selectedProduct.wholesalerId,
+                          },
+                          selectedProduct.minOrderQty || 1,
+                        )
+                      }
+                      className={`w-full py-5 rounded-3xl font-black text-xl transition-all shadow-2xl active:scale-95 flex items-center justify-center gap-4 ${
+                        selectedProduct.stock > 0 || isMechanic
+                          ? 'bg-primary-600 text-white hover:bg-primary-700 shadow-primary-200' 
+                          : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      <ShoppingCart className="w-7 h-7" />
+                      {selectedProduct.stock > 0 || isMechanic ? 'Add to Cart' : 'Sold Out'}
+                    </button>
+                  )}
+                  <p className="text-center text-xs font-bold text-gray-400 uppercase tracking-widest">
+                    Verified Genuine Parts Mitra Quality
+                  </p>
+                </div>
               </div>
-            </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   );
 };

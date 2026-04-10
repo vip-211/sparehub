@@ -22,6 +22,7 @@ import MobileDashboard from './pages/MobileDashboard';
 import PendingApproval from './pages/PendingApproval';
 import { ROLE_MECHANIC, ROLE_RETAILER } from './services/constants';
 import Stock from './pages/Stock';
+import Offers from './pages/Offers';
 
 const App: React.FC = () => {
   const { currentUser, logout } = useAuth();
@@ -133,6 +134,9 @@ const App: React.FC = () => {
                     <Link to="/shop" className="text-gray-600 hover:text-primary-600 font-medium">
                       {t('shop.title')}
                     </Link>
+                    <Link to="/offers" className="text-gray-600 hover:text-primary-600 font-medium">
+                      Offers
+                    </Link>
                     <Link to="/cart" className="relative text-gray-600 hover:text-primary-600 font-medium">
                       {t('shop.cart')}
                       {count > 0 && (
@@ -186,6 +190,12 @@ const App: React.FC = () => {
             path="/shop"
             element={
               !currentUser ? <Navigate to="/login" /> : (isPending ? <Navigate to="/pending-approval" /> : <Shop />)
+            }
+          />
+          <Route
+            path="/offers"
+            element={
+              !currentUser ? <Navigate to="/login" /> : (isPending ? <Navigate to="/pending-approval" /> : <Offers />)
             }
           />
           <Route

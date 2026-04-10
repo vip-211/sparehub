@@ -130,11 +130,16 @@ class _CartScreenState extends State<CartScreen> {
                                     const SizedBox(height: 8),
                                     Row(
                                       children: [
+                                        if (item.isLocked)
+                                          Padding(
+                                            padding: const EdgeInsets.only(right: 8),
+                                            child: Icon(Icons.lock, size: 16, color: Theme.of(context).colorScheme.primary),
+                                          ),
                                         IconButton(
                                           icon: Icon(
                                               Icons.remove_circle_outline,
-                                              color: Theme.of(context).colorScheme.error),
-                                          onPressed: () => cart
+                                              color: item.isLocked ? Colors.grey : Theme.of(context).colorScheme.error),
+                                          onPressed: item.isLocked ? null : () => cart
                                               .decrementItem(item.productId),
                                           constraints: const BoxConstraints(),
                                           padding: EdgeInsets.zero,
@@ -151,10 +156,10 @@ class _CartScreenState extends State<CartScreen> {
                                           ),
                                         ),
                                         IconButton(
-                                          icon: const Icon(
+                                          icon: Icon(
                                               Icons.add_circle_outline,
-                                              color: Colors.green),
-                                          onPressed: () {
+                                              color: item.isLocked ? Colors.grey : Colors.green),
+                                          onPressed: item.isLocked ? null : () {
                                             cart.addItemFromCart(
                                                 item.productId);
                                           },

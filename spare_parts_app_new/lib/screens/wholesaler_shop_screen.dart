@@ -16,6 +16,9 @@ import '../services/settings_service.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/product_service.dart';
 import '../services/ocr_service.dart';
+import 'package:carousel_slider/carousel_slider.dart';
+import 'package:photo_view/photo_view.dart';
+import 'package:photo_view/photo_view_gallery.dart';
 import '../models/product.dart';
 import '../providers/cart_provider.dart';
 import '../services/order_service.dart';
@@ -1576,7 +1579,18 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
 
 class ProductDetailSheet extends StatefulWidget {
   final Product product;
-  const ProductDetailSheet({required this.product});
+  final int? initialQuantity;
+  final bool isQuantityLocked;
+  final int? bannerId;
+  final int? offerId;
+
+  const ProductDetailSheet({
+    required this.product,
+    this.initialQuantity,
+    this.isQuantityLocked = false,
+    this.bannerId,
+    this.offerId,
+  });
 
   @override
   State<ProductDetailSheet> createState() => ProductDetailSheetState();
@@ -1584,6 +1598,44 @@ class ProductDetailSheet extends StatefulWidget {
 
 class ProductDetailSheetState extends State<ProductDetailSheet> {
   int _currentImageIndex = 0;
+
+  void _showFullScreenGallery(BuildContext context, List<String> images, int initialIndex) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            iconTheme: const IconThemeData(color: Colors.white),
+            elevation: 0,
+            title: Text(
+              '${initialIndex + 1}/${images.length}',
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+            ),
+          ),
+          body: PhotoViewGallery.builder(
+            scrollPhysics: const BouncingScrollPhysics(),
+            builder: (BuildContext context, int index) {
+              return PhotoViewGalleryPageOptions(
+                imageProvider: getImageProvider(images[index]),
+                initialScale: PhotoViewComputedScale.contained,
+                heroAttributes: PhotoViewHeroAttributes(tag: images[index]),
+              );
+            },
+            itemCount: images.length,
+            loadingBuilder: (context, event) => const Center(
+              child: CircularProgressIndicator(),
+            ),
+            pageController: PageController(initialPage: initialIndex),
+            onPageChanged: (index) {
+              // Update title if needed, but we'd need a stateful widget for that
+            },
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1627,24 +1679,56 @@ class ProductDetailSheetState extends State<ProductDetailSheet> {
                 children: [
                   // Image Gallery
                   AspectRatio(
-                    aspectRatio: 1,
+                    aspectRatio: 1.2,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.grey.shade100),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
                       ),
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
                           if (images.isNotEmpty)
-                            PageView.builder(
+                            CarouselSlider.builder(
                               itemCount: images.length,
-                              onPageChanged: (idx) => setState(() => _currentImageIndex = idx),
-                              itemBuilder: (context, idx) => InteractiveViewer(
-                                child: Image(
-                                  image: getImageProvider(images[idx]),
-                                  fit: BoxFit.contain,
+                              options: CarouselOptions(
+                                aspectRatio: 1.2,
+                                viewportFraction: 1.0,
+                                enableInfiniteScroll: images.length > 1,
+                                onPageChanged: (idx, reason) => setState(() => _currentImageIndex = idx),
+                              ),
+                              itemBuilder: (context, idx, realIdx) => GestureDetector(
+                                onTap: () => _showFullScreenGallery(context, images, idx),
+                                child: Container(
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: Image(
+                                      image: getImageProvider(images[idx]),
+                                      fit: BoxFit.contain,
+                                      loadingBuilder: (context, child, loadingProgress) {
+                                        if (loadingProgress == null) return child;
+                                        return Center(
+                                          child: CircularProgressIndicator(
+                                            value: loadingProgress.expectedTotalBytes != null
+                                                ? loadingProgress.cumulativeBytesLoaded /
+                                                    loadingProgress.expectedTotalBytes!
+                                                : null,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
                                 ),
                               ),
                             )
@@ -1653,20 +1737,45 @@ class ProductDetailSheetState extends State<ProductDetailSheet> {
                           
                           if (images.length > 1)
                             Positioned(
-                              bottom: 16,
+                              bottom: 12,
                               left: 0,
                               right: 0,
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
-                                children: List.generate(images.length, (idx) => Container(
-                                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: _currentImageIndex == idx ? Colors.green : Colors.grey.shade300,
+                                children: images.asMap().entries.map((entry) {
+                                  return Container(
+                                    width: _currentImageIndex == entry.key ? 12.0 : 6.0,
+                                    height: 6.0,
+                                    margin: const EdgeInsets.symmetric(horizontal: 3.0),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(3),
+                                      color: _currentImageIndex == entry.key
+                                          ? Theme.of(context).primaryColor
+                                          : Colors.grey.shade300,
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                          
+                          if (images.length > 1)
+                            Positioned(
+                              top: 12,
+                              right: 12,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.5),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  '${_currentImageIndex + 1}/${images.length}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                )),
+                                ),
                               ),
                             ),
                         ],
@@ -1751,7 +1860,34 @@ class ProductDetailSheetState extends State<ProductDetailSheet> {
                     ),
                   ],
 
-                  if (p.minOrderQty > 1) ...[
+                  if (widget.isQuantityLocked) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.red.shade100),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.lock, size: 20, color: Colors.red.shade700),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('QUANTITY LOCKED', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.red.shade700)),
+                                Text('Special offer requires exactly ${widget.initialQuantity} units.', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.red.shade600)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  if (!widget.isQuantityLocked && p.minOrderQty > 1) ...[
                     const SizedBox(height: 12),
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -1806,7 +1942,14 @@ class ProductDetailSheetState extends State<ProductDetailSheet> {
                   flex: 2,
                   child: ElevatedButton(
                     onPressed: p.stock > 0 ? () {
-                      cart.addItem(p, p.sellingPrice, quantity: p.minOrderQty);
+                      cart.addItem(
+                        p, 
+                        p.sellingPrice, 
+                        quantity: widget.initialQuantity ?? p.minOrderQty,
+                        isLocked: widget.isQuantityLocked,
+                        bannerId: widget.bannerId,
+                        offerId: widget.offerId,
+                      );
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('${p.name} added to cart'), backgroundColor: Colors.green),

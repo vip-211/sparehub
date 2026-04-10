@@ -6,6 +6,7 @@ import com.spareparts.inventory.dto.ProductDto;
 import com.spareparts.inventory.entity.Product;
 import com.spareparts.inventory.entity.Category;
 import com.spareparts.inventory.entity.User;
+import com.spareparts.inventory.entity.ProductImage;
 import com.spareparts.inventory.repository.ProductRepository;
 import com.spareparts.inventory.repository.UserRepository;
 import com.spareparts.inventory.repository.CategoryRepository;
@@ -130,7 +131,19 @@ public class ProductService extends ProductSubject {
         product.setEnabled(productDto.isEnabled());
         product.setImagePath(productDto.getImagePath());
         product.setImageLink(productDto.getImageLink());
-        product.setImageLinks(productDto.getImageLinks() != null ? productDto.getImageLinks() : new java.util.ArrayList<>());
+        
+        if (productDto.getImageUrls() != null && !productDto.getImageUrls().isEmpty()) {
+            java.util.List<ProductImage> productImages = new java.util.ArrayList<>();
+            for (int i = 0; i < productDto.getImageUrls().size(); i++) {
+                ProductImage img = new ProductImage();
+                img.setImageUrl(productDto.getImageUrls().get(i));
+                img.setDisplayOrder(i);
+                img.setProduct(product);
+                productImages.add(img);
+            }
+            product.setImages(productImages);
+        }
+
         if (productDto.getMinOrderQty() != null) {
             product.setMinOrderQty(productDto.getMinOrderQty());
         } else if (product.getMinOrderQty() == null) {
@@ -263,7 +276,19 @@ public class ProductService extends ProductSubject {
                 product.setEnabled(dto.isEnabled());
                 product.setImagePath(dto.getImagePath());
                 product.setImageLink(dto.getImageLink());
-                product.setImageLinks(dto.getImageLinks() != null ? dto.getImageLinks() : new java.util.ArrayList<>());
+                
+                if (dto.getImageUrls() != null && !dto.getImageUrls().isEmpty()) {
+                    java.util.List<ProductImage> productImages = new java.util.ArrayList<>();
+                    for (int i = 0; i < dto.getImageUrls().size(); i++) {
+                        ProductImage img = new ProductImage();
+                        img.setImageUrl(dto.getImageUrls().get(i));
+                        img.setDisplayOrder(i);
+                        img.setProduct(product);
+                        productImages.add(img);
+                    }
+                    product.setImages(productImages);
+                }
+
                 if (dto.getMinOrderQty() != null) {
                     product.setMinOrderQty(dto.getMinOrderQty());
                 } else {
@@ -311,7 +336,19 @@ public class ProductService extends ProductSubject {
         product.setEnabled(productDto.isEnabled());
         product.setImagePath(productDto.getImagePath());
         product.setImageLink(productDto.getImageLink());
-        product.setImageLinks(productDto.getImageLinks() != null ? productDto.getImageLinks() : new java.util.ArrayList<>());
+        
+        // Update images
+        product.getImages().clear();
+        if (productDto.getImageUrls() != null) {
+            for (int i = 0; i < productDto.getImageUrls().size(); i++) {
+                ProductImage img = new ProductImage();
+                img.setImageUrl(productDto.getImageUrls().get(i));
+                img.setDisplayOrder(i);
+                img.setProduct(product);
+                product.getImages().add(img);
+            }
+        }
+
         if (productDto.getMinOrderQty() != null) {
             product.setMinOrderQty(productDto.getMinOrderQty());
         }
@@ -436,7 +473,9 @@ public class ProductService extends ProductSubject {
         dto.setEnabled(product.isEnabled());
         dto.setImagePath(product.getImagePath());
         dto.setImageLink(product.getImageLink());
-        dto.setImageLinks(new java.util.ArrayList<>(product.getImageLinks()));
+        dto.setImageUrls(product.getImages() != null ? 
+                product.getImages().stream().map(ProductImage::getImageUrl).collect(Collectors.toList()) : 
+                new java.util.ArrayList<>());
         dto.setMinOrderQty(product.getMinOrderQty());
         dto.setFeatured(product.isFeatured());
         dto.setDescription(product.getDescription());

@@ -84,7 +84,7 @@ class Product {
       categoryImageLink: json['categoryImageLink'],
       offerType: json['offerType'],
       offerMinQty: (json['offerMinQty'] as num?)?.toInt(),
-      imageLinks: (json['imageLinks'] as List<dynamic>?)
+      imageLinks: (json['imageUrls'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           [],
