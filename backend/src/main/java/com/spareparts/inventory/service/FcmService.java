@@ -238,8 +238,6 @@ public class FcmService {
         sendToRole("ROLE_ADMIN", title, message, null, null);
         // 2. Send to SUPER_MANAGER role
         sendToRole("ROLE_SUPER_MANAGER", title, message, null, null);
-        
-        // Also push via standard WebSocket /topic/orders if needed (though already handled in OrderService usually)
     }
     
     public void sendOrderStatusToStaff(Long orderId, String title, String message) {

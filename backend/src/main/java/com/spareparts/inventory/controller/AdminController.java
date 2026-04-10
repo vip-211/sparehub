@@ -174,8 +174,8 @@ public class AdminController {
     public ResponseEntity<?> deleteUserPermanent(@PathVariable Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        if (user.getRole() != null && "ROLE_SUPER_MANAGER".equals(user.getRole().getName().name())) {
-            return ResponseEntity.status(403).body("Cannot delete SUPER_MANAGER");
+        if (user.getRole() != null && ("ROLE_SUPER_MANAGER".equals(user.getRole().getName().name()) || "ROLE_ADMIN".equals(user.getRole().getName().name()))) {
+            return ResponseEntity.status(403).body("Cannot delete administrative users");
         }
         userRepository.delete(user);
         return ResponseEntity.ok().build();
@@ -191,8 +191,8 @@ public class AdminController {
     public ResponseEntity<?> deleteUser(@PathVariable Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        if (user.getRole() != null && "ROLE_SUPER_MANAGER".equals(user.getRole().getName().name())) {
-            return ResponseEntity.status(403).body("Cannot delete SUPER_MANAGER");
+        if (user.getRole() != null && ("ROLE_SUPER_MANAGER".equals(user.getRole().getName().name()) || "ROLE_ADMIN".equals(user.getRole().getName().name()))) {
+            return ResponseEntity.status(403).body("Cannot delete administrative users");
         }
         user.setDeleted(true);
         userRepository.save(user);
@@ -206,7 +206,7 @@ public class AdminController {
             return ResponseEntity.ok().build();
         }
         List<User> users = userRepository.findAllById(ids).stream()
-                .filter(u -> !(u.getRole() != null && "ROLE_SUPER_MANAGER".equals(u.getRole().getName().name())))
+                .filter(u -> !(u.getRole() != null && ("ROLE_SUPER_MANAGER".equals(u.getRole().getName().name()) || "ROLE_ADMIN".equals(u.getRole().getName().name()))))
                 .collect(Collectors.toList());
         if (!users.isEmpty()) {
             users.forEach(u -> u.setDeleted(true));
