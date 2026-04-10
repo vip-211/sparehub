@@ -28,6 +28,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByDeletedFalse();
     List<Order> findByDeletedTrue();
 
+    @EntityGraph(attributePaths = {"items", "items.product"})
     @Query("SELECT o FROM Order o WHERE o.createdAt >= :since AND o.deleted = false")
     List<Order> findLast30Days(@Param("since") LocalDateTime since);
 

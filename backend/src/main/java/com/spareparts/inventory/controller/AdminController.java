@@ -25,6 +25,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.spareparts.inventory.security.UserDetailsImpl;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -79,6 +80,7 @@ public class AdminController {
     private VoiceTrainingSampleRepository voiceTrainingSampleRepository;
 
     @GetMapping("/dashboard")
+    @Transactional(readOnly = true)
     public ResponseEntity<Map<String, Object>> getDashboardData() {
         Map<String, Object> data = new HashMap<>();
         data.put("topSelling", orderRepository.findTopSellingProducts(PageRequest.of(0, 5)));

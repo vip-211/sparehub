@@ -31,6 +31,7 @@ public class PredictionService {
     @Autowired
     private AIService aiService;
 
+    @Transactional(readOnly = true)
     public Map<String, Integer> predictDemand(List<Order> orders) {
         Map<String, Integer> totalDemand = new HashMap<>();
         Map<String, Integer> productOccurrence = new HashMap<>();
@@ -110,6 +111,7 @@ public class PredictionService {
         return aiService.askAI(prompt, "gemini", null);
     }
 
+    @Transactional(readOnly = true)
     public String getAIBusinessInsights() {
         try {
             LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
