@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 
 import java.util.List;
 import java.util.Map;
@@ -22,11 +24,13 @@ public class BannerController {
     private SystemSettingRepository systemSettingRepository;
 
     @GetMapping
+    @Cacheable(cacheNames = "home_banners_all")
     public ResponseEntity<List<Banner>> getAllBanners() {
         return ResponseEntity.ok(bannerRepository.findAll());
     }
 
     @GetMapping("/active")
+    @Cacheable(cacheNames = "home_banners_active")
     public ResponseEntity<Map<String, Object>> getActiveBanners() {
         List<Banner> activeBanners = bannerRepository.findActiveBanners();
         int speed = Integer.parseInt(systemSettingRepository.getSettingValue("banner_scroll_speed", "3"));
@@ -40,12 +44,14 @@ public class BannerController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    @CacheEvict(cacheNames = {"home_banners_all", "home_banners_active"}, allEntries = true)
     public ResponseEntity<Banner> createBanner(@RequestBody Banner banner) {
         return ResponseEntity.ok(bannerRepository.save(banner));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    @CacheEvict(cacheNames = {"home_banners_all", "home_banners_active"}, allEntries = true)
     public ResponseEntity<Banner> updateBanner(@PathVariable Long id, @RequestBody Banner bannerDetails) {
         Banner banner = bannerRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Banner not found with id: " + id));
@@ -72,6 +78,7 @@ public class BannerController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    @CacheEvict(cacheNames = {"home_banners_all", "home_banners_active"}, allEntries = true)
     public ResponseEntity<Void> deleteBanner(@PathVariable Long id) {
         bannerRepository.deleteById(id);
         return ResponseEntity.ok().build();

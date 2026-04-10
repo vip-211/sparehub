@@ -17,6 +17,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -117,6 +119,7 @@ public class ProductController {
 
     @PostMapping
     @PreAuthorize("hasRole('WHOLESALER') or hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    @CacheEvict(cacheNames = {"home_featured_products"}, allEntries = true)
     public ResponseEntity<ProductDto> addProduct(@Valid @RequestBody ProductDto productDto, Authentication authentication) {
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         boolean isAdmin = authentication.getAuthorities().stream()
@@ -132,6 +135,7 @@ public class ProductController {
 
     @PostMapping("/bulk")
     @PreAuthorize("hasRole('WHOLESALER') or hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    @CacheEvict(cacheNames = {"home_featured_products"}, allEntries = true)
     public ResponseEntity<?> addProductsBulk(@RequestBody List<ProductDto> productDtos, Authentication authentication) {
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         boolean isAdmin = authentication.getAuthorities().stream()
@@ -323,12 +327,14 @@ public class ProductController {
     }
 
     @GetMapping("/featured")
+    @Cacheable(cacheNames = "home_featured_products")
     public ResponseEntity<List<ProductDto>> getFeaturedProducts() {
         return ResponseEntity.ok(productService.getFeaturedProducts());
     }
 
     @PostMapping("/featured")
     @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    @CacheEvict(cacheNames = {"home_featured_products"}, allEntries = true)
     public ResponseEntity<?> updateFeaturedStatus(@RequestBody java.util.Map<String, Object> body) {
         @SuppressWarnings("unchecked")
         List<Integer> idsInt = (List<Integer>) body.get("ids");
@@ -340,6 +346,7 @@ public class ProductController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('WHOLESALER') or hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    @CacheEvict(cacheNames = {"home_featured_products"}, allEntries = true)
     public ResponseEntity<ProductDto> updateProduct(@PathVariable Long id, @Valid @RequestBody ProductDto productDto, Authentication authentication) {
         boolean isAdmin = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_SUPER_MANAGER"));
@@ -353,6 +360,7 @@ public class ProductController {
 
     @DeleteMapping("/empty-recycle-bin")
     @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    @CacheEvict(cacheNames = {"home_featured_products"}, allEntries = true)
     public ResponseEntity<?> emptyRecycleBin() {
         productService.emptyRecycleBin();
         return ResponseEntity.ok().build();
@@ -360,6 +368,7 @@ public class ProductController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    @CacheEvict(cacheNames = {"home_featured_products"}, allEntries = true)
     public ResponseEntity<?> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);
         return ResponseEntity.ok().build();
@@ -367,6 +376,7 @@ public class ProductController {
 
     @PostMapping("/delete-bulk")
     @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    @CacheEvict(cacheNames = {"home_featured_products"}, allEntries = true)
     public ResponseEntity<?> deleteProductsBulk(@RequestBody List<Long> ids) {
         productService.deleteProductsBulk(ids);
         return ResponseEntity.ok().build();

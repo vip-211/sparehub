@@ -2,19 +2,21 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:animate_do/animate_do.dart';
+import '../screens/trending_products_screen.dart';
+import '../screens/category_products_screen.dart';
+import '../screens/category_list_screen.dart';
+import '../screens/wholesaler_shop_screen.dart';
 import '../services/product_service.dart';
 import '../services/order_service.dart';
 import '../models/product.dart';
 import '../models/order.dart';
 import '../providers/cart_provider.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/cart_badge.dart';
 import '../utils/image_utils.dart';
 import '../utils/constants.dart';
-import '../widgets/cart_badge.dart';
-import 'wholesaler_shop_screen.dart'; // For ProductDetailSheet
-import 'category_products_screen.dart';
+import 'package:shimmer/shimmer.dart';
 
 class MechanicHomeScreen extends StatefulWidget {
   const MechanicHomeScreen({super.key});
@@ -120,6 +122,7 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
       final allCats = await _productService.getCategories();
       final cats = allCats.where((c) => c['showOnHome'] == 1 || c['showOnHome'] == true).toList();
       final featured = await _productService.getFeaturedProducts();
+      final trending = await _productService.getTrendingProducts();
       final products = await _productService.getAllProducts(page: 0, size: 10);
       final bannerData = await _productService.getActiveBanners();
       final myOrders = await _orderService.getMyOrders();
@@ -137,6 +140,9 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
       for (var p in featured) {
         prices[p.id] = await _productService.getPriceForUser(p);
       }
+      for (var p in trending) {
+        prices[p.id] = await _productService.getPriceForUser(p);
+      }
       for (var p in products) {
         prices[p.id] = await _productService.getPriceForUser(p);
       }
@@ -148,9 +154,11 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
           _recentOrders = myOrders.take(5).toList();
           _isCarousel = isCarousel;
           _autoScrollSpeed = speed;
-          _hotDeals = featured.isNotEmpty
-              ? featured
-              : products.where((p) => p.mrp > p.sellingPrice).toList();
+          _hotDeals = trending.isNotEmpty
+              ? trending
+              : featured.isNotEmpty
+                  ? featured
+                  : products.where((p) => p.mrp > p.sellingPrice).toList();
           _prices = prices;
           _homeTitle = homeTitle;
           _bannerText = bannerText;
@@ -314,7 +322,7 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                               color: Colors.white.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(15),
                             ),
-                            child: const CartBadge(),
+                            child: CartBadge(),
                           ),
                         ],
                       ),
@@ -465,7 +473,7 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
             children: [
               const Text('Shop by Category', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: -0.5)),
               GestureDetector(
-                onTap: () {},
+                onTap: () => Navigator.pushNamed(context, '/categories'),
                 child: Text('View All', style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold, fontSize: 14)),
               ),
             ],
@@ -730,10 +738,23 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      if (effectiveImage != null)
+                      if (effectiveImage != null && effectiveImage.isNotEmpty)
                         Image(
                           image: getImageProvider(effectiveImage),
                           fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            color: Colors.grey.shade200,
+                            child: const Center(
+                              child: Icon(Icons.broken_image, color: Colors.grey, size: 50),
+                            ),
+                          ),
+                        )
+                      else
+                        Container(
+                          color: Colors.grey.shade200,
+                          child: const Center(
+                            child: Icon(Icons.image_not_supported, color: Colors.grey, size: 50),
+                          ),
                         ),
                       Container(
                         decoration: BoxDecoration(
@@ -833,7 +854,7 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
             children: [
               const Text('Trending Parts 🔥', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: -0.5)),
               GestureDetector(
-                onTap: () {},
+                onTap: () => Navigator.pushNamed(context, '/products/trending'),
                 child: Text('See All', style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold, fontSize: 14)),
               ),
             ],

@@ -445,6 +445,28 @@ class ProductService {
     }
   }
 
+  Future<List<Product>> getTrendingProducts({int page = 0, int size = 20}) async {
+    try {
+      if (Constants.useRemote) {
+        try {
+          final list = await _remote.getList('/products/trending?page=$page&size=$size');
+          return list.map((e) => Product.fromJson(e as Map<String, dynamic>)).toList();
+        } catch (e) {
+          // Fallback to featured if endpoint not available
+          final featured = await getFeaturedProducts();
+          if (featured.isNotEmpty) return featured;
+        }
+      }
+      final all = await getAllProducts(page: page, size: size);
+      final discounted = all.where((p) => p.mrp > p.sellingPrice).toList();
+      if (discounted.isNotEmpty) return discounted;
+      return all;
+    } catch (e) {
+      debugPrint('Get trending products error: $e');
+      return [];
+    }
+  }
+
   Future<List<Product>> getProductsByCategory(int categoryId,
       {int page = 0, int size = 20}) async {
     try {

@@ -25,6 +25,8 @@ import 'screens/admin_ai_training_report_screen.dart';
 import 'screens/thank_you_screen.dart';
 import 'screens/pending_approval_screen.dart';
 import 'screens/mechanic_search_screen.dart';
+import 'screens/category_list_screen.dart';
+import 'screens/trending_products_screen.dart';
 
 import 'services/notification_service.dart';
 import 'services/settings_service.dart';
@@ -145,6 +147,8 @@ class MyApp extends StatelessWidget {
         '/admin/ai-training': (context) => const AdminAITrainingReportScreen(),
         '/thank-you': (context) => const ThankYouScreen(),
         '/search': (context) => const MechanicSearchScreen(),
+        '/categories': (context) => const CategoryListScreen(),
+        '/products/trending': (context) => const TrendingProductsScreen(),
       },
     );
   }

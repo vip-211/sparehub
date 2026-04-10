@@ -12,6 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 
 import java.util.List;
 import java.util.Map;
@@ -29,6 +31,7 @@ public class OfferController {
 
     @GetMapping
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = "home_offers_all")
     public ResponseEntity<List<OfferDto>> getAllOffers() {
         List<Offer> offers = offerRepository.findAll();
         return ResponseEntity.ok(
@@ -38,6 +41,7 @@ public class OfferController {
 
     @GetMapping("/active")
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = "home_offers_active")
     public ResponseEntity<List<OfferDto>> getActiveOffers() {
         List<Offer> offers = offerRepository.findActiveOffers();
         return ResponseEntity.ok(
@@ -47,6 +51,7 @@ public class OfferController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    @CacheEvict(cacheNames = {"home_offers_all","home_offers_active"}, allEntries = true)
     public ResponseEntity<?> createOffer(@RequestBody Map<String, Object> req) {
         Long productId = Long.valueOf(req.get("productId").toString());
         Product product = productRepository.findById(productId)
@@ -65,6 +70,7 @@ public class OfferController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    @CacheEvict(cacheNames = {"home_offers_all","home_offers_active"}, allEntries = true)
     public ResponseEntity<?> updateOffer(@PathVariable Long id, @RequestBody Map<String, Object> req) {
         Offer offer = offerRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Offer not found"));
@@ -87,6 +93,7 @@ public class OfferController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    @CacheEvict(cacheNames = {"home_offers_all","home_offers_active"}, allEntries = true)
     public ResponseEntity<Void> deleteOffer(@PathVariable Long id) {
         offerRepository.deleteById(id);
         return ResponseEntity.ok().build();

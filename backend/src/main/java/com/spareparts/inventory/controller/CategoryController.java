@@ -12,6 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,6 +44,7 @@ public class CategoryController {
     }
 
     @GetMapping
+    @Cacheable(cacheNames = "home_categories")
     public ResponseEntity<?> list() {
         try {
             List<Category> categories = categoryRepository.findByDeletedFalse();
@@ -54,6 +57,7 @@ public class CategoryController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    @CacheEvict(cacheNames = "home_categories", allEntries = true)
     public ResponseEntity<?> create(@RequestBody Map<String, Object> req) {
         try {
             System.out.println("Category creation request: " + req);
@@ -89,6 +93,7 @@ public class CategoryController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    @CacheEvict(cacheNames = "home_categories", allEntries = true)
     public ResponseEntity<?> update(@PathVariable Long id, @RequestBody Map<String, Object> req) {
         try {
             Category c = categoryRepository.findById(id).orElse(null);
@@ -115,6 +120,7 @@ public class CategoryController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    @CacheEvict(cacheNames = "home_categories", allEntries = true)
     public ResponseEntity<?> delete(@PathVariable Long id) {
         try {
             if (!categoryRepository.existsById(id)) return ResponseEntity.notFound().build();
