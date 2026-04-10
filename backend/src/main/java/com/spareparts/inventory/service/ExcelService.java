@@ -2,6 +2,7 @@
 package com.spareparts.inventory.service;
 
 import com.spareparts.inventory.entity.Product;
+import com.spareparts.inventory.entity.ProductImage;
 import com.spareparts.inventory.entity.User;
 import com.spareparts.inventory.repository.ProductRepository;
 import com.spareparts.inventory.repository.UserRepository;
@@ -54,7 +55,20 @@ public class ExcelService {
                       e.setRackNumber(p.getRackNumber());
                       e.setDescription(p.getDescription());
                       e.setMinOrderQty(p.getMinOrderQty());
-                      e.setImageLinks(p.getImageLinks());
+                      
+                      // Update images
+                      e.getImages().clear();
+                      if (p.getImages() != null) {
+                          for (int i = 0; i < p.getImages().size(); i++) {
+                              ProductImage oldImg = p.getImages().get(i);
+                              ProductImage newImg = new ProductImage();
+                              newImg.setImageUrl(oldImg.getImageUrl());
+                              newImg.setDisplayOrder(i);
+                              newImg.setProduct(e);
+                              e.getImages().add(newImg);
+                          }
+                      }
+                      
                       if (category != null) e.setCategory(category);
                       productRepository.save(e);
                   } else {

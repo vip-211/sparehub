@@ -2,6 +2,7 @@
 package com.spareparts.inventory.service;
 
 import com.spareparts.inventory.entity.Product;
+import com.spareparts.inventory.entity.ProductImage;
 import com.spareparts.inventory.entity.User;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -15,6 +16,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ExcelHelper {
     public static String[] TYPE = {
@@ -59,7 +61,7 @@ public class ExcelHelper {
                 row.createCell(8).setCellValue(product.getRackNumber() != null ? product.getRackNumber() : "");
                 row.createCell(9).setCellValue(product.getDescription() != null ? product.getDescription() : "");
                 row.createCell(10).setCellValue(product.getMinOrderQty() != null ? product.getMinOrderQty() : 1);
-                String imageLinks = product.getImageLinks() != null ? String.join(";", product.getImageLinks()) : "";
+                String imageLinks = product.getImages() != null ? product.getImages().stream().map(ProductImage::getImageUrl).collect(Collectors.joining(";")) : "";
                 row.createCell(11).setCellValue(imageLinks);
             }
 
@@ -252,7 +254,15 @@ public class ExcelHelper {
                                         list.add(link.trim());
                                     }
                                 }
-                                product.setImageLinks(list);
+                                java.util.List<ProductImage> productImages = new java.util.ArrayList<>();
+                                for (int i = 0; i < list.size(); i++) {
+                                    ProductImage img = new ProductImage();
+                                    img.setImageUrl(list.get(i));
+                                    img.setDisplayOrder(i);
+                                    img.setProduct(product);
+                                    productImages.add(img);
+                                }
+                                product.setImages(productImages);
                             }
                             break;
                         default:
