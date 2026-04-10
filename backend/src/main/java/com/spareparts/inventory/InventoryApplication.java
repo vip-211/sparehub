@@ -22,6 +22,9 @@ import com.spareparts.inventory.repository.CategoryRepository;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.context.annotation.Primary;
+import org.springframework.core.task.TaskExecutor;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 @SpringBootApplication
 @EnableScheduling
@@ -30,6 +33,18 @@ import org.springframework.cache.annotation.EnableCaching;
 public class InventoryApplication {
     public static void main(String[] args) {
         SpringApplication.run(InventoryApplication.class, args);
+    }
+
+    @Bean(name = "taskExecutor")
+    @Primary
+    public TaskExecutor taskExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(5);
+        executor.setMaxPoolSize(10);
+        executor.setQueueCapacity(25);
+        executor.setThreadNamePrefix("Async-");
+        executor.initialize();
+        return executor;
     }
 
     @Bean

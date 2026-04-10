@@ -26,6 +26,23 @@ public class GlobalExceptionHandler {
                 .body(new MessageResponse(ex.getMessage()));
     }
 
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<MessageResponse> handleDataIntegrityViolationException(org.springframework.dao.DataIntegrityViolationException ex) {
+        log.error("Data integrity violation caught: {}", ex.getMessage());
+        String message = "A data integrity error occurred.";
+        if (ex.getMessage().contains("duplicate key value violates unique constraint")) {
+            if (ex.getMessage().contains("part_number")) {
+                message = "Error: A product with this part number already exists.";
+            } else if (ex.getMessage().contains("uk_") || ex.getMessage().contains("unique constraint")) {
+                message = "Error: A record with this unique value already exists.";
+            }
+        }
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .body(new MessageResponse(message));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
         log.warn("Validation error: {}", ex.getMessage());

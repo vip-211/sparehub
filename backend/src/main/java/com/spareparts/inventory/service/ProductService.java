@@ -118,10 +118,12 @@ public class ProductService extends ProductSubject {
         User wholesaler = userRepository.findById(wholesalerId)
                 .orElseThrow(() -> new RuntimeException("Wholesaler not found"));
 
-        // Check for duplicate part number
-        productRepository.findByPartNumberAndDeletedFalse(productDto.getPartNumber()).ifPresent(p -> {
-            throw new RuntimeException("Product with part number " + productDto.getPartNumber() + " already exists.");
-        });
+        // Check if a product with the same part number already exists (excluding deleted ones)
+        if (productDto.getPartNumber() != null && !productDto.getPartNumber().isEmpty()) {
+            if (productRepository.findByPartNumberAndDeletedFalse(productDto.getPartNumber()).isPresent()) {
+                throw new RuntimeException("Error: Product with part number " + productDto.getPartNumber() + " already exists!");
+            }
+        }
 
         Product product = new Product();
         product.setName(productDto.getName());
@@ -329,6 +331,14 @@ public class ProductService extends ProductSubject {
     public ProductDto updateProduct(Long id, ProductDto productDto) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
+
+        // Check for duplicate part number if it's being changed
+        if (productDto.getPartNumber() != null && !productDto.getPartNumber().equals(product.getPartNumber())) {
+            if (productRepository.findByPartNumberAndDeletedFalse(productDto.getPartNumber()).isPresent()) {
+                throw new RuntimeException("Error: Product with part number " + productDto.getPartNumber() + " already exists!");
+            }
+        }
+
         product.setName(productDto.getName());
         product.setPartNumber(productDto.getPartNumber());
         product.setRackNumber(productDto.getRackNumber());
