@@ -19,9 +19,7 @@ const StaffDashboard = () => {
 
   const fetchOrders = async () => {
     try {
-      // Reusing admin orders endpoint or staff-specific if it exists. 
-      // Assuming admin orders works for staff too for now.
-      const res = await api.get('admin/orders');
+      const res = await api.get('orders/staff-orders');
       setOrders(res.data);
     } catch (err) {
       console.error('Error fetching orders:', err);

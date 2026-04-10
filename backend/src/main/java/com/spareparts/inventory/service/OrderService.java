@@ -74,8 +74,16 @@ public class OrderService {
         try {
             String title = "New Custom Order Request #" + request.getId();
             String message = "New custom order request from " + customer.getName();
-            fcmService.sendToRole("ROLE_ADMIN", title, message, "DAILY", null);
-            fcmService.sendToRole("ROLE_SUPER_MANAGER", title, message, "DAILY", null);
+            
+            // Only notify Admin and Super Manager for Mechanic requests
+            if (customer.getRole() != null && customer.getRole().getName() == RoleName.ROLE_MECHANIC) {
+                fcmService.sendToRole("ROLE_ADMIN", title, message, "DAILY", null);
+                fcmService.sendToRole("ROLE_SUPER_MANAGER", title, message, "DAILY", null);
+            } else {
+                // For other roles, current behavior is same but this block allows for future changes
+                fcmService.sendToRole("ROLE_ADMIN", title, message, "DAILY", null);
+                fcmService.sendToRole("ROLE_SUPER_MANAGER", title, message, "DAILY", null);
+            }
             
             // Real-time update for admin dashboard
             messagingTemplate.convertAndSend("/topic/admin/orders", dto);
@@ -262,17 +270,25 @@ public class OrderService {
 
         OrderDto dto = convertToDto(order);
 
-        // Notify Admin and Super Manager when user creates an order
+        // Notify relevant roles when user creates an order
         try {
             String title = "New Order #" + order.getId();
             String message = "New order received from " + customer.getName() + " for Rs. " + order.getTotalAmount();
-            fcmService.sendToRole("ROLE_ADMIN", title, message, "DAILY", null);
-            fcmService.sendToRole("ROLE_SUPER_MANAGER", title, message, "DAILY", null);
             
-            if (order.getPointsRedeemed() != null && order.getPointsRedeemed() > 0) {
-                String redeemMsg = customer.getName() + " redeemed " + order.getPointsRedeemed() + " points (₹" + order.getPointsRedeemed() + ") on Order #" + order.getId();
-                fcmService.sendToRole("ROLE_ADMIN", "Points Redeemed", redeemMsg, "DAILY", null);
-                fcmService.sendToRole("ROLE_SUPER_MANAGER", "Points Redeemed", redeemMsg, "DAILY", null);
+            // For Mechanic orders, only Admin and Super Manager get notified
+            if (customer.getRole() != null && customer.getRole().getName() == RoleName.ROLE_MECHANIC) {
+                fcmService.sendToRole("ROLE_ADMIN", title, message, "DAILY", null);
+                fcmService.sendToRole("ROLE_SUPER_MANAGER", title, message, "DAILY", null);
+                
+                if (order.getPointsRedeemed() != null && order.getPointsRedeemed() > 0) {
+                    String redeemMsg = customer.getName() + " redeemed " + order.getPointsRedeemed() + " points (₹" + order.getPointsRedeemed() + ") on Order #" + order.getId();
+                    fcmService.sendToRole("ROLE_ADMIN", "Points Redeemed", redeemMsg, "DAILY", null);
+                    fcmService.sendToRole("ROLE_SUPER_MANAGER", "Points Redeemed", redeemMsg, "DAILY", null);
+                }
+            } else {
+                // For other roles, current behavior is same but this block allows for future changes
+                fcmService.sendToRole("ROLE_ADMIN", title, message, "DAILY", null);
+                fcmService.sendToRole("ROLE_SUPER_MANAGER", title, message, "DAILY", null);
             }
             
             // Real-time update for admin dashboard - Restricted topic
