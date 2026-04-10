@@ -126,7 +126,7 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
       
       final banners = bannerData['banners'] as List? ?? [];
       final isCarousel = bannerData['isCarousel'] as bool? ?? false;
-      final speed = bannerData['autoScrollSpeed'] as int? ?? 3;
+      final speed = (bannerData['autoScrollSpeed'] as num?)?.toInt() ?? 3;
       
       final homeTitle = await _productService.getCmsSetting('mechanic_home_title', 'Parts Mitra');
       final bannerText = await _productService.getCmsSetting('mechanic_banner_text', 'मार्केटमध्ये दर वाढले,\nparts mitra ॲप वर नाही.');
@@ -295,15 +295,15 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                                 letterSpacing: 0.5
                               ),
                             ),
-                            Text(
-                              _homeTitle,
-                              style: const TextStyle(
-                                color: Colors.white, 
-                                fontSize: 26, 
-                                fontWeight: FontWeight.black,
-                                letterSpacing: -0.5
+                              Text(
+                                _homeTitle,
+                                style: const TextStyle(
+                                  color: Colors.white, 
+                                  fontSize: 26, 
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: -0.5
+                                ),
                               ),
-                            ),
                           ],
                         ),
                       ),
@@ -461,9 +461,9 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 25, 20, 15),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.between,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Shop by Category', style: TextStyle(fontSize: 22, fontWeight: FontWeight.black, letterSpacing: -0.5)),
+              const Text('Shop by Category', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: -0.5)),
               GestureDetector(
                 onTap: () {},
                 child: Text('View All', style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold, fontSize: 14)),
@@ -555,9 +555,9 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 25, 20, 15),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.between,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('My Recent Orders', style: TextStyle(fontSize: 22, fontWeight: FontWeight.black, letterSpacing: -0.5)),
+              const Text('My Recent Orders', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: -0.5)),
               GestureDetector(
                 onTap: () => Navigator.pushNamed(context, '/orders'),
                 child: Text('View All', style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold, fontSize: 14)),
@@ -622,11 +622,11 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                           ),
                           child: Text(
                             order.status,
-                            style: TextStyle(
-                              color: statusColor,
-                              fontSize: 11,
-                              fontWeight: FontWeight.black,
-                            ),
+                              style: TextStyle(
+                                color: statusColor,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
                           ),
                         ),
                         const SizedBox(height: 5),
@@ -759,7 +759,7 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                                   FadeInLeft(
                                     child: Text(
                                       title, 
-                                      style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.black, letterSpacing: -0.5)
+                                      style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: -0.5)
                                     ),
                                   ),
                                   if (text != null && text.isNotEmpty)
@@ -787,7 +787,7 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                                     padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                                   ),
-                                  child: Text(buttonText, style: const TextStyle(fontWeight: FontWeight.black, fontSize: 14)),
+                                  child: Text(buttonText, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                                 ),
                               ),
                           ],
@@ -829,9 +829,9 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 25, 20, 15),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.between,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Trending Parts 🔥', style: TextStyle(fontSize: 22, fontWeight: FontWeight.black, letterSpacing: -0.5)),
+              const Text('Trending Parts 🔥', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: -0.5)),
               GestureDetector(
                 onTap: () {},
                 child: Text('See All', style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold, fontSize: 14)),
@@ -904,7 +904,7 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                                     ),
                                     child: Text(
                                       '${discountPercent.toStringAsFixed(0)}% OFF', 
-                                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.black)
+                                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)
                                     ),
                                   ),
                                 ),
@@ -929,13 +929,13 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                               Text('PN: ${p.partNumber}', style: TextStyle(color: Colors.grey.shade500, fontSize: 12, fontWeight: FontWeight.bold)),
                               const SizedBox(height: 10),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.between,
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text('₹${(_prices[p.id] ?? p.sellingPrice).toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.black, color: Theme.of(context).primaryColor, fontSize: 20)),
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('₹${(_prices[p.id] ?? p.sellingPrice).toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor, fontSize: 20)),
                                       if (p.mrp > p.sellingPrice)
                                         Text('₹${p.mrp.toStringAsFixed(0)}', style: const TextStyle(fontSize: 12, decoration: TextDecoration.lineThrough, color: Colors.grey, fontWeight: FontWeight.w600)),
                                     ],
@@ -943,7 +943,7 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                                   GestureDetector(
                                     onTap: () {
                                       final cart = Provider.of<CartProvider>(context, listen: false);
-                                      cart.addItem(p);
+                                      cart.addItem(p, _prices[p.id] ?? p.sellingPrice);
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         SnackBar(
                                           content: Text('${p.name} added to cart'),

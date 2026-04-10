@@ -2,15 +2,20 @@ package com.spareparts.inventory.controller;
 
 import com.spareparts.inventory.entity.Offer;
 import com.spareparts.inventory.entity.Product;
+import com.spareparts.inventory.entity.ProductImage;
+import com.spareparts.inventory.dto.OfferDto;
+import com.spareparts.inventory.dto.ProductDto;
 import com.spareparts.inventory.repository.OfferRepository;
 import com.spareparts.inventory.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/offers")
@@ -23,13 +28,21 @@ public class OfferController {
     private ProductRepository productRepository;
 
     @GetMapping
-    public ResponseEntity<List<Offer>> getAllOffers() {
-        return ResponseEntity.ok(offerRepository.findAll());
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<OfferDto>> getAllOffers() {
+        List<Offer> offers = offerRepository.findAll();
+        return ResponseEntity.ok(
+                offers.stream().map(this::toDto).collect(Collectors.toList())
+        );
     }
 
     @GetMapping("/active")
-    public ResponseEntity<List<Offer>> getActiveOffers() {
-        return ResponseEntity.ok(offerRepository.findActiveOffers());
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<OfferDto>> getActiveOffers() {
+        List<Offer> offers = offerRepository.findActiveOffers();
+        return ResponseEntity.ok(
+                offers.stream().map(this::toDto).collect(Collectors.toList())
+        );
     }
 
     @PostMapping
@@ -77,5 +90,53 @@ public class OfferController {
     public ResponseEntity<Void> deleteOffer(@PathVariable Long id) {
         offerRepository.deleteById(id);
         return ResponseEntity.ok().build();
+    }
+
+    private OfferDto toDto(Offer offer) {
+        OfferDto dto = new OfferDto();
+        dto.setId(offer.getId());
+        dto.setOfferPrice(offer.getOfferPrice());
+        dto.setMinimumQuantity(offer.getMinimumQuantity());
+        dto.setQuantityLocked(offer.isQuantityLocked());
+        dto.setActive(offer.isActive());
+        dto.setDescription(offer.getDescription());
+        dto.setCreatedAt(offer.getCreatedAt());
+        dto.setProduct(toProductDto(offer.getProduct()));
+        return dto;
+    }
+
+    private ProductDto toProductDto(Product product) {
+        ProductDto dto = new ProductDto();
+        dto.setId(product.getId());
+        dto.setName(product.getName());
+        dto.setPartNumber(product.getPartNumber());
+        dto.setRackNumber(product.getRackNumber());
+        dto.setMrp(product.getMrp());
+        dto.setSellingPrice(product.getSellingPrice());
+        dto.setWholesalerPrice(product.getWholesalerPrice());
+        dto.setRetailerPrice(product.getRetailerPrice());
+        dto.setMechanicPrice(product.getMechanicPrice());
+        dto.setStock(product.getStock());
+        dto.setEnabled(product.isEnabled());
+        dto.setImagePath(product.getImagePath());
+        dto.setImageLink(product.getImageLink());
+        dto.setImageUrls(product.getImages() != null ?
+                product.getImages().stream().map(ProductImage::getImageUrl).collect(Collectors.toList()) :
+                new java.util.ArrayList<>());
+        dto.setMinOrderQty(product.getMinOrderQty());
+        dto.setFeatured(product.isFeatured());
+        dto.setDescription(product.getDescription());
+        if (product.getWholesaler() != null) {
+            dto.setWholesalerId(product.getWholesaler().getId());
+        }
+        if (product.getCategory() != null) {
+            dto.setCategoryId(product.getCategory().getId());
+            dto.setCategoryName(product.getCategory().getName());
+            dto.setCategoryImagePath(product.getCategory().getImagePath());
+            dto.setCategoryImageLink(product.getCategory().getImageLink());
+        }
+        dto.setOfferType(product.getOfferType() != null ? product.getOfferType().name() : null);
+        dto.setOfferMinQty(product.getOfferMinQty());
+        return dto;
     }
 }

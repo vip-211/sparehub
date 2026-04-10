@@ -395,29 +395,53 @@ class ProductService {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getActiveBanners() async {
+  Future<Product?> getProductById(int id) async {
+    try {
+      if (Constants.useRemote) {
+        final res = await _remote.getJson('/products/$id');
+        return Product.fromJson(res);
+      }
+      final db = await _dbService.database;
+      final List<Map<String, dynamic>> maps =
+          await db.query('products', where: 'id = ?', whereArgs: [id]);
+      if (maps.isNotEmpty) {
+        return Product.fromJson(maps.first);
+      }
+    } catch (e) {
+      debugPrint('Get product by ID error: $e');
+    }
+    return null;
+  }
+
+  Future<Map<String, dynamic>> getActiveBanners() async {
     try {
       if (Constants.useRemote) {
         final list = await _remote.getList('/banners/active');
-        return list.map((e) => e as Map<String, dynamic>).toList();
+        return {
+          'banners': list.map((e) => e as Map<String, dynamic>).toList(),
+          'isCarousel': true,
+          'autoScrollSpeed': 3,
+        };
       }
-      return [];
+      return {'banners': [], 'isCarousel': false, 'autoScrollSpeed': 3};
     } catch (e) {
       debugPrint('Get active banners error: $e');
-      return [];
+      return {'banners': [], 'isCarousel': false, 'autoScrollSpeed': 3};
     }
   }
 
-  Future<List<Map<String, dynamic>>> getActiveOffers() async {
+  Future<Map<String, dynamic>> getActiveOffers() async {
     try {
       if (Constants.useRemote) {
         final list = await _remote.getList('/offers/active');
-        return list.map((e) => e as Map<String, dynamic>).toList();
+        return {
+          'offers': list.map((e) => e as Map<String, dynamic>).toList(),
+        };
       }
-      return [];
+      return {'offers': []};
     } catch (e) {
       debugPrint('Get active offers error: $e');
-      return [];
+      return {'offers': []};
     }
   }
 

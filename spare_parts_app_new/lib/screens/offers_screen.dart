@@ -39,10 +39,10 @@ class _OffersScreenState extends State<OffersScreen>
   }
 
   Future<void> _fetchExclusiveOffers() async {
-    final offers = await _productService.getActiveOffers();
+    final data = await _productService.getActiveOffers();
     if (mounted) {
       setState(() {
-        _exclusiveOffers = offers;
+        _exclusiveOffers = data['offers'] as List<Map<String, dynamic>>? ?? [];
         _isLoadingExclusive = false;
       });
     }
@@ -187,7 +187,7 @@ class _OffersScreenState extends State<OffersScreen>
                       color: Colors.amber,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Text('SPECIAL', style: TextStyle(color: Colors.black, fontWeight: FontWeight.black, fontSize: 10)),
+                    child: const Text('SPECIAL', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 10)),
                   ),
                 ),
                 if (discountPercent > 0)
@@ -212,7 +212,7 @@ class _OffersScreenState extends State<OffersScreen>
               children: [
                 Text(product.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                 const SizedBox(height: 4),
-                Text('₹${price.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.black, fontSize: 18, color: Theme.of(context).primaryColor)),
+                Text('₹${price.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Theme.of(context).primaryColor)),
                 const SizedBox(height: 8),
                 Row(
                   children: [
@@ -244,7 +244,7 @@ class _OffersScreenState extends State<OffersScreen>
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
                     ),
-                    child: const Text('View Offer', style: TextStyle(fontWeight: FontWeight.black, fontSize: 12)),
+                    child: const Text('View Offer', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                   ),
                 ),
               ],
