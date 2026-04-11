@@ -952,10 +952,10 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                               return Padding(
                                 padding: const EdgeInsets.only(right: 8.0),
                                 child: FilterChip(
-                                  avatar: cat['imagePath'] != null
+                                  avatar: (cat['imageLink'] != null && (cat['imageLink'] as String).isNotEmpty) || (cat['imagePath'] != null && (cat['imagePath'] as String).isNotEmpty)
                                       ? CircleAvatar(
                                           radius: 9,
-                                          backgroundImage: getImageProvider(cat['imagePath']),
+                                          backgroundImage: getImageProvider(cat['imageLink'] != null && (cat['imageLink'] as String).isNotEmpty ? cat['imageLink'] : cat['imagePath']),
                                         )
                                       : Icon(
                                           cat['iconCodePoint'] != null

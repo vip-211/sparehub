@@ -518,11 +518,11 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                             border: Border.all(color: Colors.grey.shade50, width: 1),
                           ),
                           child: Center(
-                            child: cat['imagePath'] != null
+                            child: (cat['imageLink'] != null && (cat['imageLink'] as String).isNotEmpty) || (cat['imagePath'] != null && (cat['imagePath'] as String).isNotEmpty)
                                 ? ClipRRect(
                                     borderRadius: BorderRadius.circular(18),
                                     child: Image(
-                                      image: getImageProvider(cat['imagePath']),
+                                      image: getImageProvider(cat['imageLink'] != null && (cat['imageLink'] as String).isNotEmpty ? cat['imageLink'] : cat['imagePath']),
                                       width: 50,
                                       height: 50,
                                       fit: BoxFit.contain,

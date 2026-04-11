@@ -137,6 +137,10 @@ public class FcmService {
     }
 
     public void sendToRole(String role, String title, String message, String offerType, String imageUrl) {
+        sendToRole(role, title, message, offerType, imageUrl, "offers", null);
+    }
+
+    public void sendToRole(String role, String title, String message, String offerType, String imageUrl, String route, Long orderId) {
         log.info("FcmService: Preparing notification for role {}: {}", role, title);
         // Always save for in-app notifications
         Notification notification = saveNotification(null, title, message, false, role);
@@ -146,6 +150,8 @@ public class FcmService {
         payload.put("id", notification.getId());
         payload.put("title", title);
         payload.put("message", message);
+        payload.put("route", route);
+        payload.put("orderId", orderId);
         payload.put("createdAt", notification.getCreatedAt());
         messagingTemplate.convertAndSend("/topic/notifications/" + role, payload);
 
@@ -166,7 +172,8 @@ public class FcmService {
                                 .setChannelId("spare_parts_channel")
                                 .build())
                         .build())
-                .putData("route", "offers")
+                .putData("route", route != null ? route : "offers")
+                .putData("orderId", orderId != null ? String.valueOf(orderId) : "")
                 .putData("offerType", offerType != null ? offerType : "")
                 .putData("role", role)
                 .putData("title", title != null ? title : "")

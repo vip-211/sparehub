@@ -80,11 +80,11 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
                           padding: const EdgeInsets.all(16.0),
                           child: Row(
                             children: [
-                              if (category['imagePath'] != null && category['imagePath'].isNotEmpty)
+                              if ((category['imageLink'] != null && (category['imageLink'] as String).isNotEmpty) || (category['imagePath'] != null && (category['imagePath'] as String).isNotEmpty))
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(8),
                                   child: Image(
-                                    image: getImageProvider(category['imagePath']),
+                                    image: getImageProvider(category['imageLink'] != null && (category['imageLink'] as String).isNotEmpty ? category['imageLink'] : category['imagePath']),
                                     width: 60,
                                     height: 60,
                                     fit: BoxFit.cover,

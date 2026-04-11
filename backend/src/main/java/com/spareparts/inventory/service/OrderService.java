@@ -70,25 +70,19 @@ public class OrderService {
         request = orderRequestRepository.save(request);
         CustomOrderRequestDto dto = convertToCustomRequestDto(request);
         
-        // Notify Admin and Super Manager when user creates a custom order request
+        // Notify Admin, Super Manager, and Staff when user creates a custom order request
         try {
             String title = "New Custom Order Request #" + request.getId();
             String message = "New custom order request from " + customer.getName();
             
-            // Only notify Admin and Super Manager for Mechanic requests
-            if (customer.getRole() != null && customer.getRole().getName() == RoleName.ROLE_MECHANIC) {
-                fcmService.sendToRole("ROLE_ADMIN", title, message, "DAILY", null);
-                fcmService.sendToRole("ROLE_SUPER_MANAGER", title, message, "DAILY", null);
-            } else {
-                // For other roles, current behavior is same but this block allows for future changes
-                fcmService.sendToRole("ROLE_ADMIN", title, message, "DAILY", null);
-                fcmService.sendToRole("ROLE_SUPER_MANAGER", title, message, "DAILY", null);
-            }
+            fcmService.sendToRole("ROLE_ADMIN", title, message, "DAILY", null, "offers", null);
+            fcmService.sendToRole("ROLE_SUPER_MANAGER", title, message, "DAILY", null, "offers", null);
+            fcmService.sendToRole("ROLE_STAFF", title, message, "DAILY", null, "offers", null);
             
             // Real-time update for admin dashboard
             messagingTemplate.convertAndSend("/topic/admin/orders", dto);
         } catch (Exception e) {
-            log.error("Failed to notify administrators of new custom request: {}", e.getMessage());
+            log.error("Failed to notify staff of new custom order request: {}", e.getMessage());
         }
         
         return dto;
@@ -275,26 +269,28 @@ public class OrderService {
             String title = "New Order #" + order.getId();
             String message = "New order received from " + customer.getName() + " for Rs. " + order.getTotalAmount();
             
-            // For Mechanic orders, only Admin and Super Manager get notified
+            // 1. Always notify the Seller (Wholesaler) directly
+            fcmService.sendOrderStatusToUser(seller.getId(), order.getId(), title, message);
+
+            // 2. Notify all Staff
+            fcmService.sendToRole("ROLE_STAFF", title, message, "DAILY", null, "orders", order.getId());
+
+            // 3. Notify Admin and Super Manager
+            fcmService.sendToRole("ROLE_ADMIN", title, message, "DAILY", null, "orders", order.getId());
+            fcmService.sendToRole("ROLE_SUPER_MANAGER", title, message, "DAILY", null, "orders", order.getId());
+            
             if (customer.getRole() != null && customer.getRole().getName() == RoleName.ROLE_MECHANIC) {
-                fcmService.sendToRole("ROLE_ADMIN", title, message, "DAILY", null);
-                fcmService.sendToRole("ROLE_SUPER_MANAGER", title, message, "DAILY", null);
-                
                 if (order.getPointsRedeemed() != null && order.getPointsRedeemed() > 0) {
                     String redeemMsg = customer.getName() + " redeemed " + order.getPointsRedeemed() + " points (₹" + order.getPointsRedeemed() + ") on Order #" + order.getId();
                     fcmService.sendToRole("ROLE_ADMIN", "Points Redeemed", redeemMsg, "DAILY", null);
                     fcmService.sendToRole("ROLE_SUPER_MANAGER", "Points Redeemed", redeemMsg, "DAILY", null);
                 }
-            } else {
-                // For other roles, current behavior is same but this block allows for future changes
-                fcmService.sendToRole("ROLE_ADMIN", title, message, "DAILY", null);
-                fcmService.sendToRole("ROLE_SUPER_MANAGER", title, message, "DAILY", null);
             }
             
             // Real-time update for admin dashboard - Restricted topic
             messagingTemplate.convertAndSend("/topic/admin/orders", dto);
         } catch (Exception e) {
-            System.err.println("Failed to notify administrators of new order: " + e.getMessage());
+            log.error("Failed to notify administrators of new order: {}", e.getMessage());
         }
 
         return dto;
