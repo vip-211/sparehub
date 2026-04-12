@@ -8,6 +8,7 @@ import com.spareparts.inventory.repository.ProductRepository;
 import com.spareparts.inventory.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
@@ -26,6 +27,7 @@ public class ExcelService {
     @Autowired
     private com.spareparts.inventory.repository.CategoryRepository categoryRepository;
 
+    @Transactional
     public void save(MultipartFile file, Long wholesalerId, Long categoryId) {
         try {
             User wholesaler = userRepository.findById(wholesalerId)
@@ -80,6 +82,7 @@ public class ExcelService {
         }
     }
 
+    @Transactional(readOnly = true)
     public ByteArrayInputStream load() {
         List<Product> products = productRepository.findAll();
         ByteArrayInputStream in = ExcelHelper.productsToExcel(products);
