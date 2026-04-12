@@ -50,18 +50,18 @@ public class ExcelHelper {
             for (Product product : products) {
                 Row row = sheet.createRow(rowIdx++);
 
-                row.createCell(0).setCellValue(product.getName());
-                row.createCell(1).setCellValue(product.getPartNumber());
-                row.createCell(2).setCellValue(product.getMrp().doubleValue());
-                row.createCell(3).setCellValue(product.getSellingPrice().doubleValue());
-                row.createCell(4).setCellValue(product.getStock());
-                row.createCell(5).setCellValue(product.getWholesalerPrice().doubleValue());
-                row.createCell(6).setCellValue(product.getRetailerPrice().doubleValue());
-                row.createCell(7).setCellValue(product.getMechanicPrice().doubleValue());
+                row.createCell(0).setCellValue(product.getName() != null ? product.getName() : "");
+                row.createCell(1).setCellValue(product.getPartNumber() != null ? product.getPartNumber() : "");
+                row.createCell(2).setCellValue(product.getMrp() != null ? product.getMrp().doubleValue() : 0.0);
+                row.createCell(3).setCellValue(product.getSellingPrice() != null ? product.getSellingPrice().doubleValue() : 0.0);
+                row.createCell(4).setCellValue(product.getStock() != null ? product.getStock() : 0);
+                row.createCell(5).setCellValue(product.getWholesalerPrice() != null ? product.getWholesalerPrice().doubleValue() : 0.0);
+                row.createCell(6).setCellValue(product.getRetailerPrice() != null ? product.getRetailerPrice().doubleValue() : 0.0);
+                row.createCell(7).setCellValue(product.getMechanicPrice() != null ? product.getMechanicPrice().doubleValue() : 0.0);
                 row.createCell(8).setCellValue(product.getRackNumber() != null ? product.getRackNumber() : "");
                 row.createCell(9).setCellValue(product.getDescription() != null ? product.getDescription() : "");
                 row.createCell(10).setCellValue(product.getMinOrderQty() != null ? product.getMinOrderQty() : 1);
-                String imageLinks = product.getImages() != null ? product.getImages().stream().map(ProductImage::getImageUrl).collect(Collectors.joining(";")) : "";
+                String imageLinks = product.getImages() != null ? product.getImages().stream().map(img -> img.getImageUrl() != null ? img.getImageUrl() : "").filter(url -> !url.isEmpty()).collect(Collectors.joining(";")) : "";
                 row.createCell(11).setCellValue(imageLinks);
             }
 

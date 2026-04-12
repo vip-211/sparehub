@@ -2848,8 +2848,8 @@ const AdminDashboard = () => {
                 {/* Monthly Sales Line Chart */}
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                   <h4 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-6">Revenue Trends (Monthly)</h4>
-                  <div className="h-80 w-full">
-                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                  <div className="h-80 w-full min-h-0 min-w-0">
+                    <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={dashboardData?.monthlySales || []}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
                         <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fontSize: 12, fontWeight: 'bold', fill: '#94A3B8'}} dy={10} />
@@ -2867,8 +2867,8 @@ const AdminDashboard = () => {
                 {/* Top Selling Products Bar Chart */}
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                   <h4 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-6">Top Selling Products</h4>
-                  <div className="h-80 w-full">
-                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                  <div className="h-80 w-full min-h-0 min-w-0">
+                    <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={dashboardData?.topSelling || []}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#94A3B8'}} dy={10} />
