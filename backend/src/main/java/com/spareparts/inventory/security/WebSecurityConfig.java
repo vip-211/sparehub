@@ -32,7 +32,7 @@ public class WebSecurityConfig {
     @Autowired
     UserDetailsServiceImpl userDetailsService;
 
-    @Value("${app.cors.allowed-origins:https://sparehub-3uyq.vercel.app,https://sparehub-production.up.railway.app,https://partsmitra.onrender.com,https://sparehub-0t47.onrender.com,https://spareshub.app,https://sparehub-chi.vercel.app,https://*.vercel.app,http://localhost:5173}")
+    @Value("${app.cors.allowed-origins:https://sparehub-3uyq.vercel.app,https://partsmitra.onrender.com,https://sparehub-0t47.onrender.com,https://spareshub.app,https://sparehub-chi.vercel.app,https://*.vercel.app,http://localhost:5173}")
     private String allowedOriginsProp;
 
     private List<String> allowedOrigins() {

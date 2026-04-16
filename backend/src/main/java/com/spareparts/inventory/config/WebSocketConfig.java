@@ -21,7 +21,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setAllowedOrigins("https://sparehub-3uyq.vercel.app", "https://partsmitra.onrender.com", "http://localhost:5173", "https://sparehub-production.up.railway.app")
+                .setAllowedOrigins("https://sparehub-3uyq.vercel.app", "https://partsmitra.onrender.com", "http://localhost:5173", "https://sparehub-0t47.onrender.com", "https://spareshub.app", "https://sparehub-chi.vercel.app")
                 .setAllowedOriginPatterns("*")
                 .withSockJS();
     }

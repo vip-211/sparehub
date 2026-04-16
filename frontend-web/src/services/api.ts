@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const VITE_API_BASE = import.meta.env.VITE_API_BASE;
 
-let base = VITE_API_BASE || 'https://sparehub-production.up.railway.app/api';
+let base = VITE_API_BASE || 'https://sparehub-0t47.onrender.com/api';
 if (base.endsWith('/')) {
   base = base.substring(0, base.length - 1);
 }
