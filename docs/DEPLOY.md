@@ -6,8 +6,10 @@ Backend (Render or Railway)
   - Deploy, health check: https://YOUR_HOST/api/products
 - Railway:
   - Create PostgreSQL, copy DATABASE_URL
-  - Create Service from spares-hub-server Dockerfile
+  - Create Service from the root Dockerfile (not the one in spares-hub-server)
   - Set env: DATABASE_URL
+  - Ensure the service is named `inventory-system` or similar
+  - Verify health check: https://YOUR_HOST/api/test/health
 
 Flutter Web (GitHub Pages)
 - Add secret FLUTTER_WEB_BASE_URL with https://YOUR_HOST/api in repo settings

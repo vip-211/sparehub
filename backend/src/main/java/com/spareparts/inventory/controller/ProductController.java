@@ -32,6 +32,7 @@ import java.util.stream.Stream;
 
 @RestController
 @RequestMapping("/api/products")
+@CrossOrigin(origins = "*")
 public class ProductController {
     @Autowired
     private ProductService productService;

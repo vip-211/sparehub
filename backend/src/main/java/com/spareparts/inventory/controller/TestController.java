@@ -4,6 +4,7 @@ package com.spareparts.inventory.controller;
 import com.spareparts.inventory.repository.ProductRepository;
 import com.spareparts.inventory.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -12,6 +13,7 @@ import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/test")
+@CrossOrigin(origins = "*")
 public class TestController {
     @Autowired
     private UserRepository userRepository;
