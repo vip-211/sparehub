@@ -19,12 +19,13 @@ import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/excel")
+@CrossOrigin(origins = "*")
 public class ExcelController {
     @Autowired
     private ExcelService fileService;
 
-    @PostMapping("/upload")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER') or hasRole('WHOLESALER')")
     public ResponseEntity<MessageResponse> uploadFile(
             @RequestParam("file") MultipartFile file, 
             @RequestParam(value = "categoryId", required = false) Long categoryId,

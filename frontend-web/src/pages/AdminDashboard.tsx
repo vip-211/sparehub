@@ -843,7 +843,7 @@ const AdminDashboard = () => {
     try {
       await api.post('excel/upload', formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Expect': '', // Fix 417 Expectation Failed on some proxies
         },
       });
       alert('Products imported successfully!');
