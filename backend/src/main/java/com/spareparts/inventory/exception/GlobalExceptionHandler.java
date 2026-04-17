@@ -76,21 +76,35 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(org.springframework.http.converter.HttpMessageNotWritableException.class)
     public void handleMessageNotWritableException(org.springframework.http.converter.HttpMessageNotWritableException ex, jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
         log.error("HttpMessageNotWritableException caught: {}", ex.getMessage());
-        // If the response is already committed or content-type is fixed (like text/event-stream),
-        // we might not be able to return a standard JSON response.
-        if (!response.isCommitted()) {
-            try {
-                response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
-                response.resetBuffer(); // Try to clear buffer if possible
-                response.setContentType("application/json");
-                // Use a simple JSON string to avoid any further serialization issues
-                response.getWriter().write("{\"message\":\"Error writing response: " + ex.getMessage().replace("\"", "'").replace("\n", " ") + "\"}");
-                response.getWriter().flush();
-            } catch (Exception e) {
-                log.error("Failed to write error response after HttpMessageNotWritableException: {}", e.getMessage());
-            }
-        } else {
+        
+        if (response.isCommitted()) {
             log.error("Response already committed. Cannot send error details to client.");
+            return;
+        }
+
+        try {
+            // Check if content type is already set and incompatible with JSON
+            String contentType = response.getContentType();
+            if (contentType != null && (contentType.contains("text/event-stream") || contentType.contains("application/javascript"))) {
+                log.warn("Fixed content-type {} detected. Sending simple string response.", contentType);
+                response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
+                // For application/javascript, we might need a valid JS statement, but let's try a simple message first
+                if (contentType.contains("application/javascript")) {
+                    response.getWriter().write("/* Error: " + ex.getMessage().replace("*/", "* /") + " */");
+                } else {
+                    response.getWriter().write("Error: " + ex.getMessage());
+                }
+                response.getWriter().flush();
+                return;
+            }
+
+            response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
+            response.resetBuffer(); // Try to clear buffer if possible
+            response.setContentType("application/json");
+            response.getWriter().write("{\"message\":\"Error writing response: " + ex.getMessage().replace("\"", "'").replace("\n", " ") + "\"}");
+            response.getWriter().flush();
+        } catch (Exception e) {
+            log.error("Failed to write error response after HttpMessageNotWritableException: {}", e.getMessage());
         }
     }
 }
