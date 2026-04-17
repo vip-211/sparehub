@@ -75,32 +75,16 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(org.springframework.http.converter.HttpMessageNotWritableException.class)
     public void handleMessageNotWritableException(org.springframework.http.converter.HttpMessageNotWritableException ex, jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
-        // These exceptions are common in WebSocket/SockJS fallbacks and often represent harmless client disconnections.
-        // We use WARN instead of ERROR to reduce noise in production logs.
         log.warn("HttpMessageNotWritableException caught: {}", ex.getMessage());
-        
-        if (response.isCommitted()) {
-            return;
-        }
 
         try {
-            String contentType = response.getContentType();
-            if (contentType != null && (contentType.contains("text/event-stream") || contentType.contains("application/javascript"))) {
+            if (!response.isCommitted()) {
+                response.resetBuffer();
+                response.setContentType("application/json");
                 response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
-                if (contentType.contains("application/javascript")) {
-                    response.getWriter().write("/* Error: " + ex.getMessage().replace("*/", "* /") + " */");
-                } else {
-                    response.getWriter().write("Error: " + ex.getMessage());
-                }
+                response.getWriter().write("{\"message\":\"Error processing request\"}");
                 response.getWriter().flush();
-                return;
             }
-
-            response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
-            response.resetBuffer();
-            response.setContentType("application/json");
-            response.getWriter().write("{\"message\":\"Error writing response: " + ex.getMessage().replace("\"", "'").replace("\n", " ") + "\"}");
-            response.getWriter().flush();
         } catch (Exception e) {
             log.debug("Silent failure writing error response: {}", e.getMessage());
         }
