@@ -90,6 +90,7 @@ public class WebSecurityConfig {
                 .authorizeHttpRequests(auth ->
                         auth.requestMatchers("/api/auth/**").permitAll()
                                 .requestMatchers("/api/test/**").permitAll()
+                                .requestMatchers("/api/health").permitAll()
                                 .requestMatchers("/api/files/display/**").permitAll()
                                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/categories/**").permitAll()
                                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/cms/settings/**").permitAll()

@@ -4,15 +4,17 @@ package com.spareparts.inventory.controller;
 import com.spareparts.inventory.repository.ProductRepository;
 import com.spareparts.inventory.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 import java.util.HashMap;
+import java.time.Instant;
 
 @RestController
-@RequestMapping("/api/test")
+@RequestMapping("/api")
 @CrossOrigin(origins = "*")
 public class TestController {
     @Autowired
@@ -22,14 +24,15 @@ public class TestController {
     private ProductRepository productRepository;
 
     @GetMapping("/health")
-    public Map<String, String> health() {
-        Map<String, String> res = new HashMap<>();
-        res.put("status", "UP");
-        res.put("message", "Inventory System is running");
-        return res;
+    public ResponseEntity<Map<String, Object>> healthCheck() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "OK");
+        response.put("message", "Your API is running");
+        response.put("timestamp", Instant.now().toString());
+        return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/stats")
+    @GetMapping("/test/stats")
     public Map<String, Object> stats() {
         Map<String, Object> res = new HashMap<>();
         res.put("totalUsers", userRepository.count());

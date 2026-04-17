@@ -276,78 +276,90 @@ public class ProductService extends ProductSubject {
                 .orElseThrow(() -> new RuntimeException("Wholesaler not found"));
         
         List<Category> allCategories = categoryRepository.findAll();
+        java.util.Map<String, Product> processedInBatch = new java.util.HashMap<>();
+        java.util.List<Product> toSave = new java.util.ArrayList<>();
 
-        List<Product> products = productDtos.stream()
-            .map(dto -> {
-                // Check if product already exists by partNumber (global check)
-                java.util.Optional<Product> existing = productRepository.findByPartNumber(dto.getPartNumber());
-                Product product;
-                if (existing.isPresent()) {
-                    Product e = existing.get();
-                    if (!e.getWholesaler().getId().equals(wholesaler.getId())) {
-                        log.warn("Skipping product belonging to another wholesaler: {}", dto.getPartNumber());
-                        return null;
-                    }
-                    product = e;
-                    product.setDeleted(false);
-                } else {
-                    product = new Product();
-                }
-                
-                product.setName(dto.getName());
-                product.setPartNumber(dto.getPartNumber());
-                product.setRackNumber(dto.getRackNumber());
-                product.setMrp(dto.getMrp());
-                product.setSellingPrice(dto.getSellingPrice());
-                product.setWholesalerPrice(dto.getWholesalerPrice());
-                product.setRetailerPrice(dto.getRetailerPrice());
-                product.setMechanicPrice(dto.getMechanicPrice());
-                product.setStock(dto.getStock());
-                product.setEnabled(dto.isEnabled());
-                product.setImagePath(dto.getImagePath());
-                product.setImageLink(dto.getImageLink());
-                
-                if (dto.getImageUrls() != null && !dto.getImageUrls().isEmpty()) {
-                    java.util.List<ProductImage> productImages = new java.util.ArrayList<>();
-                    for (int i = 0; i < dto.getImageUrls().size(); i++) {
-                        ProductImage img = new ProductImage();
-                        img.setImageUrl(dto.getImageUrls().get(i));
-                        img.setDisplayOrder(i);
-                        img.setProduct(product);
-                        productImages.add(img);
-                    }
-                    product.setImages(productImages);
-                }
+        for (ProductDto dto : productDtos) {
+            if (dto.getPartNumber() == null || dto.getPartNumber().trim().isEmpty()) continue;
+            String partNumber = dto.getPartNumber().trim();
 
-                if (dto.getMinOrderQty() != null) {
-                    product.setMinOrderQty(dto.getMinOrderQty());
-                } else {
-                    product.setMinOrderQty(1);
-                }
-                product.setWholesaler(wholesaler);
-                product.setFeatured(dto.isFeatured());
+            Product product;
+            if (processedInBatch.containsKey(partNumber)) {
+                product = processedInBatch.get(partNumber);
+                updateProductFromDto(product, dto, wholesaler, allCategories);
+                continue;
+            }
 
-                Long categoryId = dto.getCategoryId();
-                if (categoryId == null) {
-                    categoryId = findBestCategoryMatchInList(dto.getName(), dto.getPartNumber(), allCategories);
+            // Check if product already exists by partNumber (global check)
+            java.util.Optional<Product> existing = productRepository.findByPartNumber(partNumber);
+            if (existing.isPresent()) {
+                Product e = existing.get();
+                if (!e.getWholesaler().getId().equals(wholesaler.getId())) {
+                    log.warn("Skipping product belonging to another wholesaler: {}", partNumber);
+                    continue;
                 }
-                if (categoryId != null) {
-                    final Long finalCid = categoryId;
-                    allCategories.stream().filter(c -> c.getId().equals(finalCid)).findFirst().ifPresent(product::setCategory);
-                }
-
-                return product;
-            })
-            .filter(java.util.Objects::nonNull)
-            .collect(Collectors.toList());
-        
-        if (!products.isEmpty()) {
-            productRepository.saveAll(products);
+                product = e;
+                product.setDeleted(false);
+            } else {
+                product = new Product();
+                toSave.add(product);
+            }
             
-            // Notify observers for each new product in bulk addition
-            for (Product product : products) {
+            updateProductFromDto(product, dto, wholesaler, allCategories);
+            processedInBatch.put(partNumber, product);
+        }
+        
+        if (!processedInBatch.isEmpty()) {
+            productRepository.saveAll(processedInBatch.values());
+            
+            // Notify observers for each product in bulk addition
+            for (Product product : processedInBatch.values()) {
                 notifyObservers(product);
             }
+        }
+    }
+
+    private void updateProductFromDto(Product product, ProductDto dto, User wholesaler, List<Category> allCategories) {
+        product.setName(dto.getName());
+        product.setPartNumber(dto.getPartNumber());
+        product.setRackNumber(dto.getRackNumber());
+        product.setMrp(dto.getMrp());
+        product.setSellingPrice(dto.getSellingPrice());
+        product.setWholesalerPrice(dto.getWholesalerPrice());
+        product.setRetailerPrice(dto.getRetailerPrice());
+        product.setMechanicPrice(dto.getMechanicPrice());
+        product.setStock(dto.getStock());
+        product.setEnabled(dto.isEnabled());
+        product.setImagePath(dto.getImagePath());
+        product.setImageLink(dto.getImageLink());
+        
+        if (dto.getImageUrls() != null && !dto.getImageUrls().isEmpty()) {
+            java.util.List<ProductImage> productImages = new java.util.ArrayList<>();
+            for (int i = 0; i < dto.getImageUrls().size(); i++) {
+                ProductImage img = new ProductImage();
+                img.setImageUrl(dto.getImageUrls().get(i));
+                img.setDisplayOrder(i);
+                img.setProduct(product);
+                productImages.add(img);
+            }
+            product.setImages(productImages);
+        }
+
+        if (dto.getMinOrderQty() != null) {
+            product.setMinOrderQty(dto.getMinOrderQty());
+        } else {
+            product.setMinOrderQty(1);
+        }
+        product.setWholesaler(wholesaler);
+        product.setFeatured(dto.isFeatured());
+
+        Long categoryId = dto.getCategoryId();
+        if (categoryId == null) {
+            categoryId = findBestCategoryMatchInList(dto.getName(), dto.getPartNumber(), allCategories);
+        }
+        if (categoryId != null) {
+            final Long finalCid = categoryId;
+            allCategories.stream().filter(c -> c.getId().equals(finalCid)).findFirst().ifPresent(product::setCategory);
         }
     }
 

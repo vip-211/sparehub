@@ -9,7 +9,7 @@ Backend (Render or Railway)
   - Create Service from the root Dockerfile (not the one in spares-hub-server)
   - Set env: DATABASE_URL
   - Ensure the service is named `inventory-system` or similar
-  - Verify health check: https://YOUR_HOST/api/test/health
+  - Verify health check: https://YOUR_HOST/api/health
 
 Flutter Web (GitHub Pages)
 - Add secret FLUTTER_WEB_BASE_URL with https://YOUR_HOST/api in repo settings
