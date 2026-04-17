@@ -17,10 +17,15 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @RestController
 @RequestMapping("/api/excel")
 @CrossOrigin(origins = "*")
 public class ExcelController {
+    private static final Logger log = LoggerFactory.getLogger(ExcelController.class);
+
     @Autowired
     private ExcelService fileService;
 
@@ -31,6 +36,9 @@ public class ExcelController {
             @RequestParam(value = "categoryId", required = false) Long categoryId,
             Authentication authentication) {
         String message = "";
+        
+        log.info("Received Excel upload request: {}, Content-Type: {}, Size: {}", 
+                file.getOriginalFilename(), file.getContentType(), file.getSize());
 
         if (ExcelHelper.hasExcelFormat(file)) {
             try {
@@ -38,14 +46,17 @@ public class ExcelController {
                 fileService.save(file, userDetails.getId(), categoryId);
 
                 message = "Uploaded the file successfully: " + file.getOriginalFilename();
+                log.info(message);
                 return ResponseEntity.status(HttpStatus.OK).body(new MessageResponse(message));
             } catch (Exception e) {
                 message = "Could not upload the file: " + file.getOriginalFilename() + "! Reason: " + e.getMessage();
+                log.error(message, e);
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new MessageResponse(message));
             }
         }
 
-        message = "Please upload an excel file!";
+        message = "Please upload an excel file! (Got: " + file.getContentType() + ")";
+        log.warn(message);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new MessageResponse(message));
     }
 

@@ -21,17 +21,29 @@ import java.util.stream.Collectors;
 public class ExcelHelper {
     public static String[] TYPE = {
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "application/vnd.ms-excel"
+            "application/vnd.ms-excel",
+            "application/octet-stream",
+            "application/x-tika-ooxml",
+            "application/x-tika-msoffice"
     };
     static String[] HEADERS = { "Name", "Part Number", "MRP", "Selling Price", "Stock", "Wholesaler Price", "Retailer Price", "Mechanic Price", "Rack Number", "Description", "Min Order Qty", "Image Links" };
     static String SHEET = "Products";
 
     public static boolean hasExcelFormat(MultipartFile file) {
         String contentType = file.getContentType();
-        if (contentType == null) return false;
-        for (String type : TYPE) {
-            if (type.equals(contentType)) return true;
+        String fileName = file.getOriginalFilename();
+        
+        if (contentType != null) {
+            for (String type : TYPE) {
+                if (type.equalsIgnoreCase(contentType)) return true;
+            }
         }
+        
+        if (fileName != null) {
+            String lowerFileName = fileName.toLowerCase();
+            return lowerFileName.endsWith(".xlsx") || lowerFileName.endsWith(".xls");
+        }
+        
         return false;
     }
 

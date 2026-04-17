@@ -82,8 +82,15 @@ public class GlobalExceptionHandler {
                 response.resetBuffer();
                 response.setContentType("application/json");
                 response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
-                response.getWriter().write("{\"message\":\"Error processing request\"}");
+                response.getWriter().write("{\"message\":\"Error writing response: " + ex.getMessage().replace("\"", "'").replace("\n", " ") + "\"}");
                 response.getWriter().flush();
+            } else {
+                // If already committed, try to write a simple message if it's SSE
+                String contentType = response.getContentType();
+                if (contentType != null && contentType.contains("text/event-stream")) {
+                    response.getWriter().write("event: error\ndata: " + ex.getMessage() + "\n\n");
+                    response.getWriter().flush();
+                }
             }
         } catch (Exception e) {
             log.debug("Silent failure writing error response: {}", e.getMessage());
