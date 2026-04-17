@@ -75,14 +75,20 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(org.springframework.http.converter.HttpMessageNotWritableException.class)
     public void handleMessageNotWritableException(org.springframework.http.converter.HttpMessageNotWritableException ex, jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
-        log.error("HttpMessageNotWritableException caught: {}", ex.getMessage(), ex);
+        log.error("HttpMessageNotWritableException caught: {}", ex.getMessage());
         // If the response is already committed or content-type is fixed (like text/event-stream),
         // we might not be able to return a standard JSON response.
         if (!response.isCommitted()) {
-            response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
-            response.setContentType("application/json");
-            // Use a simple JSON string to avoid any further serialization issues
-            response.getWriter().write("{\"message\":\"Error writing response: " + ex.getMessage().replace("\"", "'").replace("\n", " ") + "\"}");
+            try {
+                response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
+                response.resetBuffer(); // Try to clear buffer if possible
+                response.setContentType("application/json");
+                // Use a simple JSON string to avoid any further serialization issues
+                response.getWriter().write("{\"message\":\"Error writing response: " + ex.getMessage().replace("\"", "'").replace("\n", " ") + "\"}");
+                response.getWriter().flush();
+            } catch (Exception e) {
+                log.error("Failed to write error response after HttpMessageNotWritableException: {}", e.getMessage());
+            }
         } else {
             log.error("Response already committed. Cannot send error details to client.");
         }

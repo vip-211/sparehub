@@ -118,14 +118,31 @@ public class ProductService extends ProductSubject {
         User wholesaler = userRepository.findById(wholesalerId)
                 .orElseThrow(() -> new RuntimeException("Wholesaler not found"));
 
-        // Check if a product with the same part number already exists (excluding deleted ones)
+        Product product = null;
+
+        // Check if a product with the same part number already exists (global check since it's unique in DB)
         if (productDto.getPartNumber() != null && !productDto.getPartNumber().isEmpty()) {
-            if (productRepository.findByPartNumberAndDeletedFalse(productDto.getPartNumber()).isPresent()) {
-                throw new RuntimeException("Error: Product with part number " + productDto.getPartNumber() + " already exists!");
+            java.util.Optional<Product> existing = productRepository.findByPartNumber(productDto.getPartNumber());
+            if (existing.isPresent()) {
+                Product e = existing.get();
+                if (!e.getWholesaler().getId().equals(wholesaler.getId())) {
+                    throw new RuntimeException("Error: Product with part number " + productDto.getPartNumber() + " is already registered by another wholesaler.");
+                }
+                // If it belongs to same wholesaler, we should update instead of throw error
+                // For simplicity in addProduct, we might still throw error if UI expects fresh add, 
+                // but let's at least mention it.
+                if (!e.isDeleted()) {
+                    throw new RuntimeException("Error: Product with part number " + productDto.getPartNumber() + " already exists!");
+                }
+                // If it was deleted, we'll continue and "re-create" it by updating the deleted one
+                product = e;
+                product.setDeleted(false);
             }
         }
 
-        Product product = new Product();
+        if (product == null) {
+            product = new Product();
+        }
         product.setName(productDto.getName());
         product.setPartNumber(productDto.getPartNumber());
         product.setRackNumber(productDto.getRackNumber());
@@ -261,16 +278,22 @@ public class ProductService extends ProductSubject {
         List<Category> allCategories = categoryRepository.findAll();
 
         List<Product> products = productDtos.stream()
-            .filter(dto -> {
-                // Filter out products that already exist with the same part number
-                boolean exists = productRepository.findByPartNumberAndDeletedFalse(dto.getPartNumber()).isPresent();
-                if (exists) {
-                    log.warn("Skipping duplicate product in bulk upload. Part Number: {}", dto.getPartNumber());
-                }
-                return !exists;
-            })
             .map(dto -> {
-                Product product = new Product();
+                // Check if product already exists by partNumber (global check)
+                java.util.Optional<Product> existing = productRepository.findByPartNumber(dto.getPartNumber());
+                Product product;
+                if (existing.isPresent()) {
+                    Product e = existing.get();
+                    if (!e.getWholesaler().getId().equals(wholesaler.getId())) {
+                        log.warn("Skipping product belonging to another wholesaler: {}", dto.getPartNumber());
+                        return null;
+                    }
+                    product = e;
+                    product.setDeleted(false);
+                } else {
+                    product = new Product();
+                }
+                
                 product.setName(dto.getName());
                 product.setPartNumber(dto.getPartNumber());
                 product.setRackNumber(dto.getRackNumber());
@@ -315,6 +338,7 @@ public class ProductService extends ProductSubject {
 
                 return product;
             })
+            .filter(java.util.Objects::nonNull)
             .collect(Collectors.toList());
         
         if (!products.isEmpty()) {

@@ -43,10 +43,16 @@ public class ExcelService {
                 if (category != null) {
                       p.setCategory(category);
                   }
-                  // Check if product already exists by partNumber for this wholesaler
-                  Optional<Product> existing = productRepository.findByPartNumberAndWholesalerAndDeletedFalse(p.getPartNumber(), wholesaler);
+                  // Check if product already exists by partNumber (global check since it's unique in DB)
+                  Optional<Product> existing = productRepository.findByPartNumber(p.getPartNumber());
                   if (existing.isPresent()) {
                       Product e = existing.get();
+                      
+                      // Check if it belongs to this wholesaler or if we should transfer it
+                      if (!e.getWholesaler().getId().equals(wholesaler.getId())) {
+                          throw new RuntimeException("Part number '" + p.getPartNumber() + "' is already registered by another wholesaler.");
+                      }
+                      
                       e.setName(p.getName());
                       e.setMrp(p.getMrp());
                       e.setSellingPrice(p.getSellingPrice());
@@ -57,6 +63,7 @@ public class ExcelService {
                       e.setRackNumber(p.getRackNumber());
                       e.setDescription(p.getDescription());
                       e.setMinOrderQty(p.getMinOrderQty());
+                      e.setDeleted(false); // Ensure it's not marked as deleted
                       
                       // Update images
                       e.getImages().clear();

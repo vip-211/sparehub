@@ -20,6 +20,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByWholesalerAndDeletedTrue(User wholesaler);
     Optional<Product> findByPartNumberAndDeletedFalse(String partNumber);
     Optional<Product> findByPartNumberAndWholesalerAndDeletedFalse(String partNumber, User wholesaler);
+    Optional<Product> findByPartNumber(String partNumber);
     
     @Query("SELECT p FROM Product p WHERE (LOWER(p.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.partNumber) LIKE LOWER(CONCAT('%', :query, '%'))) AND p.deleted = false")
     List<Product> searchProducts(@Param("query") String query);
