@@ -1644,7 +1644,11 @@ class ProductDetailSheetState extends State<ProductDetailSheet> {
     final user = Provider.of<AuthProvider>(context, listen: false).user;
     final bool isMechanic = user?.roles.contains(Constants.roleMechanic) ?? false;
 
-    final images = [p.imageLink ?? p.imagePath, ...p.imageLinks]
+    final images = [
+      p.imageLink ?? p.imagePath,
+      ...(p.imageLink == null && p.imagePath == null ? [p.categoryImageLink ?? p.categoryImagePath] : []),
+      ...p.imageLinks
+    ]
         .where((e) => e != null && e.isNotEmpty)
         .cast<String>()
         .toList();
@@ -1841,7 +1845,7 @@ class ProductDetailSheetState extends State<ProductDetailSheet> {
                     style: TextStyle(fontSize: 15, height: 1.5, fontWeight: FontWeight.w600, color: Colors.grey.shade600),
                   ),
 
-                  if (p.rackNumber != null) ...[
+                  if (!isMechanic && p.rackNumber != null) ...[
                     const SizedBox(height: 24),
                     Container(
                       padding: const EdgeInsets.all(16),

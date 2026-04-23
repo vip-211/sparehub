@@ -141,7 +141,8 @@ const MobileDashboard = () => {
             name: product.name,
             price: banner.fixedPrice || product.sellingPrice,
             partNumber: product.partNumber,
-            wholesalerId: product.wholesalerId
+            wholesalerId: product.wholesalerId,
+            image: product.imageLink || product.imagePath || product.categoryImageLink || product.categoryImagePath
           },
           banner.minimumQuantity || 1,
           banner.quantityLocked,
@@ -162,7 +163,8 @@ const MobileDashboard = () => {
       name: p.name,
       price: p.sellingPrice,
       partNumber: p.partNumber,
-      wholesalerId: p.wholesalerId
+      wholesalerId: p.wholesalerId,
+      image: p.imageLink || p.imagePath || p.categoryImageLink || p.categoryImagePath
     }, 1);
     alert(`${p.name} added to cart!`);
   };
@@ -405,11 +407,17 @@ const MobileDashboard = () => {
                     {hotDeals.map((deal) => (
                       <div key={deal.id} className="flex-shrink-0 w-64 bg-white rounded-[3rem] border border-gray-100 shadow-sm overflow-hidden group cursor-pointer hover:shadow-2xl hover:shadow-primary-100 transition-all duration-500">
                         <div className="h-56 bg-gray-50 relative overflow-hidden">
-                          <img 
-                            src={getImageUrl(deal.imageLink || deal.imagePath)} 
-                            alt={deal.name}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
-                          />
+                          {deal.imageLink || deal.imagePath || deal.categoryImageLink || deal.categoryImagePath ? (
+                            <img 
+                              src={getImageUrl(deal.imageLink || deal.imagePath || deal.categoryImageLink || deal.categoryImagePath)} 
+                              alt={deal.name}
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-300">
+                              <Package size={48} />
+                            </div>
+                          )}
                           <div className="absolute top-5 left-5 bg-white/90 backdrop-blur-md text-red-600 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg flex items-center gap-2">
                             <Zap size={12} className="fill-current" />
                             Hot

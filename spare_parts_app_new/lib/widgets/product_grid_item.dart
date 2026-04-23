@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/product.dart';
+import '../utils/image_utils.dart';
 
 class ProductGridItem extends StatelessWidget {
   final Product product;
@@ -56,8 +57,11 @@ class ProductGridItem extends StatelessWidget {
                         ],
                       ),
                       child: ClipOval(
-                        child: Image.network(
-                          product.imagePath ?? '',
+                        child: Image(
+                          image: getImageProvider(product.imageLink ??
+                              product.imagePath ??
+                              product.categoryImageLink ??
+                              product.categoryImagePath),
                           fit: BoxFit.cover,
                           errorBuilder: (ctx, err, st) => Icon(
                             Icons.image_not_supported,

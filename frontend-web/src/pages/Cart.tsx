@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import api from '../services/api';
+import api, { API_BASE_URL } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import { Trash2, Plus, Minus, ShoppingCart, ArrowRight, Package, Star } from 'lucide-react';
 
@@ -18,6 +18,13 @@ const Cart: React.FC = () => {
   const userPoints = currentUser?.points || 0;
   const pointsToRedeem = usePoints ? Math.min(userPoints, total) : 0;
   const finalTotal = total - pointsToRedeem;
+
+  const getImageUrl = (path: string) => {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
+    const base = API_BASE_URL.endsWith('/api') ? API_BASE_URL.replace('/api', '') : API_BASE_URL;
+    return `${base}${path.startsWith('/') ? '' : '/'}${path}`;
+  };
 
   const checkout = async () => {
     if (!items.length) return;
@@ -133,8 +140,12 @@ const Cart: React.FC = () => {
                     <tr key={i.productId} className="hover:bg-gray-50/50 transition">
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center relative">
-                            <Package className="w-6 h-6 text-gray-400" />
+                          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center relative overflow-hidden">
+                            {i.image ? (
+                              <img src={getImageUrl(i.image)} alt={i.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <Package className="w-6 h-6 text-gray-400" />
+                            )}
                             {i.isLocked && (
                               <div className="absolute -top-2 -right-2 bg-primary-600 text-white p-1 rounded-full shadow-lg border-2 border-white">
                                 <Star size={10} className="fill-current" />
@@ -181,10 +192,14 @@ const Cart: React.FC = () => {
             {/* Mobile Card View */}
             <div className="md:hidden space-y-4">
               {items.map((i) => (
-                <div key={i.productId} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                  <div className="flex gap-4 mb-4">
-                    <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center shrink-0 relative">
-                      <Package className="w-8 h-8 text-gray-400" />
+                <div key={i.productId} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 bg-gray-50 rounded-xl flex items-center justify-center relative overflow-hidden shrink-0">
+                      {i.image ? (
+                        <img src={getImageUrl(i.image)} alt={i.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <Package className="w-8 h-8 text-gray-300" />
+                      )}
                       {i.isLocked && (
                         <div className="absolute -top-2 -right-2 bg-primary-600 text-white p-1 rounded-full shadow-lg border-2 border-white">
                           <Star size={12} className="fill-current" />

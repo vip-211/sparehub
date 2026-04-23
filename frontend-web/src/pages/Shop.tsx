@@ -379,6 +379,7 @@ const Shop: React.FC = () => {
                             partNumber: p.partNumber,
                             price: displayPrice,
                             wholesalerId: p.wholesalerId,
+                            image: p.imageLink || p.imagePath || p.categoryImageLink || p.categoryImagePath,
                           },
                           1,
                         )
@@ -436,6 +437,9 @@ const Shop: React.FC = () => {
                 <div className="relative flex-grow flex items-center justify-center bg-white rounded-3xl border border-gray-100 overflow-hidden group">
                   {(() => {
                     const images = [selectedProduct.imageLink || selectedProduct.imagePath, ...(selectedProduct.imageUrls || [])].filter(Boolean);
+                    if (images.length === 0 && (selectedProduct.categoryImageLink || selectedProduct.categoryImagePath)) {
+                      images.push(selectedProduct.categoryImageLink || selectedProduct.categoryImagePath);
+                    }
                     if (images.length > 0) {
                       return (
                         <>
@@ -573,6 +577,7 @@ const Shop: React.FC = () => {
                             partNumber: selectedProduct.partNumber,
                             price: getPriceForRole(selectedProduct),
                             wholesalerId: selectedProduct.wholesalerId,
+                            image: selectedProduct.imageLink || selectedProduct.imagePath || selectedProduct.categoryImageLink || selectedProduct.categoryImagePath,
                           },
                           selectedProduct.minOrderQty || 1,
                         )

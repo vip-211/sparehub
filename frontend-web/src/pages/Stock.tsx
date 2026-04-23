@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import api from '../services/api';
-import { Bot, Search } from 'lucide-react';
+import api, { API_BASE_URL } from '../services/api';
+import { Bot, Search, Package } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
 type Product = {
@@ -17,6 +17,13 @@ type Product = {
 };
 
 const Stock: React.FC = () => {
+  const getImageUrl = (path: string) => {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
+    const base = API_BASE_URL.endsWith('/api') ? API_BASE_URL.replace('/api', '') : API_BASE_URL;
+    return `${base}${path.startsWith('/') ? '' : '/'}${path}`;
+  };
+
   const loc = useLocation();
   const initialQuery = useMemo(() => {
     const sp = new URLSearchParams(loc.search);
@@ -117,11 +124,9 @@ const Stock: React.FC = () => {
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center border border-gray-100 overflow-hidden">
                           {p.imagePath || p.imageLink || p.categoryImageLink || p.categoryImagePath ? (
-                            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                            // @ts-ignore
-                            <img src={p.imagePath || p.imageLink || p.categoryImageLink || p.categoryImagePath} alt={p.name} className="w-10 h-10 object-cover" />
+                            <img src={getImageUrl(p.imagePath || p.imageLink || p.categoryImageLink || p.categoryImagePath)} alt={p.name} className="w-10 h-10 object-cover" />
                           ) : (
-                            <Bot className="w-5 h-5 text-gray-300" />
+                            <Package className="w-5 h-5 text-gray-300" />
                           )}
                         </div>
                         <div className="text-sm font-bold text-gray-900">{p.name}</div>
@@ -153,11 +158,9 @@ const Stock: React.FC = () => {
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center border border-gray-100 overflow-hidden">
                       {p.imagePath || p.imageLink || p.categoryImageLink || p.categoryImagePath ? (
-                        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                        // @ts-ignore
-                        <img src={p.imagePath || p.imageLink || p.categoryImageLink || p.categoryImagePath} alt={p.name} className="w-12 h-12 object-cover" />
+                        <img src={getImageUrl(p.imagePath || p.imageLink || p.categoryImageLink || p.categoryImagePath)} alt={p.name} className="w-12 h-12 object-cover" />
                       ) : (
-                        <Bot className="w-6 h-6 text-gray-300" />
+                        <Package className="w-6 h-6 text-gray-300" />
                       )}
                     </div>
                     <div>

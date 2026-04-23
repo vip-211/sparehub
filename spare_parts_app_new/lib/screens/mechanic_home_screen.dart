@@ -913,7 +913,10 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                                   child: Hero(
                                     tag: 'product_${p.id}',
                                     child: Image(
-                                      image: getImageProvider(p.imageLink ?? p.imagePath),
+                                      image: getImageProvider(p.imageLink ??
+                                          p.imagePath ??
+                                          p.categoryImageLink ??
+                                          p.categoryImagePath),
                                       fit: BoxFit.cover,
                                       width: double.infinity,
                                       height: double.infinity,

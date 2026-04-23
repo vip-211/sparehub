@@ -98,24 +98,22 @@ class _TrendingProductsScreenState extends State<TrendingProductsScreen> {
                             Expanded(
                               child: ClipRRect(
                                 borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                                child: p.imageLinks.isNotEmpty
-                                    ? Image(
-                                        image: getImageProvider(p.imageLinks.first),
-                                        fit: BoxFit.cover,
-                                        width: double.infinity,
-                                        errorBuilder: (context, error, stackTrace) => Container(
-                                          color: Colors.grey.shade200,
-                                          child: const Center(
-                                            child: Icon(Icons.broken_image, color: Colors.grey, size: 50),
-                                          ),
-                                        ),
-                                      )
-                                    : Container(
-                                        color: Colors.grey.shade200,
-                                        child: const Center(
-                                          child: Icon(Icons.image_not_supported, color: Colors.grey, size: 50),
-                                        ),
-                                      ),
+                                child: Image(
+                                  image: getImageProvider(p.imageLink ??
+                                      p.imagePath ??
+                                      p.categoryImageLink ??
+                                      p.categoryImagePath),
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Container(
+                                    color: Colors.grey.shade200,
+                                    child: const Center(
+                                      child: Icon(Icons.broken_image,
+                                          color: Colors.grey, size: 50),
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                             Padding(

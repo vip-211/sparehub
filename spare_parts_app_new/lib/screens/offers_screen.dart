@@ -173,9 +173,13 @@ class _OffersScreenState extends State<OffersScreen>
               fit: StackFit.expand,
               children: [
                 ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(20)),
                   child: Image(
-                    image: getImageProvider(product.imagePath ?? product.imageLink),
+                    image: getImageProvider(product.imagePath ??
+                        product.imageLink ??
+                        product.categoryImagePath ??
+                        product.categoryImageLink),
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -329,8 +333,10 @@ class _OffersScreenState extends State<OffersScreen>
                         borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(16)),
                         child: Image(
-                          image: getImageProvider(
-                              product.imagePath ?? product.imageLink),
+                          image: getImageProvider(product.imagePath ??
+                              product.imageLink ??
+                              product.categoryImagePath ??
+                              product.categoryImageLink),
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => Container(
                             color: Theme.of(context)

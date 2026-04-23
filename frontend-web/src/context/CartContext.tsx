@@ -5,6 +5,7 @@ type CartItem = {
   name: string;
   price: number;
   partNumber?: string;
+  image?: string;
   quantity: number;
   wholesalerId?: number;
   isLocked?: boolean;

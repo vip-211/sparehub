@@ -3214,8 +3214,8 @@ const AdminDashboard = () => {
                     {offers.map((offer) => (
                       <div key={offer.id} className="bg-white border-2 border-gray-100 rounded-[2rem] overflow-hidden group hover:border-amber-200 transition-all hover:shadow-xl hover:shadow-amber-50/50">
                         <div className="relative aspect-square bg-gray-100 overflow-hidden">
-                          {offer.product?.imagePath || offer.product?.imageLink ? (
-                            <img src={getImageUrl(offer.product?.imageLink || offer.product?.imagePath)} alt={offer.product?.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                          {offer.product?.imagePath || offer.product?.imageLink || offer.product?.categoryImagePath || offer.product?.categoryImageLink ? (
+                            <img src={getImageUrl(offer.product?.imagePath || offer.product?.imageLink || offer.product?.categoryImagePath || offer.product?.categoryImageLink)} alt={offer.product?.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-gray-300">
                               <Package size={48} />

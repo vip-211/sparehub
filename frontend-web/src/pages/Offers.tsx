@@ -43,7 +43,8 @@ const Offers: React.FC = () => {
       name: p.name,
       price: offer.offerPrice || p.sellingPrice,
       partNumber: p.partNumber,
-      wholesalerId: p.wholesalerId
+      wholesalerId: p.wholesalerId,
+      image: p.imageLink || p.imagePath || p.categoryImageLink || p.categoryImagePath
     }, offer.minimumQuantity, offer.quantityLocked, undefined, offer.id);
     alert(`${p.name} added to cart!`);
   };
@@ -96,11 +97,17 @@ const Offers: React.FC = () => {
               )}
               
               <div className="aspect-[4/3] bg-gray-50 overflow-hidden relative">
-                <img 
-                  src={getImageUrl(p.imageLink || p.imagePath)} 
-                  alt={p.name} 
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                />
+                {p.imageLink || p.imagePath || p.categoryImageLink || p.categoryImagePath ? (
+                  <img 
+                    src={getImageUrl(p.imageLink || p.imagePath || p.categoryImageLink || p.categoryImagePath)} 
+                    alt={p.name} 
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-300">
+                    <Package size={64} />
+                  </div>
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
 

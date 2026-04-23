@@ -106,7 +106,10 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                               child: ClipRRect(
                                 borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                                 child: Image(
-                                  image: getImageProvider(p.imageLink ?? p.imagePath),
+                                  image: getImageProvider(p.imageLink ??
+                                      p.imagePath ??
+                                      p.categoryImageLink ??
+                                      p.categoryImagePath),
                                   fit: BoxFit.cover,
                                   width: double.infinity,
                                 ),
