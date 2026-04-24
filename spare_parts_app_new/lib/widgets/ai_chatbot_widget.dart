@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
+import '../widgets/quantity_selector.dart';
 import '../services/ai_training_service.dart';
 import '../services/settings_service.dart';
 
@@ -628,11 +629,12 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
                                             fontWeight: FontWeight.bold)),
                                     const SizedBox(width: 8),
                                     Builder(builder: (ctx) {
+                                      final cart = Provider.of<CartProvider>(ctx, listen: false);
+                                      if (cart.items.containsKey(p.id)) {
+                                        return QuantitySelector(product: p, price: displayPrice);
+                                      }
                                       return TextButton(
                                         onPressed: () {
-                                          final cart =
-                                              Provider.of<CartProvider>(ctx,
-                                                  listen: false);
                                           cart.addItem(p, displayPrice);
                                           try {
                                             _trainingService.submitVoiceAdd(

@@ -44,6 +44,7 @@ import { useCart } from '../context/CartContext';
 
 const MobileDashboard = () => {
   const { tp } = useLanguage();
+  const { reorder } = useCart();
   const [stats, setStats] = useState<any>(null);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [cms, setCms] = useState<any>({});
@@ -142,7 +143,7 @@ const MobileDashboard = () => {
             price: banner.fixedPrice || product.sellingPrice,
             partNumber: product.partNumber,
             wholesalerId: product.wholesalerId,
-            image: product.imageLink || product.imagePath || product.categoryImageLink || product.categoryImagePath
+            image: product.imageLink || product.imagePath || product.categoryImagePath || product.categoryImageLink
           },
           banner.minimumQuantity || 1,
           banner.quantityLocked,
@@ -164,7 +165,7 @@ const MobileDashboard = () => {
       price: p.sellingPrice,
       partNumber: p.partNumber,
       wholesalerId: p.wholesalerId,
-      image: p.imageLink || p.imagePath || p.categoryImageLink || p.categoryImagePath
+      image: p.imageLink || p.imagePath || p.categoryImagePath || p.categoryImageLink
     }, 1);
     alert(`${p.name} added to cart!`);
   };
@@ -239,7 +240,7 @@ const MobileDashboard = () => {
     return <Package className="mb-2 text-primary-600 group-hover:scale-110 transition-transform duration-300" size={32} />;
   };
 
-  const getImageUrl = (path: string) => {
+  const getImageUrl = (path: string | undefined | null) => {
     if (!path) return '';
     if (path.startsWith('http')) return path;
     const base = API_BASE_URL.endsWith('/api') ? API_BASE_URL.replace('/api', '') : API_BASE_URL;
@@ -407,9 +408,9 @@ const MobileDashboard = () => {
                     {hotDeals.map((deal) => (
                       <div key={deal.id} className="flex-shrink-0 w-64 bg-white rounded-[3rem] border border-gray-100 shadow-sm overflow-hidden group cursor-pointer hover:shadow-2xl hover:shadow-primary-100 transition-all duration-500">
                         <div className="h-56 bg-gray-50 relative overflow-hidden">
-                          {deal.imageLink || deal.imagePath || deal.categoryImageLink || deal.categoryImagePath ? (
+                          {deal.imageLink || deal.imagePath || deal.categoryImagePath || deal.categoryImageLink ? (
                             <img 
-                              src={getImageUrl(deal.imageLink || deal.imagePath || deal.categoryImageLink || deal.categoryImagePath)} 
+                              src={getImageUrl(deal.imageLink || deal.imagePath || deal.categoryImagePath || deal.categoryImageLink)} 
                               alt={deal.name}
                               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
                             />
@@ -465,26 +466,51 @@ const MobileDashboard = () => {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {(recentOrders || []).map((order) => (
-                      <div key={order.id} className="flex items-center justify-between p-6 bg-white border border-gray-100 rounded-[2.5rem] shadow-sm hover:shadow-xl hover:shadow-gray-100 transition-all duration-500 group cursor-pointer">
-                        <div className="flex items-center gap-5">
-                          <div className={`p-4 rounded-[1.5rem] transition-colors ${
-                            order.status === 'DELIVERED' ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'
-                          }`}>
-                            {order.status === 'DELIVERED' ? <CheckCircle size={24} /> : <Clock size={24} />}
+                      <div key={order.id} className="p-6 bg-white border border-gray-100 rounded-[2.5rem] shadow-sm hover:shadow-xl hover:shadow-gray-100 transition-all duration-500 group relative">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-5">
+                            <div className={`p-4 rounded-[1.5rem] transition-colors ${
+                              order.status === 'DELIVERED' ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'
+                            }`}>
+                              {order.status === 'DELIVERED' ? <CheckCircle size={24} /> : <Clock size={24} />}
+                            </div>
+                            <div>
+                              <p className="font-black text-gray-900 text-base">Order #{order.id}</p>
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
+                                {new Date(order.orderDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })} • {order.items?.length || 0} Items
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-black text-gray-900 text-base">Order #{order.id}</p>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
-                              {new Date(order.orderDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })} • {order.items?.length || 0} Items
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right flex items-center gap-4">
-                          <div>
+                          <div className="text-right">
                             <p className="font-black text-gray-900 text-lg">₹{(order.totalAmount || 0).toLocaleString()}</p>
                             <p className={`text-[9px] font-black uppercase tracking-widest mt-1 ${order.status === 'DELIVERED' ? 'text-green-500' : 'text-amber-500'}`}>{order.status}</p>
                           </div>
-                          <div className="p-2 bg-gray-50 rounded-xl text-gray-400 group-hover:bg-primary-600 group-hover:text-white group-hover:translate-x-1 transition-all">
+                        </div>
+                        
+                        <div className="mt-6 flex items-center justify-between">
+                          {order.status === 'DELIVERED' && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const itemsToReorder = order.items.map((it: any) => ({
+                                  productId: it.productId,
+                                  name: it.name || it.productName,
+                                  price: it.price,
+                                  quantity: it.quantity,
+                                  partNumber: it.partNumber,
+                                  image: it.image || it.imagePath
+                                }));
+                                reorder(itemsToReorder);
+                              }}
+                              className="px-6 py-2 bg-primary-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-700 transition-all"
+                            >
+                              Reorder
+                            </button>
+                          )}
+                          <div 
+                            onClick={() => window.location.href = `/order-status/${order.id}`}
+                            className="p-2 bg-gray-50 rounded-xl text-gray-400 hover:bg-primary-600 hover:text-white transition-all cursor-pointer"
+                          >
                             <ChevronRight size={20} />
                           </div>
                         </div>

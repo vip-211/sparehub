@@ -14,6 +14,7 @@ import '../models/order.dart';
 import '../providers/cart_provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/cart_badge.dart';
+import '../widgets/quantity_selector.dart';
 import '../utils/image_utils.dart';
 import '../utils/constants.dart';
 import 'package:shimmer/shimmer.dart';
@@ -616,6 +617,39 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                             '${order.items.length} items • ₹${order.totalAmount.toStringAsFixed(0)}', 
                             style: TextStyle(color: Colors.grey.shade600, fontSize: 14, fontWeight: FontWeight.w600)
                           ),
+                          if (order.status.toUpperCase() == 'DELIVERED' || order.status.toUpperCase() == 'COMPLETED')
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: GestureDetector(
+                                onTap: () {
+                                  final cart = Provider.of<CartProvider>(context, listen: false);
+                                  cart.reorder(order.items);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Order #${order.id} items added to cart'),
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                      action: SnackBarAction(label: 'CART', onPressed: () => Navigator.pushNamed(context, '/cart')),
+                                    )
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    'Reorder',
+                                    style: TextStyle(
+                                      color: Theme.of(context).primaryColor,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -972,10 +1006,10 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                                         Text('₹${p.mrp.toStringAsFixed(0)}', style: const TextStyle(fontSize: 12, decoration: TextDecoration.lineThrough, color: Colors.grey, fontWeight: FontWeight.w600)),
                                     ],
                                   ),
-                                  GestureDetector(
-                                    onTap: () {
-                                      final cart = Provider.of<CartProvider>(context, listen: false);
-                                      cart.addItem(p, _prices[p.id] ?? p.sellingPrice);
+                                  QuantitySelector(
+                                    product: p,
+                                    price: _prices[p.id] ?? p.sellingPrice,
+                                    onAddToCart: () {
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         SnackBar(
                                           content: Text('${p.name} added to cart'),
@@ -985,15 +1019,6 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                                         )
                                       );
                                     },
-                                    child: Container(
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context).primaryColor,
-                                        borderRadius: BorderRadius.circular(15),
-                                        boxShadow: [BoxShadow(color: Theme.of(context).primaryColor.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 5))],
-                                      ),
-                                      child: const Icon(Icons.add_shopping_cart_rounded, size: 22, color: Colors.white),
-                                    ),
                                   ),
                                 ],
                               ),

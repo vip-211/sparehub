@@ -18,7 +18,8 @@ class CartProvider with ChangeNotifier {
   }
 
   void addItem(Product product, double price, {int? quantity, bool isLocked = false, int? bannerId, int? offerId}) {
-    final int qtyToAdd = quantity ?? 1;
+    final effectiveMinQty = product.minOrderQty > 1 ? product.minOrderQty : (product.offerType != null && product.offerType != 'NONE' && (product.offerMinQty ?? 0) > 0 ? (product.offerMinQty ?? 1) : 1);
+    final int qtyToAdd = quantity ?? effectiveMinQty;
     if (_items.containsKey(product.id)) {
       if (_items[product.id]!.isLocked) return; // Prevent updating locked items
       _items.update(
@@ -35,24 +36,14 @@ class CartProvider with ChangeNotifier {
         ),
       );
     } else {
-      int initialQty = qtyToAdd;
-      if (quantity == null) {
-        // Only use offer logic if explicit quantity not provided
-        initialQty = (product.offerType != null &&
-                product.offerType != 'NONE' &&
-                (product.offerMinQty ?? 0) > 0)
-            ? (product.offerMinQty ?? 1)
-            : 1;
-      }
-      
       _items.putIfAbsent(
         product.id,
         () => OrderItem(
           productId: product.id,
           productName: product.name,
-          quantity: initialQty,
+          quantity: qtyToAdd,
           price: price,
-          minQty: product.minOrderQty > 1 ? product.minOrderQty : product.offerMinQty,
+          minQty: effectiveMinQty,
           isLocked: isLocked,
           bannerId: bannerId,
           offerId: offerId,
@@ -101,13 +92,47 @@ class CartProvider with ChangeNotifier {
         ),
       );
     } else {
-      // keep at minimum quantity for offer; do not remove
+      removeItem(productId);
     }
     notifyListeners();
   }
 
   void clear() {
     _items.clear();
+    notifyListeners();
+  }
+
+  void reorder(List<OrderItem> newItems) {
+    for (var item in newItems) {
+      if (_items.containsKey(item.productId)) {
+        if (!_items[item.productId]!.isLocked) {
+          _items.update(
+            item.productId,
+            (existing) => OrderItem(
+              productId: existing.productId,
+              productName: existing.productName,
+              quantity: existing.quantity + item.quantity,
+              price: existing.price,
+              minQty: existing.minQty,
+              isLocked: existing.isLocked,
+              bannerId: existing.bannerId,
+              offerId: existing.offerId,
+            ),
+          );
+        }
+      } else {
+        _items[item.productId] = OrderItem(
+          productId: item.productId,
+          productName: item.productName,
+          quantity: item.quantity,
+          price: item.price,
+          minQty: item.minQty,
+          isLocked: false,
+          bannerId: item.bannerId,
+          offerId: item.offerId,
+        );
+      }
+    }
     notifyListeners();
   }
 }

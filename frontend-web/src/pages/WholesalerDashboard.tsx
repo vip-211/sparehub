@@ -26,7 +26,7 @@ const WholesalerDashboard = () => {
   const [placing, setPlacing] = useState(false);
   const [orderMsg, setOrderMsg] = useState('');
 
-  const getImageUrl = (path: string) => {
+  const getImageUrl = (path: string | undefined | null) => {
     if (!path) return '';
     if (path.startsWith('http')) return path;
     const base = API_BASE_URL.endsWith('/api') ? API_BASE_URL.replace('/api', '') : API_BASE_URL;
@@ -222,9 +222,9 @@ const WholesalerDashboard = () => {
                   <tr key={product.id} className="hover:bg-gray-50/50 transition">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
-                          {product.imagePath || product.imageLink || product.categoryImageLink || product.categoryImagePath ? (
+                          {product.imagePath || product.imageLink || product.categoryImagePath || product.categoryImageLink ? (
                             <img 
-                              src={getImageUrl(product.imagePath || product.imageLink || product.categoryImageLink || product.categoryImagePath)} 
+                              src={getImageUrl(product.imagePath || product.imageLink || product.categoryImagePath || product.categoryImageLink)} 
                               alt={product.name} 
                               className="w-10 h-10 rounded-lg object-cover bg-gray-50 border border-gray-100" 
                               onError={(e) => {
@@ -268,9 +268,9 @@ const WholesalerDashboard = () => {
               <div key={product.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    {product.imagePath || product.imageLink || product.categoryImageLink || product.categoryImagePath ? (
+                    {product.imagePath || product.imageLink || product.categoryImagePath || product.categoryImageLink ? (
                       <img 
-                        src={getImageUrl(product.imagePath || product.imageLink || product.categoryImageLink || product.categoryImagePath)} 
+                        src={getImageUrl(product.imagePath || product.imageLink || product.categoryImagePath || product.categoryImageLink)} 
                         alt={product.name} 
                         className="w-14 h-14 rounded-xl object-cover bg-gray-50 border border-gray-100 shadow-sm"
                       />

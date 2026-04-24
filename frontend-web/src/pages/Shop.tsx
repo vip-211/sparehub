@@ -65,7 +65,7 @@ const Shop: React.FC = () => {
     return <Package className="w-5 h-5" />;
   };
 
-  const getImageUrl = (path: string) => {
+  const getImageUrl = (path: string | undefined | null) => {
     if (!path) return '';
     if (path.startsWith('http')) return path;
     // Remove /api from base URL if path already includes it
@@ -304,7 +304,7 @@ const Shop: React.FC = () => {
           {filteredProducts.map((p) => {
             const displayPrice = getPriceForRole(p);
             const inStock = p.stock > 0;
-            const images = [p.imageLink || p.imagePath, ...(p.imageLinks || [])].filter(Boolean);
+            const images = [p.imageLink || p.imagePath, ...(p.imageUrls || [])].filter(Boolean);
             const mainImage = images.length > 0 ? getImageUrl(images[0]) : (p.categoryImageLink || p.categoryImagePath ? getImageUrl(p.categoryImageLink || p.categoryImagePath) : null);
 
             return (

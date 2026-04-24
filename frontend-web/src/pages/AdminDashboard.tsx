@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import api, { API_BASE_URL } from '../services/api';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
-import { Users, ShoppingBag, BarChart2, CheckCircle, XCircle, Plus, Package, UserPlus, Upload, Truck, Trash2, RotateCcw, Settings, Bell, MessageSquare, Search, Star, FileText, List, LayoutGrid, Store, ScanBarcode, Keyboard, Cpu, TrendingUp, Move } from 'lucide-react';
+import { Users, ShoppingBag, BarChart2, CheckCircle, XCircle, Plus, Package, UserPlus, Upload, Truck, Trash2, RotateCcw, Settings, Bell, MessageSquare, Search, Star, FileText, List, LayoutGrid, Store, ScanBarcode, Keyboard, Cpu, TrendingUp, Move, Sparkles } from 'lucide-react';
 import { ROLE_SUPER_MANAGER, ROLE_ADMIN, ROLE_MECHANIC, ROLE_RETAILER, ROLE_WHOLESALER, ROLE_STAFF } from '../services/constants';
 import AuthService from '../services/auth.service';
 import Skeleton from '../components/Skeleton';
@@ -29,7 +29,7 @@ const AdminDashboard = () => {
   // Sound hook - using a public notification sound URL
   const [playNotification] = useSound('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
-  const getImageUrl = (path: string) => {
+  const getImageUrl = (path: string | undefined | null) => {
     if (!path) return '';
     if (path.startsWith('http')) return path;
     const base = API_BASE_URL.endsWith('/api') ? API_BASE_URL.replace('/api', '') : API_BASE_URL;
@@ -921,6 +921,39 @@ const AdminDashboard = () => {
       alert('Failed to upload image');
     } finally {
       setUploading(false);
+    }
+  };
+
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+
+  const handleGenerateAIDescription = async (isEdit: boolean) => {
+    const product = isEdit ? editingProduct : newProduct;
+    if (!product.name) {
+      alert("Please enter product name first");
+      return;
+    }
+
+    setIsGeneratingAI(true);
+    try {
+      const categoryName = categories.find((c: any) => c.id.toString() === product.categoryId?.toString())?.name || '';
+      const response = await api.post('/products/ai-description', {
+        name: product.name,
+        partNumber: product.partNumber,
+        category: categoryName
+      });
+      
+      if (response.data.description) {
+        if (isEdit) {
+          setEditingProduct({ ...editingProduct, description: response.data.description });
+        } else {
+          setNewProduct({ ...newProduct, description: response.data.description });
+        }
+      }
+    } catch (error) {
+      console.error("AI generation failed:", error);
+      alert("AI generation failed. Please try again.");
+    } finally {
+      setIsGeneratingAI(false);
     }
   };
 
@@ -2022,8 +2055,8 @@ const AdminDashboard = () => {
                   )}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                      {product.imagePath || product.imageLink || product.categoryImageLink || product.categoryImagePath ? (
-                        <img src={getImageUrl(product.imagePath || product.imageLink || product.categoryImageLink || product.categoryImagePath)} alt={product.name} className="w-10 h-10 rounded-lg object-cover bg-gray-50 border border-gray-100" />
+                      {product.imagePath || product.imageLink || product.categoryImagePath || product.categoryImageLink ? (
+                        <img src={getImageUrl(product.imagePath || product.imageLink || product.categoryImagePath || product.categoryImageLink)} alt={product.name} className="w-10 h-10 rounded-lg object-cover bg-gray-50 border border-gray-100" />
                       ) : (
                         <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center border border-gray-100">
                           <Package size={20} className="text-gray-300" />
@@ -4544,7 +4577,18 @@ const AdminDashboard = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Description</label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-sm font-medium text-gray-700">Description</label>
+                  <button
+                    type="button"
+                    onClick={() => handleGenerateAIDescription(false)}
+                    disabled={isGeneratingAI}
+                    className="flex items-center gap-1.5 text-xs font-bold text-primary-600 hover:text-primary-700 transition disabled:opacity-50"
+                  >
+                    <Sparkles size={14} className={isGeneratingAI ? "animate-pulse" : ""} />
+                    {isGeneratingAI ? "Generating..." : "AI Generate"}
+                  </button>
+                </div>
                 <textarea
                   className="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
                   rows={3}
@@ -4772,7 +4816,18 @@ const AdminDashboard = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Description</label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-sm font-medium text-gray-700">Description</label>
+                  <button
+                    type="button"
+                    onClick={() => handleGenerateAIDescription(true)}
+                    disabled={isGeneratingAI}
+                    className="flex items-center gap-1.5 text-xs font-bold text-primary-600 hover:text-primary-700 transition disabled:opacity-50"
+                  >
+                    <Sparkles size={14} className={isGeneratingAI ? "animate-pulse" : ""} />
+                    {isGeneratingAI ? "Generating..." : "AI Generate"}
+                  </button>
+                </div>
                 <textarea
                   className="w-full border border-gray-300 rounded-lg p-2 mt-1 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
                   rows={3}

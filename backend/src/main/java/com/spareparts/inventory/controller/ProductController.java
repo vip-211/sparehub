@@ -295,6 +295,21 @@ public class ProductController {
         return ResponseEntity.ok(productService.getWholesalerProducts(userDetails.getId(), page, size, sortBy, direction));
     }
 
+    @PostMapping("/ai-description")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER') or hasRole('STAFF') or hasRole('WHOLESALER')")
+    public ResponseEntity<java.util.Map<String, String>> generateAIDescription(@RequestBody java.util.Map<String, String> request) {
+        String name = request.get("name");
+        String partNumber = request.get("partNumber");
+        String category = request.get("category");
+        
+        if (name == null || name.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", "Product name is required"));
+        }
+        
+        String description = aiService.generateProductDescription(name, partNumber, category);
+        return ResponseEntity.ok(java.util.Map.of("description", description));
+    }
+
     @GetMapping
     public ResponseEntity<PaginatedResponse<ProductDto>> getAllProducts(
             @RequestParam(required = false) Long categoryId,

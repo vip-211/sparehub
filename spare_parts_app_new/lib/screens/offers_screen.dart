@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/product.dart';
 import '../services/product_service.dart';
 import '../providers/cart_provider.dart';
+import '../widgets/quantity_selector.dart';
 import '../providers/auth_provider.dart';
 import '../utils/constants.dart';
 import '../utils/image_utils.dart';
@@ -176,10 +177,10 @@ class _OffersScreenState extends State<OffersScreen>
                   borderRadius:
                       const BorderRadius.vertical(top: Radius.circular(20)),
                   child: Image(
-                    image: getImageProvider(product.imagePath ??
-                        product.imageLink ??
-                        product.categoryImagePath ??
-                        product.categoryImageLink),
+                    image: getImageProvider(product.imageLink ??
+                        product.imagePath ??
+                        product.categoryImageLink ??
+                        product.categoryImagePath),
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -333,10 +334,10 @@ class _OffersScreenState extends State<OffersScreen>
                         borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(16)),
                         child: Image(
-                          image: getImageProvider(product.imagePath ??
-                              product.imageLink ??
-                              product.categoryImagePath ??
-                              product.categoryImageLink),
+                          image: getImageProvider(product.imageLink ??
+                              product.imagePath ??
+                              product.categoryImageLink ??
+                              product.categoryImagePath),
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => Container(
                             color: Theme.of(context)
@@ -448,38 +449,18 @@ class _OffersScreenState extends State<OffersScreen>
                         ],
                       ),
                       const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: product.stock > 0
-                              ? () {
-                                  cart.addItem(product, price);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content:
-                                          Text('${product.name} added to cart'),
-                                      duration: const Duration(seconds: 1),
-                                      backgroundColor:
-                                          Theme.of(context).colorScheme.primary,
-                                    ),
-                                  );
-                                }
-                              : null,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                Theme.of(context).colorScheme.primary,
-                            foregroundColor:
-                                Theme.of(context).colorScheme.onPrimary,
-                            padding: EdgeInsets.zero,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
-                          ),
-                          child: Text(
-                              product.stock > 0
-                                  ? 'Add to Cart'
-                                  : 'Out of Stock',
-                              style: const TextStyle(fontSize: 12)),
-                        ),
+                      QuantitySelector(
+                        product: product,
+                        price: price,
+                        onAddToCart: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('${product.name} added to cart'),
+                              duration: const Duration(seconds: 1),
+                              backgroundColor: Theme.of(context).colorScheme.primary,
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),

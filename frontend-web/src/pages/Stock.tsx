@@ -17,7 +17,7 @@ type Product = {
 };
 
 const Stock: React.FC = () => {
-  const getImageUrl = (path: string) => {
+  const getImageUrl = (path: string | undefined | null) => {
     if (!path) return '';
     if (path.startsWith('http')) return path;
     const base = API_BASE_URL.endsWith('/api') ? API_BASE_URL.replace('/api', '') : API_BASE_URL;
@@ -123,8 +123,8 @@ const Stock: React.FC = () => {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center border border-gray-100 overflow-hidden">
-                          {p.imagePath || p.imageLink || p.categoryImageLink || p.categoryImagePath ? (
-                            <img src={getImageUrl(p.imagePath || p.imageLink || p.categoryImageLink || p.categoryImagePath)} alt={p.name} className="w-10 h-10 object-cover" />
+                          {p.imagePath || p.imageLink || p.categoryImagePath || p.categoryImageLink ? (
+                            <img src={getImageUrl(p.imagePath || p.imageLink || p.categoryImagePath || p.categoryImageLink)} alt={p.name} className="w-10 h-10 object-cover" />
                           ) : (
                             <Package className="w-5 h-5 text-gray-300" />
                           )}
@@ -157,8 +157,8 @@ const Stock: React.FC = () => {
                 <div key={p.id} className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center border border-gray-100 overflow-hidden">
-                      {p.imagePath || p.imageLink || p.categoryImageLink || p.categoryImagePath ? (
-                        <img src={getImageUrl(p.imagePath || p.imageLink || p.categoryImageLink || p.categoryImagePath)} alt={p.name} className="w-12 h-12 object-cover" />
+                      {p.imagePath || p.imageLink || p.categoryImagePath || p.categoryImageLink ? (
+                        <img src={getImageUrl(p.imagePath || p.imageLink || p.categoryImagePath || p.categoryImageLink)} alt={p.name} className="w-12 h-12 object-cover" />
                       ) : (
                         <Package className="w-6 h-6 text-gray-300" />
                       )}

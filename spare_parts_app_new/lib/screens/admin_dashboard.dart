@@ -3683,8 +3683,8 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: Colors.grey[300]!),
                         image: DecorationImage(
-                          image: getImageProvider(p.imagePath ??
-                              p.imageLink ??
+                          image: getImageProvider(p.imageLink ??
+                              p.imagePath ??
                               p.categoryImageLink ??
                               p.categoryImagePath),
                           fit: BoxFit.cover,

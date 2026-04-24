@@ -246,6 +246,21 @@ public class AIService {
         }
     }
 
+    public String generateProductDescription(String name, String partNumber, String category) {
+        String prompt = String.format(
+            "Generate a professional and attractive product description for an auto spare part with the following details:\n" +
+            "Name: %s\n" +
+            "Part Number: %s\n" +
+            "Category: %s\n\n" +
+            "The description should be concise (max 3-4 sentences), highlight compatibility and quality, and be suitable for an e-commerce catalog.",
+            name, partNumber, category != null ? category : "Automotive Parts"
+        );
+
+        // We use askAI with a null userId to avoid saving this to chat history
+        // but still use the existing AI logic
+        return askAI(prompt, "gemini", null);
+    }
+
     @Transactional(readOnly = true)
     public String searchByPhoto(MultipartFile image, String provider) {
         try {

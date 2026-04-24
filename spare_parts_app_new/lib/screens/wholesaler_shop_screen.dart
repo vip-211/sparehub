@@ -21,6 +21,7 @@ import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import '../models/product.dart';
 import '../providers/cart_provider.dart';
+import '../widgets/quantity_selector.dart';
 import '../services/order_service.dart';
 import '../models/order.dart';
 import '../utils/image_utils.dart';
@@ -733,8 +734,8 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                     fit: StackFit.expand,
                     children: [
                       Image(
-                        image: getImageProvider(p.imagePath ??
-                            p.imageLink ??
+                        image: getImageProvider(p.imageLink ??
+                            p.imagePath ??
                             p.categoryImageLink ??
                             p.categoryImagePath),
                         fit: BoxFit.cover,
@@ -814,30 +815,18 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                             ),
                           ),
                           if (!isOutOfStock)
-                            InkWell(
-                              onTap: () {
-                                cart.addItem(p, price);
+                            QuantitySelector(
+                              product: p,
+                              price: price,
+                              onAddToCart: () {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text('${p.name} added'),
                                     duration: const Duration(seconds: 1),
-                                    backgroundColor:
-                                        Theme.of(context).colorScheme.primary,
+                                    backgroundColor: Theme.of(context).colorScheme.primary,
                                   ),
                                 );
                               },
-                              child: Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(Icons.add_shopping_cart,
-                                    size: 20,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onPrimary),
-                              ),
                             ),
                         ],
                       ),
@@ -1374,77 +1363,39 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                                                                 ),
                                                               ],
                                                             ),
-                                                            const SizedBox(
-                                                                height: 12),
+                                                            const SizedBox(height: 12),
                                                             if (!isOutOfStock)
-                                                              ElevatedButton(
-                                                                onPressed: () {
-                                                                  cart.addItem(
-                                                                      product,
-                                                                      price);
-                                                                  ScaffoldMessenger.of(
-                                                                          context)
-                                                                      .showSnackBar(
-                                                                    SnackBar(
-                                                                      content: Text(
-                                                                          '${product.name} added to cart'),
-                                                                      duration: const Duration(
-                                                                          seconds:
-                                                                              1),
-                                                                      backgroundColor:
-                                                                          Colors
-                                                                              .blue,
+                                                              cart.items.containsKey(product.id)
+                                                                ? QuantitySelector(product: product, price: price)
+                                                                : GestureDetector(
+                                                                    onTap: () {
+                                                                      cart.addItem(product, price);
+                                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                                        SnackBar(
+                                                                          content: Text('${product.name} added to cart'),
+                                                                          duration: const Duration(seconds: 1),
+                                                                          backgroundColor: Colors.blue,
+                                                                        ),
+                                                                      );
+                                                                    },
+                                                                    child: Container(
+                                                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                                                      constraints: const BoxConstraints(minSize: Size(80, 36)),
+                                                                      decoration: BoxDecoration(
+                                                                        color: Colors.green.shade600,
+                                                                        borderRadius: BorderRadius.circular(10),
+                                                                      ),
+                                                                      alignment: Alignment.center,
+                                                                      child: Row(
+                                                                        mainAxisSize: MainAxisSize.min,
+                                                                        children: [
+                                                                          Icon(Icons.add_shopping_cart, size: 16, color: Colors.white),
+                                                                          const SizedBox(width: 4),
+                                                                          const Text('Add', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                                                                        ],
+                                                                      ),
                                                                     ),
-                                                                  );
-                                                                },
-                                                                style: ElevatedButton
-                                                                    .styleFrom(
-                                                                  padding: const EdgeInsets
-                                                                      .symmetric(
-                                                                      horizontal:
-                                                                          16),
-                                                                  minimumSize:
-                                                                      const Size(
-                                                                          80,
-                                                                          36),
-                                                                  backgroundColor:
-                                                                      Colors
-                                                                          .green
-                                                                          .shade600,
-                                                                  foregroundColor:
-                                                                      Colors
-                                                                          .white,
-                                                                  elevation: 2,
-                                                                  shape:
-                                                                      RoundedRectangleBorder(
-                                                                    borderRadius:
-                                                                        BorderRadius.circular(
-                                                                            10),
                                                                   ),
-                                                                ),
-                                                                child:
-                                                                    const Row(
-                                                                  mainAxisSize:
-                                                                      MainAxisSize
-                                                                          .min,
-                                                                  children: [
-                                                                    Icon(
-                                                                        Icons
-                                                                            .add_shopping_cart,
-                                                                        size:
-                                                                            16),
-                                                                    SizedBox(
-                                                                        width:
-                                                                            4),
-                                                                    Text('Add',
-                                                                        style: TextStyle(
-                                                                            fontSize:
-                                                                                14,
-                                                                            fontWeight:
-                                                                                FontWeight.bold)),
-                                                                  ],
-                                                                ),
-                                                              ),
                                                           ],
                                                         ),
                                                       ],

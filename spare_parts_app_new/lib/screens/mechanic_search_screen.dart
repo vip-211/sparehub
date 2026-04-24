@@ -11,6 +11,7 @@ import '../services/product_service.dart';
 import '../services/ocr_service.dart';
 import '../models/product.dart';
 import '../providers/cart_provider.dart';
+import '../widgets/quantity_selector.dart';
 import '../services/order_service.dart';
 import 'order_confirmation_screen.dart';
 import '../utils/image_utils.dart';
@@ -664,8 +665,8 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(22),
                             child: Image(
-                              image: getImageProvider(p.imagePath ??
-                                  p.imageLink ??
+                              image: getImageProvider(p.imageLink ??
+                                  p.imagePath ??
                                   p.categoryImageLink ??
                                   p.categoryImagePath),
                               fit: BoxFit.cover,
@@ -772,99 +773,45 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                               ),
                             ),
                             if (cart.items.containsKey(p.id))
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .primary
-                                      .withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.remove, size: 16),
-                                      visualDensity: VisualDensity.compact,
-                                      onPressed: () {
-                                        final item = cart.items[p.id]!;
-                                        if (item.quantity <= (item.minQty ?? 1)) {
-                                          cart.removeItem(p.id);
-                                        } else {
-                                          cart.decrementItem(p.id);
-                                        }
-                                      },
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                    ),
-                                    Text(
-                                      '${cart.items[p.id]!.quantity}',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary,
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.add, size: 16),
-                                      visualDensity: VisualDensity.compact,
-                                      onPressed: () => cart.addItem(p, price),
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                    ),
-                                  ],
-                                ),
+                              QuantitySelector(
+                                product: p,
+                                price: price,
                               )
                             else
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: isOutOfStock
-                                      ? Theme.of(context)
-                                          .colorScheme
-                                          .surfaceContainerHighest
-                                      : Theme.of(context).colorScheme.primary,
-                                  foregroundColor: isOutOfStock
-                                      ? Theme.of(context)
-                                          .colorScheme
-                                          .onSurfaceVariant
-                                          .withOpacity(0.3)
-                                      : Theme.of(context).colorScheme.onPrimary,
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 8),
-                                  minimumSize: Size.zero,
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                onPressed: isOutOfStock
+                              GestureDetector(
+                                onTap: isOutOfStock
                                     ? null
                                     : () {
                                         cart.addItem(p, price);
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
+                                        ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(
-                                            content:
-                                                Text('${p.name} added to cart'),
+                                            content: Text('${p.name} added to cart'),
                                             behavior: SnackBarBehavior.floating,
-                                            duration:
-                                                const Duration(seconds: 1),
+                                            duration: const Duration(seconds: 1),
                                             shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(12)),
-                                            backgroundColor: Theme.of(context)
-                                                .colorScheme
-                                                .primary,
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            backgroundColor: Theme.of(context).colorScheme.primary,
                                           ),
                                         );
                                       },
-                                child: const Text(
-                                  'BUY',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 0.5,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: isOutOfStock
+                                        ? Theme.of(context).colorScheme.surfaceContainerHighest
+                                        : Theme.of(context).colorScheme.primary,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    isOutOfStock ? 'Out of Stock' : 'Add to Cart',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w900,
+                                      color: isOutOfStock
+                                          ? Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.3)
+                                          : Theme.of(context).colorScheme.onPrimary,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -1278,9 +1225,9 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                                                               image:
                                                                   DecorationImage(
                                                                 image: getImageProvider(product
-                                                                        .imagePath ??
-                                                                    product
                                                                         .imageLink ??
+                                                                    product
+                                                                        .imagePath ??
                                                                     product
                                                                         .categoryImageLink ??
                                                                     product
@@ -1443,62 +1390,32 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                                                               fontSize: 17,
                                                             ),
                                                           ),
-                                                          const SizedBox(
-                                                              height: 8),
+                                                          const SizedBox(height: 8),
                                                           if (!isOutOfStock)
-                                                            ElevatedButton(
-                                                              onPressed: () {
-                                                                cart.addItem(
-                                                                    product,
-                                                                    price);
-                                                                ScaffoldMessenger.of(
-                                                                        context)
-                                                                    .showSnackBar(
-                                                                  SnackBar(
-                                                                    content:
-                                                                        Text(
-                                                                      '${product.name} added to cart',
+                                                            cart.items.containsKey(product.id)
+                                                              ? QuantitySelector(product: product, price: price)
+                                                              : GestureDetector(
+                                                                  onTap: () {
+                                                                    cart.addItem(product, price);
+                                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                                      SnackBar(
+                                                                        content: Text('${product.name} added to cart'),
+                                                                        duration: const Duration(seconds: 1),
+                                                                        backgroundColor: Colors.blue,
+                                                                      ),
+                                                                    );
+                                                                  },
+                                                                  child: Container(
+                                                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                                                                    constraints: const BoxConstraints(minSize: Size(60, 32)),
+                                                                    decoration: BoxDecoration(
+                                                                      color: Colors.blue,
+                                                                      borderRadius: BorderRadius.circular(8),
                                                                     ),
-                                                                    duration: const Duration(
-                                                                        seconds:
-                                                                            1),
-                                                                    backgroundColor:
-                                                                        Colors
-                                                                            .blue,
+                                                                    alignment: Alignment.center,
+                                                                    child: const Text('Add', style: TextStyle(fontSize: 13, color: Colors.white)),
                                                                   ),
-                                                                );
-                                                              },
-                                                              style:
-                                                                  ElevatedButton
-                                                                      .styleFrom(
-                                                                padding: const EdgeInsets
-                                                                    .symmetric(
-                                                                    horizontal:
-                                                                        12,
-                                                                    vertical:
-                                                                        0),
-                                                                minimumSize:
-                                                                    const Size(
-                                                                        60, 32),
-                                                                backgroundColor:
-                                                                    Colors.blue,
-                                                                foregroundColor:
-                                                                    Colors
-                                                                        .white,
-                                                                shape:
-                                                                    RoundedRectangleBorder(
-                                                                  borderRadius:
-                                                                      BorderRadius
-                                                                          .circular(
-                                                                              8),
                                                                 ),
-                                                              ),
-                                                              child: const Text(
-                                                                  'Add',
-                                                                  style: TextStyle(
-                                                                      fontSize:
-                                                                          13)),
-                                                            ),
                                                         ],
                                                       ),
                                                     ],
@@ -1506,13 +1423,10 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                                                 ),
                                               ),
                                             ),
-                                            if (i == _products.length - 1 &&
-                                                _isMoreLoading)
+                                            if (i == _products.length - 1 && _isMoreLoading)
                                               const Padding(
-                                                padding: EdgeInsets.symmetric(
-                                                    vertical: 16),
-                                                child:
-                                                    CircularProgressIndicator(),
+                                                padding: EdgeInsets.symmetric(vertical: 16),
+                                                child: CircularProgressIndicator(),
                                               ),
                                           ],
                                         );

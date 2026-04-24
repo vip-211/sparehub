@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
+import { useCart } from '../context/CartContext';
 
 const OrderStatus: React.FC = () => {
   const { id } = useParams();
   const { tp } = useLanguage();
+  const { reorder } = useCart();
+  const navigate = useNavigate();
   const [order, setOrder] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -36,13 +39,39 @@ const OrderStatus: React.FC = () => {
     run();
   }, [id]);
 
+  const handleReorder = () => {
+    if (!order?.items) return;
+    const itemsToReorder = order.items.map((it: any) => ({
+      productId: it.productId,
+      name: it.name || it.productName,
+      price: it.price,
+      quantity: it.quantity,
+      partNumber: it.partNumber,
+      image: it.image || it.imagePath
+    }));
+    reorder(itemsToReorder);
+    navigate('/cart');
+  };
+
   if (loading) return <div className="p-10 text-center">Loading...</div>;
 
   return (
     <div className="container mx-auto">
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-        <h1 className="text-xl font-bold">Order #{id}</h1>
-        <p className="text-gray-500 text-sm mt-1">Live status and tracking</p>
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-xl font-bold">Order #{id}</h1>
+            <p className="text-gray-500 text-sm mt-1">Live status and tracking</p>
+          </div>
+          {order?.status === 'DELIVERED' && (
+            <button
+              onClick={handleReorder}
+              className="px-6 py-2 bg-primary-600 text-white rounded-xl font-bold hover:bg-primary-700 transition-all shadow-lg shadow-primary-100"
+            >
+              Reorder Items
+            </button>
+          )}
+        </div>
         {order?.pointsRedeemed > 0 && (
           <div className="mt-4 p-4 rounded-xl bg-blue-50 border border-blue-100">
             <div className="text-blue-800 font-black">

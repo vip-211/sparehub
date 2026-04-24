@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/product.dart';
 import '../services/product_service.dart';
 import '../providers/cart_provider.dart';
+import '../widgets/quantity_selector.dart';
 import '../utils/image_utils.dart';
 import '../utils/constants.dart';
 import 'wholesaler_shop_screen.dart'; // For ProductDetailSheet
@@ -142,10 +143,10 @@ class _TrendingProductsScreenState extends State<TrendingProductsScreen> {
                                   const SizedBox(height: 8),
                                   Align(
                                     alignment: Alignment.bottomRight,
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        final cart = Provider.of<CartProvider>(context, listen: false);
-                                        cart.addItem(p, _prices[p.id] ?? p.sellingPrice);
+                                    child: QuantitySelector(
+                                      product: p,
+                                      price: _prices[p.id] ?? p.sellingPrice,
+                                      onAddToCart: () {
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(
                                             content: Text('${p.name} added to cart!'),
@@ -153,14 +154,6 @@ class _TrendingProductsScreenState extends State<TrendingProductsScreen> {
                                           ),
                                         );
                                       },
-                                      child: Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: Theme.of(context).primaryColor,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(Icons.add_shopping_cart, color: Colors.white, size: 20),
-                                      ),
                                     ),
                                   ),
                                 ],

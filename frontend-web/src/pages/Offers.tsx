@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import api from '../services/api';
+import api, { API_BASE_URL } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useLanguage } from '../context/LanguageContext';
 import { Package, Star, Lock, ShoppingCart, Info, CheckCircle2, Search, ArrowRight, TrendingUp } from 'lucide-react';
@@ -13,10 +13,10 @@ const Offers: React.FC = () => {
   const { addItem } = useCart();
   const [selectedOffer, setSelectedOffer] = useState<any>(null);
 
-  const getImageUrl = (path: string) => {
+  const getImageUrl = (path: string | undefined | null) => {
     if (!path) return '';
     if (path.startsWith('http')) return path;
-    const base = window.location.origin; // Simplified for this environment
+    const base = API_BASE_URL.endsWith('/api') ? API_BASE_URL.replace('/api', '') : API_BASE_URL;
     return `${base}${path.startsWith('/') ? '' : '/'}${path}`;
   };
 
@@ -44,7 +44,7 @@ const Offers: React.FC = () => {
       price: offer.offerPrice || p.sellingPrice,
       partNumber: p.partNumber,
       wholesalerId: p.wholesalerId,
-      image: p.imageLink || p.imagePath || p.categoryImageLink || p.categoryImagePath
+      image: p.imageLink || p.imagePath || p.categoryImagePath || p.categoryImageLink
     }, offer.minimumQuantity, offer.quantityLocked, undefined, offer.id);
     alert(`${p.name} added to cart!`);
   };
@@ -97,9 +97,9 @@ const Offers: React.FC = () => {
               )}
               
               <div className="aspect-[4/3] bg-gray-50 overflow-hidden relative">
-                {p.imageLink || p.imagePath || p.categoryImageLink || p.categoryImagePath ? (
+                {p.imageLink || p.imagePath || p.categoryImagePath || p.categoryImageLink ? (
                   <img 
-                    src={getImageUrl(p.imageLink || p.imagePath || p.categoryImageLink || p.categoryImagePath)} 
+                    src={getImageUrl(p.imageLink || p.imagePath || p.categoryImagePath || p.categoryImageLink)} 
                     alt={p.name} 
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                   />

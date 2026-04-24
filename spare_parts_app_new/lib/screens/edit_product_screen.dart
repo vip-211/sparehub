@@ -20,6 +20,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
   late TextEditingController _stockController;
   late TextEditingController _mrpController;
   late TextEditingController _sellingPriceController;
+  late TextEditingController _descriptionController;
 
   @override
   void initState() {
@@ -32,9 +33,45 @@ class _EditProductScreenState extends State<EditProductScreen> {
     _mrpController = TextEditingController(text: widget.product.mrp.toString());
     _sellingPriceController =
         TextEditingController(text: widget.product.sellingPrice.toString());
+    _descriptionController =
+        TextEditingController(text: widget.product.description ?? '');
   }
 
   bool _isLoading = false;
+  bool _isGeneratingAI = false;
+
+  Future<void> _generateAIDescription() async {
+    if (_nameController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter product name first')),
+      );
+      return;
+    }
+
+    setState(() => _isGeneratingAI = true);
+    try {
+      final productService = ProductService();
+      final description = await productService.generateAIDescription(
+        _nameController.text,
+        _partNumberController.text,
+        widget.product.categoryName,
+      );
+
+      if (description != null && mounted) {
+        setState(() {
+          _descriptionController.text = description;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('AI Generation failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isGeneratingAI = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,6 +112,32 @@ class _EditProductScreenState extends State<EditProductScreen> {
                 decoration: const InputDecoration(labelText: 'Selling Price'),
                 keyboardType: TextInputType.number,
               ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Description',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  TextButton.icon(
+                    onPressed: _isGeneratingAI ? null : _generateAIDescription,
+                    icon: _isGeneratingAI
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.auto_awesome, size: 16),
+                    label: Text(_isGeneratingAI ? 'Generating...' : 'AI Generate'),
+                  ),
+                ],
+              ),
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(
+                  hintText: 'Enter product description...',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _isLoading
@@ -90,6 +153,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                               mrp: double.parse(_mrpController.text),
                               sellingPrice:
                                   double.parse(_sellingPriceController.text),
+                              description: _descriptionController.text,
                             );
                             final productService = ProductService();
                             final success =

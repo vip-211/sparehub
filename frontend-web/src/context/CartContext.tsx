@@ -18,6 +18,7 @@ type CartContextValue = {
   addItem: (item: Omit<CartItem, 'quantity' | 'isLocked' | 'bannerId' | 'offerId'>, qty?: number, isLocked?: boolean, bannerId?: number, offerId?: number) => void;
   removeItem: (productId: number) => void;
   updateQty: (productId: number, qty: number) => void;
+  reorder: (items: Omit<CartItem, 'isLocked' | 'bannerId' | 'offerId'>[]) => void;
   clear: () => void;
   count: number;
   total: number;
@@ -72,6 +73,23 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clear = () => setItems([]);
 
+  const reorder = (newItems: Omit<CartItem, 'isLocked' | 'bannerId' | 'offerId'>[]) => {
+    setItems((prev) => {
+      let current = [...prev];
+      newItems.forEach((item) => {
+        const idx = current.findIndex((p) => p.productId === item.productId);
+        if (idx >= 0) {
+          if (!current[idx].isLocked) {
+            current[idx] = { ...current[idx], quantity: current[idx].quantity + item.quantity };
+          }
+        } else {
+          current.push({ ...item, isLocked: false });
+        }
+      });
+      return current;
+    });
+  };
+
   const count = useMemo(() => items.reduce((acc, i) => acc + i.quantity, 0), [items]);
   const total = useMemo(() => items.reduce((acc, i) => acc + i.price * i.quantity, 0), [items]);
 
@@ -80,6 +98,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     addItem,
     removeItem,
     updateQty,
+    reorder,
     clear,
     count,
     total,

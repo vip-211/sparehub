@@ -860,6 +860,20 @@ class ProductService {
     await db.delete('product_aliases', where: 'id = ?', whereArgs: [id]);
   }
 
+  Future<String?> generateAIDescription(String name, String partNumber, String? category) async {
+    try {
+      final res = await _remote.postJson('/products/ai-description', {
+        'name': name,
+        'partNumber': partNumber,
+        'category': category,
+      });
+      return res['description'];
+    } catch (e) {
+      debugPrint('AI Description error: $e');
+      return null;
+    }
+  }
+
   Future<int> addProductsBulk(List<Product> products) async {
     int count = 0;
     try {

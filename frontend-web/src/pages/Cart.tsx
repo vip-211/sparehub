@@ -19,7 +19,7 @@ const Cart: React.FC = () => {
   const pointsToRedeem = usePoints ? Math.min(userPoints, total) : 0;
   const finalTotal = total - pointsToRedeem;
 
-  const getImageUrl = (path: string) => {
+  const getImageUrl = (path: string | undefined | null) => {
     if (!path) return '';
     if (path.startsWith('http')) return path;
     const base = API_BASE_URL.endsWith('/api') ? API_BASE_URL.replace('/api', '') : API_BASE_URL;
