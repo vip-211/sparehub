@@ -46,7 +46,7 @@ import com.spareparts.inventory.service.PredictionService;
 import java.util.HashMap;
 
 @RestController
-@RequestMapping("/api/admin")
+@RequestMapping(value = "/api/admin", produces = "application/json")
 @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER') or hasRole('STAFF')")
 public class AdminController {
     @Autowired

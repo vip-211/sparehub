@@ -30,15 +30,22 @@ public class FirebaseConfig {
         InputStream serviceAccount = null;
         try {
             if (serviceAccountJson != null && !serviceAccountJson.isEmpty()) {
-                log.info("FirebaseConfig: Initializing with service account JSON from environment.");
+                log.info("FirebaseConfig: Initializing with service account JSON from environment variable.");
                 serviceAccount = new ByteArrayInputStream(serviceAccountJson.getBytes(StandardCharsets.UTF_8));
             } else if (serviceAccountPath != null && !serviceAccountPath.isEmpty()) {
                 log.info("FirebaseConfig: Initializing with service account file: {}", serviceAccountPath);
                 serviceAccount = new FileInputStream(serviceAccountPath);
+            } else {
+                // Try default Render secret path as a fallback
+                java.io.File renderSecret = new java.io.File("/etc/secrets/serviceAccountKey.json");
+                if (renderSecret.exists()) {
+                    log.info("FirebaseConfig: Found service account at Render secret path: /etc/secrets/serviceAccountKey.json");
+                    serviceAccount = new FileInputStream(renderSecret);
+                }
             }
 
             if (serviceAccount == null) {
-                log.info("FirebaseConfig: No service account provided, skipping initialization.");
+                log.warn("FirebaseConfig: No service account provided (Checked FIREBASE_SERVICE_ACCOUNT_JSON, FIREBASE_SERVICE_ACCOUNT_PATH, and /etc/secrets/serviceAccountKey.json). Skipping initialization.");
                 return;
             }
 
@@ -56,14 +63,22 @@ public class FirebaseConfig {
                     .setCredentials(GoogleCredentials.fromStream(new ByteArrayInputStream(content)))
                     .build();
 
+            if (options.getProjectId() == null || options.getProjectId().isEmpty()) {
+                throw new IllegalStateException("FirebaseConfig: FATAL ERROR! Project ID is missing from service account key.");
+            }
+
             if (FirebaseApp.getApps().isEmpty()) {
                 FirebaseApp app = FirebaseApp.initializeApp(options);
                 log.info("FirebaseConfig: Firebase has been initialized for project: {}", app.getOptions().getProjectId());
             } else {
-                log.info("FirebaseConfig: Firebase already initialized for project: {}", FirebaseApp.getInstance().getOptions().getProjectId());
+                String existingProjectId = FirebaseApp.getInstance().getOptions().getProjectId();
+                if (existingProjectId == null || existingProjectId.isEmpty()) {
+                     throw new IllegalStateException("FirebaseConfig: FATAL ERROR! Existing Firebase instance has no Project ID.");
+                }
+                log.info("FirebaseConfig: Firebase already initialized for project: {}", existingProjectId);
             }
         } catch (IOException e) {
-            log.error("FirebaseConfig: Error initializing Firebase: {}", e.getMessage());
+            throw new RuntimeException("FirebaseConfig: Failed to initialize Firebase: " + e.getMessage(), e);
         } finally {
             if (serviceAccount != null) {
                 try {

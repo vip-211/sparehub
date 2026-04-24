@@ -37,7 +37,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping(value = "/api/auth", produces = "application/json")
 @CrossOrigin(origins = "*")
 public class AuthController {
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);

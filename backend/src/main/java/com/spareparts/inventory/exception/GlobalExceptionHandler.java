@@ -81,6 +81,7 @@ public class GlobalExceptionHandler {
             if (!response.isCommitted()) {
                 response.resetBuffer();
                 response.setContentType("application/json");
+                response.setCharacterEncoding("UTF-8");
                 response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
                 response.getWriter().write("{\"message\":\"Error writing response: " + ex.getMessage().replace("\"", "'").replace("\n", " ") + "\"}");
                 response.getWriter().flush();
@@ -88,7 +89,7 @@ public class GlobalExceptionHandler {
                 // If already committed, try to write a simple message if it's SSE
                 String contentType = response.getContentType();
                 if (contentType != null && contentType.contains("text/event-stream")) {
-                    response.getWriter().write("event: error\ndata: " + ex.getMessage() + "\n\n");
+                    response.getWriter().write("event: error\ndata: {\"message\": \"" + ex.getMessage().replace("\"", "'") + "\"}\n\n");
                     response.getWriter().flush();
                 }
             }

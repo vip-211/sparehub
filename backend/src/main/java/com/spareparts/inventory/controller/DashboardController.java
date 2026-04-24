@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/dashboard")
+@RequestMapping(value = "/api/dashboard", produces = "application/json")
 public class DashboardController {
 
     @Autowired

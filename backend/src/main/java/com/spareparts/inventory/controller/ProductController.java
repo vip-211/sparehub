@@ -31,7 +31,7 @@ import java.util.Collections;
 import java.util.stream.Stream;
 
 @RestController
-@RequestMapping("/api/products")
+@RequestMapping(value = "/api/products", produces = "application/json")
 @CrossOrigin(origins = "*")
 public class ProductController {
     @Autowired

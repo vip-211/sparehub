@@ -20,7 +20,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/offers")
+@RequestMapping(value = "/api/offers", produces = "application/json")
 public class OfferController {
 
     @Autowired

@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/banners")
+@RequestMapping(value = "/api/banners", produces = "application/json")
 public class BannerController {
 
     @Autowired

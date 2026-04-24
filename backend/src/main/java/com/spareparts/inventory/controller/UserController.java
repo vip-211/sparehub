@@ -13,7 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping(value = "/api/users", produces = "application/json")
 public class UserController {
     @Autowired
     private UserRepository userRepository;

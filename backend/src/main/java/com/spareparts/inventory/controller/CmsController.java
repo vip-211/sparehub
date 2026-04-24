@@ -12,7 +12,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/cms")
+@RequestMapping(value = "/api/cms", produces = "application/json")
 public class CmsController {
 
     @Autowired

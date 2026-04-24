@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/categories")
+@RequestMapping(value = "/api/categories", produces = "application/json")
 public class CategoryController {
     private static final Logger log = LoggerFactory.getLogger(CategoryController.class);
     @Autowired

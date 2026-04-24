@@ -26,7 +26,7 @@ import com.spareparts.inventory.entity.AITrainingCorrection;
 import com.spareparts.inventory.service.AgentService;
 import com.spareparts.inventory.service.PredictionService;
 @RestController
-@RequestMapping("/api/ai")
+@RequestMapping(value = "/api/ai", produces = "application/json")
 public class AIController {
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AIController.class);
 

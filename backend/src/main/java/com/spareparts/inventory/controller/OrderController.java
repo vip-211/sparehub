@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/orders")
+@RequestMapping(value = "/api/orders", produces = "application/json")
 public class OrderController {
     @Autowired
     private OrderService orderService;

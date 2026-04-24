@@ -14,7 +14,7 @@ import java.util.Map;
 import com.spareparts.inventory.entity.SystemSetting;
 
 @RestController
-@RequestMapping("/api/settings")
+@RequestMapping(value = "/api/settings", produces = "application/json")
 @CrossOrigin(origins = "*")
 public class SettingsController {
 

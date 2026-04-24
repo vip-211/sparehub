@@ -14,7 +14,7 @@ import java.util.HashMap;
 import java.time.Instant;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping(value = "/api", produces = "application/json")
 @CrossOrigin(origins = "*")
 public class TestController {
     @Autowired

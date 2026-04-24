@@ -43,7 +43,7 @@ public class FileController {
         }
     }
 
-    @PostMapping("/upload")
+    @PostMapping(value = "/upload", produces = "application/json")
     public ResponseEntity<?> uploadFile(@RequestParam("file") MultipartFile file) {
         try {
             Path root = Paths.get(uploadDir).toAbsolutePath().normalize();

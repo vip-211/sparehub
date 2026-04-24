@@ -1,7 +1,11 @@
 package com.spareparts.inventory.service;
 
 import com.google.firebase.FirebaseApp;
-import com.google.firebase.messaging.*;
+import com.google.firebase.messaging.AndroidConfig;
+import com.google.firebase.messaging.AndroidNotification;
+import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.firebase.messaging.FirebaseMessagingException;
+import com.google.firebase.messaging.Message;
 import com.spareparts.inventory.entity.Notification;
 import com.spareparts.inventory.entity.User;
 import com.spareparts.inventory.repository.NotificationRepository;
@@ -14,7 +18,6 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -48,7 +51,7 @@ public class FcmService {
     public void sendToUser(Long userId, String title, String message, String offerType, String imageUrl) {
         log.info("FcmService: Preparing to send notification to user {}: {}", userId, title);
         // Always save for in-app notifications
-        Notification notification = saveNotification(userId, title, message, false, null);
+        com.spareparts.inventory.entity.Notification notification = saveNotification(userId, title, message, false, null);
 
         // Push to WebSocket for real-time in-app delivery
         Map<String, Object> payload = new HashMap<>();
@@ -103,7 +106,7 @@ public class FcmService {
     public void sendBroadcast(String title, String message, String offerType, String imageUrl) {
         log.info("FcmService: Preparing broadcast notification: {}", title);
         // Always save for in-app notifications
-        Notification notification = saveNotification(null, title, message, true, "ALL");
+        com.spareparts.inventory.entity.Notification notification = saveNotification(null, title, message, true, "ALL");
 
         // Push to WebSocket for real-time in-app delivery
         Map<String, Object> payload = new HashMap<>();
@@ -155,7 +158,7 @@ public class FcmService {
     public void sendToRole(String role, String title, String message, String offerType, String imageUrl, String route, Long orderId) {
         log.info("FcmService: Preparing notification for role {}: {}", role, title);
         // Always save for in-app notifications
-        Notification notification = saveNotification(null, title, message, false, role);
+        com.spareparts.inventory.entity.Notification notification = saveNotification(null, title, message, false, role);
 
         // Push to WebSocket for real-time in-app delivery
         Map<String, Object> payload = new HashMap<>();
@@ -210,7 +213,7 @@ public class FcmService {
         payload.put("title", title);
         payload.put("message", message);
         payload.put("orderId", orderId);
-        messagingTemplate.convertAndSendToUser(userId.toString(), "/queue/orders", payload);
+        messagingTemplate.convertAndSendToUser(userId.toString(), "/queue/notifications", payload);
 
         if (FirebaseApp.getApps().isEmpty()) {
             log.warn("FcmService: Firebase not initialized, skipping order status FCM.");
@@ -301,8 +304,8 @@ public class FcmService {
         }
     }
 
-    private Notification saveNotification(Long userId, String title, String message, boolean isBroadcast, String targetRole) {
-        Notification notification = new Notification();
+    private com.spareparts.inventory.entity.Notification saveNotification(Long userId, String title, String message, boolean isBroadcast, String targetRole) {
+        com.spareparts.inventory.entity.Notification notification = new com.spareparts.inventory.entity.Notification();
         notification.setTitle(title);
         notification.setMessage(message);
         notification.setUserId(userId);

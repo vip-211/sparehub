@@ -4,10 +4,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:http/http.dart' as http;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../utils/constants.dart';
 import 'remote_client.dart';
 
 class NotificationService {
@@ -89,12 +87,12 @@ class NotificationService {
         } else if (lastRoleLegacy != null && lastRoleLegacy.isNotEmpty) {
           roles = lastRoleLegacy.split(',').map((e) => e.trim()).toList();
         }
-        if (lastUserId != null) {
-          await updateTokenOnServer(lastUserId, token);
-        }
-        if (roles.isNotEmpty) {
-          await subscribeToTopicsForRoles(roles);
-        }
+    if (lastUserId != null) {
+      await updateTokenOnServer(lastUserId, token);
+    }
+    if (roles.isNotEmpty) {
+      await subscribeToTopicsForRoles(roles);
+    }
         if (kDebugMode) {
           debugPrint(
               'FCM token refreshed and synced. Roles=${roles.join(',')} User=$lastUserId');
@@ -239,15 +237,17 @@ class NotificationService {
 
   static Future<void> updateTokenOnServer(int userId, String token) async {
     try {
-      if (kDebugMode)
+      if (kDebugMode) {
         debugPrint('NotificationService: Updating FCM token for user $userId');
+      }
       final res = await _remote.postJson('/auth/update-fcm-token', {
         'userId': userId,
         'token': token,
       });
       if (res != null) {
-        if (kDebugMode)
+        if (kDebugMode) {
           debugPrint('NotificationService: FCM token updated successfully');
+        }
       } else {
         debugPrint(
             'NotificationService: Failed to update FCM token (null response)');
