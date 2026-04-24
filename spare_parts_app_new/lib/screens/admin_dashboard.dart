@@ -159,7 +159,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         width: double.maxFinite,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.broken_image, size: 50),
+                            const Icon(Icons.inventory_2_outlined, size: 50),
                       ),
                     ),
                   ),
@@ -289,7 +289,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         width: double.maxFinite,
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) =>
-                            const Icon(Icons.broken_image),
+                            const Icon(Icons.inventory_2_outlined),
                       ),
                     ),
                   ),
@@ -3688,15 +3688,13 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                               p.categoryImageLink ??
                               p.categoryImagePath),
                           fit: BoxFit.cover,
-                          onError: (exception, stackTrace) =>
-                              debugPrint('Image load error: $exception'),
                         ),
                       ),
                       child: Stack(
                         children: [
-                          if (p.imagePath == null)
+                          if (p.imagePath == null && p.imageLink == null && p.categoryImagePath == null && p.categoryImageLink == null)
                             Center(
-                              child: Icon(Icons.image_not_supported,
+                              child: Icon(Icons.inventory_2_outlined,
                                   color: Colors.grey[400], size: 32),
                             ),
                           if (p.offerType != null && p.offerType != 'NONE')

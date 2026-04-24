@@ -665,16 +665,18 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(22),
                             child: Image(
-                              image: getImageProvider(p.imageLink ??
-                                  p.imagePath ??
-                                  p.categoryImageLink ??
-                                  p.categoryImagePath),
+                              image: getImageProvider(getProductImage(
+                                  imageLink: p.imageLink,
+                                  imagePath: p.imagePath,
+                                  imageLinks: p.imageLinks,
+                                  categoryImageLink: p.categoryImageLink,
+                                  categoryImagePath: p.categoryImagePath)),
                               fit: BoxFit.cover,
                               errorBuilder: (c, e, s) => Container(
                                 color: Theme.of(context)
                                     .colorScheme
                                     .surfaceContainerHighest,
-                                child: Icon(Icons.image_not_supported_outlined,
+                                child: Icon(Icons.inventory_2_outlined,
                                     size: 32,
                                     color: Theme.of(context)
                                         .colorScheme
@@ -1224,16 +1226,13 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                                                                           8),
                                                               image:
                                                                   DecorationImage(
-                                                                image: getImageProvider(product
-                                                                        .imageLink ??
-                                                                    product
-                                                                        .imagePath ??
-                                                                    product
-                                                                        .categoryImageLink ??
-                                                                    product
-                                                                        .categoryImagePath),
-                                                                fit: BoxFit
-                                                                    .cover,
+                                                                image: getImageProvider(getProductImage(
+                                                                    imageLink: product.imageLink,
+                                                                    imagePath: product.imagePath,
+                                                                    imageLinks: product.imageLinks,
+                                                                    categoryImageLink: product.categoryImageLink,
+                                                                    categoryImagePath: product.categoryImagePath)),
+                                                                fit: BoxFit.cover,
                                                                 onError: (exception,
                                                                         stackTrace) =>
                                                                     debugPrint(
@@ -1241,32 +1240,6 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                                                               ),
                                                             ),
                                                           ),
-                                                          if (product.stock >
-                                                                  0 &&
-                                                              product.stock <=
-                                                                  5)
-                                                            Positioned(
-                                                              top: 0,
-                                                              right: 0,
-                                                              child: Container(
-                                                                padding:
-                                                                    const EdgeInsets
-                                                                        .all(2),
-                                                                decoration:
-                                                                    const BoxDecoration(
-                                                                  color: Colors
-                                                                      .orange,
-                                                                  shape: BoxShape
-                                                                      .circle,
-                                                                ),
-                                                                child: const Icon(
-                                                                    Icons
-                                                                        .warning_amber,
-                                                                    size: 12,
-                                                                    color: Colors
-                                                                        .white),
-                                                              ),
-                                                            ),
                                                         ],
                                                       ),
                                                       const SizedBox(width: 12),
@@ -1295,28 +1268,6 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                                                                   color: Colors
                                                                       .grey,
                                                                   fontSize: 13),
-                                                            ),
-                                                            Text(
-                                                              'Stock: ${isOutOfStock ? "Out of Stock" : product.stock}',
-                                                              style: TextStyle(
-                                                                fontSize: 13,
-                                                                color: (product.stock >
-                                                                            0 &&
-                                                                        product.stock <=
-                                                                            5)
-                                                                    ? Colors
-                                                                        .orange
-                                                                        .shade700
-                                                                    : Colors
-                                                                        .grey,
-                                                                fontWeight: (product.stock >
-                                                                            0 &&
-                                                                        product.stock <=
-                                                                            5)
-                                                                    ? FontWeight
-                                                                        .bold
-                                                                    : null,
-                                                              ),
                                                             ),
                                                             if (discountPercent >
                                                                 0)
@@ -1407,7 +1358,7 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                                                                   },
                                                                   child: Container(
                                                                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                                                                    constraints: const BoxConstraints(minSize: Size(60, 32)),
+                                                                    constraints: const BoxConstraints(minWidth: 60, minHeight: 32),
                                                                     decoration: BoxDecoration(
                                                                       color: Colors.blue,
                                                                       borderRadius: BorderRadius.circular(8),

@@ -32,9 +32,13 @@ import 'services/notification_service.dart';
 import 'services/settings_service.dart';
 import 'utils/app_theme.dart';
 
+import 'firebase_options.dart';
+
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   debugPrint("Handling a background message: ${message.messageId}");
 }
 
@@ -43,7 +47,9 @@ final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   } catch (e) {
     debugPrint("Firebase initialization failed: $e");

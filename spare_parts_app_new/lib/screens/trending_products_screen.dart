@@ -100,17 +100,19 @@ class _TrendingProductsScreenState extends State<TrendingProductsScreen> {
                               child: ClipRRect(
                                 borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                                 child: Image(
-                                  image: getImageProvider(p.imageLink ??
-                                      p.imagePath ??
-                                      p.categoryImageLink ??
-                                      p.categoryImagePath),
+                                  image: getImageProvider(getProductImage(
+                                      imageLink: p.imageLink,
+                                      imagePath: p.imagePath,
+                                      imageLinks: p.imageLinks,
+                                      categoryImageLink: p.categoryImageLink,
+                                      categoryImagePath: p.categoryImagePath)),
                                   fit: BoxFit.cover,
                                   width: double.infinity,
                                   errorBuilder: (context, error, stackTrace) =>
                                       Container(
                                     color: Colors.grey.shade200,
                                     child: const Center(
-                                      child: Icon(Icons.broken_image,
+                                      child: Icon(Icons.inventory_2_outlined,
                                           color: Colors.grey, size: 50),
                                     ),
                                   ),

@@ -177,10 +177,12 @@ class _OffersScreenState extends State<OffersScreen>
                   borderRadius:
                       const BorderRadius.vertical(top: Radius.circular(20)),
                   child: Image(
-                    image: getImageProvider(product.imageLink ??
-                        product.imagePath ??
-                        product.categoryImageLink ??
-                        product.categoryImagePath),
+                    image: getImageProvider(getProductImage(
+                        imageLink: product.imageLink,
+                        imagePath: product.imagePath,
+                        imageLinks: product.imageLinks,
+                        categoryImageLink: product.categoryImageLink,
+                        categoryImagePath: product.categoryImagePath)),
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -334,16 +336,18 @@ class _OffersScreenState extends State<OffersScreen>
                         borderRadius: const BorderRadius.vertical(
                             top: Radius.circular(16)),
                         child: Image(
-                          image: getImageProvider(product.imageLink ??
-                              product.imagePath ??
-                              product.categoryImageLink ??
-                              product.categoryImagePath),
+                          image: getImageProvider(getProductImage(
+                              imageLink: product.imageLink,
+                              imagePath: product.imagePath,
+                              imageLinks: product.imageLinks,
+                              categoryImageLink: product.categoryImageLink,
+                              categoryImagePath: product.categoryImagePath)),
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => Container(
                             color: Theme.of(context)
                                 .colorScheme
                                 .surfaceContainerHighest,
-                            child: Icon(Icons.image_not_supported,
+                            child: Icon(Icons.inventory_2_outlined,
                                 color: Theme.of(context)
                                     .colorScheme
                                     .onSurfaceVariant),

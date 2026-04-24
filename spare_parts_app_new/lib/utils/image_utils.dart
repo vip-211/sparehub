@@ -22,3 +22,28 @@ ImageProvider getImageProvider(String? path) {
   }
   return const AssetImage('assets/images/logo.png');
 }
+
+String? getProductImage({
+  String? imageLink,
+  String? imagePath,
+  List<String>? imageLinks,
+  String? categoryImageLink,
+  String? categoryImagePath,
+}) {
+  if (imageLink != null && imageLink.isNotEmpty) {
+    return imageLink;
+  }
+  if (imagePath != null && imagePath.isNotEmpty) {
+    return imagePath;
+  }
+  if (imageLinks != null && imageLinks.isNotEmpty) {
+    return imageLinks.first;
+  }
+  if (categoryImageLink != null && categoryImageLink.isNotEmpty) {
+    return categoryImageLink;
+  }
+  if (categoryImagePath != null && categoryImagePath.isNotEmpty) {
+    return categoryImagePath;
+  }
+  return null;
+}

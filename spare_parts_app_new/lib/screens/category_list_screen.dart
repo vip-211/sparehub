@@ -92,7 +92,7 @@ class _CategoryListScreenState extends State<CategoryListScreen> {
                                       width: 60,
                                       height: 60,
                                       color: Colors.grey.shade200,
-                                      child: const Icon(Icons.broken_image, color: Colors.grey),
+                                      child: const Icon(Icons.inventory_2_outlined, color: Colors.grey),
                                     ),
                                   ),
                                 )

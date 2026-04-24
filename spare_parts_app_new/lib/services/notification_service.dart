@@ -11,6 +11,7 @@ import '../utils/constants.dart';
 import 'remote_client.dart';
 
 class NotificationService {
+  static const String _fcmConfigVersion = '2'; // Increment this to force token refresh
   static final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
   static final FirebaseMessaging _fcm = FirebaseMessaging.instance;
@@ -216,6 +217,19 @@ class NotificationService {
 
   static Future<String?> getToken() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final currentVersion = prefs.getString('fcm_config_version');
+      
+      if (currentVersion != _fcmConfigVersion) {
+        if (kDebugMode) debugPrint("NotificationService: Config version mismatch (old: $currentVersion, new: $_fcmConfigVersion). Regenerating token.");
+        try {
+          await _fcm.deleteToken();
+        } catch (e) {
+          debugPrint("Error deleting old token: $e");
+        }
+        await prefs.setString('fcm_config_version', _fcmConfigVersion);
+      }
+      
       return await _fcm.getToken();
     } catch (e) {
       debugPrint("Error getting FCM token: $e");

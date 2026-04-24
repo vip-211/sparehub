@@ -58,13 +58,15 @@ class ProductGridItem extends StatelessWidget {
                       ),
                       child: ClipOval(
                         child: Image(
-                          image: getImageProvider(product.imageLink ??
-                              product.imagePath ??
-                              product.categoryImageLink ??
-                              product.categoryImagePath),
+                          image: getImageProvider(getProductImage(
+                              imageLink: product.imageLink,
+                              imagePath: product.imagePath,
+                              imageLinks: product.imageLinks,
+                              categoryImageLink: product.categoryImageLink,
+                              categoryImagePath: product.categoryImagePath)),
                           fit: BoxFit.cover,
                           errorBuilder: (ctx, err, st) => Icon(
-                            Icons.image_not_supported,
+                            Icons.inventory_2_outlined,
                             size: 50,
                             color:
                                 Theme.of(context).colorScheme.onSurfaceVariant,

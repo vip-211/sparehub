@@ -787,7 +787,7 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                           errorBuilder: (context, error, stackTrace) => Container(
                             color: Colors.grey.shade200,
                             child: const Center(
-                              child: Icon(Icons.broken_image, color: Colors.grey, size: 50),
+                              child: Icon(Icons.inventory_2_outlined, color: Colors.grey, size: 50),
                             ),
                           ),
                         )
@@ -795,7 +795,7 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                         Container(
                           color: Colors.grey.shade200,
                           child: const Center(
-                            child: Icon(Icons.image_not_supported, color: Colors.grey, size: 50),
+                            child: Icon(Icons.inventory_2_outlined, color: Colors.grey, size: 50),
                           ),
                         ),
                       Container(
@@ -947,10 +947,12 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                                   child: Hero(
                                     tag: 'product_${p.id}',
                                     child: Image(
-                                      image: getImageProvider(p.imageLink ??
-                                          p.imagePath ??
-                                          p.categoryImageLink ??
-                                          p.categoryImagePath),
+                                      image: getImageProvider(getProductImage(
+                                          imageLink: p.imageLink,
+                                          imagePath: p.imagePath,
+                                          imageLinks: p.imageLinks,
+                                          categoryImageLink: p.categoryImageLink,
+                                          categoryImagePath: p.categoryImagePath)),
                                       fit: BoxFit.cover,
                                       width: double.infinity,
                                       height: double.infinity,

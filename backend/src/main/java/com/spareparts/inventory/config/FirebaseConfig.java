@@ -57,8 +57,10 @@ public class FirebaseConfig {
                     .build();
 
             if (FirebaseApp.getApps().isEmpty()) {
-                FirebaseApp.initializeApp(options);
-                log.info("FirebaseConfig: Firebase has been initialized.");
+                FirebaseApp app = FirebaseApp.initializeApp(options);
+                log.info("FirebaseConfig: Firebase has been initialized for project: {}", app.getOptions().getProjectId());
+            } else {
+                log.info("FirebaseConfig: Firebase already initialized for project: {}", FirebaseApp.getInstance().getOptions().getProjectId());
             }
         } catch (IOException e) {
             log.error("FirebaseConfig: Error initializing Firebase: {}", e.getMessage());

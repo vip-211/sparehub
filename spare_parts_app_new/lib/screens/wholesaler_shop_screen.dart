@@ -734,16 +734,18 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                     fit: StackFit.expand,
                     children: [
                       Image(
-                        image: getImageProvider(p.imageLink ??
-                            p.imagePath ??
-                            p.categoryImageLink ??
-                            p.categoryImagePath),
+                        image: getImageProvider(getProductImage(
+                            imageLink: p.imageLink,
+                            imagePath: p.imagePath,
+                            imageLinks: p.imageLinks,
+                            categoryImageLink: p.categoryImageLink,
+                            categoryImagePath: p.categoryImagePath)),
                         fit: BoxFit.cover,
                         errorBuilder: (c, e, s) => Container(
                           color: Theme.of(context)
                               .colorScheme
                               .surfaceContainerHighest,
-                          child: Icon(Icons.image_not_supported,
+                          child: Icon(Icons.inventory_2_outlined,
                               size: 40,
                               color: Theme.of(context)
                                   .colorScheme
@@ -1116,15 +1118,14 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                                                                 ],
                                                                 image:
                                                                     DecorationImage(
-                                                                  image: getImageProvider(
-                                                                      product
-                                                                          .imagePath),
-                                                                  fit: BoxFit
-                                                                      .cover,
-                                                                  onError: (e,
-                                                                          _) =>
-                                                                      debugPrint(
-                                                                          'Image error: $e'),
+                                                                  image: getImageProvider(getProductImage(
+                                                                      imageLink: product.imageLink,
+                                                                      imagePath: product.imagePath,
+                                                                      imageLinks: product.imageLinks,
+                                                                      categoryImageLink: product.categoryImageLink,
+                                                                      categoryImagePath: product.categoryImagePath)),
+                                                                  fit: BoxFit.cover,
+                                                                  onError: (e, _) => debugPrint('Image error: $e'),
                                                                 ),
                                                               ),
                                                             ),
@@ -1380,7 +1381,7 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                                                                     },
                                                                     child: Container(
                                                                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                                                                      constraints: const BoxConstraints(minSize: Size(80, 36)),
+                                                                      constraints: const BoxConstraints(minWidth: 80, minHeight: 36),
                                                                       decoration: BoxDecoration(
                                                                         color: Colors.green.shade600,
                                                                         borderRadius: BorderRadius.circular(10),
@@ -1595,14 +1596,23 @@ class ProductDetailSheetState extends State<ProductDetailSheet> {
     final user = Provider.of<AuthProvider>(context, listen: false).user;
     final bool isMechanic = user?.roles.contains(Constants.roleMechanic) ?? false;
 
-    final images = [
-      p.imageLink ?? p.imagePath,
-      ...(p.imageLink == null && p.imagePath == null ? [p.categoryImageLink ?? p.categoryImagePath] : []),
-      ...p.imageLinks
-    ]
+    final List<String?> baseImages = [
+      p.imageLink,
+      p.imagePath,
+      ...p.imageLinks,
+    ];
+    
+    final List<String> images = baseImages
         .where((e) => e != null && e.isNotEmpty)
         .cast<String>()
         .toList();
+
+    if (images.isEmpty) {
+      final catImg = p.categoryImageLink ?? p.categoryImagePath;
+      if (catImg != null && catImg.isNotEmpty) {
+        images.add(catImg);
+      }
+    }
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.85,
@@ -1688,7 +1698,7 @@ class ProductDetailSheetState extends State<ProductDetailSheet> {
                               ),
                             )
                           else
-                            const Icon(Icons.image_not_supported, size: 80, color: Colors.grey),
+                            const Icon(Icons.inventory_2_outlined, size: 80, color: Colors.grey),
                           
                           if (images.length > 1)
                             Positioned(

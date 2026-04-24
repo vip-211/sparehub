@@ -1,11 +1,7 @@
 package com.spareparts.inventory.service;
 
 import com.google.firebase.FirebaseApp;
-import com.google.firebase.messaging.AndroidConfig;
-import com.google.firebase.messaging.AndroidNotification;
-import com.google.firebase.messaging.FirebaseMessaging;
-import com.google.firebase.messaging.FirebaseMessagingException;
-import com.google.firebase.messaging.Message;
+import com.google.firebase.messaging.*;
 import com.spareparts.inventory.entity.Notification;
 import com.spareparts.inventory.entity.User;
 import com.spareparts.inventory.repository.NotificationRepository;
@@ -32,6 +28,22 @@ public class FcmService {
 
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
+
+    private void handleFcmException(FirebaseMessagingException e, User user) {
+        String errorCode = e.getMessagingErrorCode() != null ? e.getMessagingErrorCode().name() : "UNKNOWN";
+        log.error("FcmService: Firebase error (Code: {}) for user {}: {}", errorCode, user.getId(), e.getMessage());
+
+        // Handle specific error codes that indicate the token is no longer valid
+        // SENDER_ID_MISMATCH is a specific one requested by the user
+        if ("UNREGISTERED".equals(errorCode) || 
+            "INVALID_ARGUMENT".equals(errorCode) || 
+            "SENDER_ID_MISMATCH".equals(errorCode)) {
+            
+            log.warn("FcmService: Token is invalid or mismatched for user {}. Removing from database.", user.getId());
+            user.setFcmToken(null);
+            userRepository.save(user);
+        }
+    }
 
     public void sendToUser(Long userId, String title, String message, String offerType, String imageUrl) {
         log.info("FcmService: Preparing to send notification to user {}: {}", userId, title);
@@ -80,7 +92,7 @@ public class FcmService {
                     String response = FirebaseMessaging.getInstance().send(fcmMessage);
                     log.info("FcmService: Successfully sent FCM to user {}. Response: {}", userId, response);
                 } catch (FirebaseMessagingException e) {
-                    log.error("FcmService: Error sending FCM message to user {}: {}", userId, e.getMessage());
+                    handleFcmException(e, user);
                 }
             } else {
                 log.warn("FcmService: No FCM token for user {}", userId);
@@ -232,7 +244,7 @@ public class FcmService {
                     String response = FirebaseMessaging.getInstance().send(msg);
                     log.info("FcmService: Successfully sent order status FCM to user {}. Response: {}", userId, response);
                 } catch (FirebaseMessagingException e) {
-                    log.error("FcmService: Error sending order status FCM to user {}: {}", userId, e.getMessage());
+                    handleFcmException(e, user);
                 }
             } else {
                 log.warn("FcmService: No FCM token for user {}", userId);
