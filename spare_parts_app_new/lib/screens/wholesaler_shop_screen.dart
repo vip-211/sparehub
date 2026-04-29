@@ -22,6 +22,7 @@ import 'package:photo_view/photo_view_gallery.dart';
 import '../models/product.dart';
 import '../providers/cart_provider.dart';
 import '../widgets/quantity_selector.dart';
+import '../widgets/translated_text.dart';
 import '../services/order_service.dart';
 import '../models/order.dart';
 import '../utils/image_utils.dart';
@@ -796,7 +797,7 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
+                      TranslatedText(
                         p.name,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -1221,7 +1222,7 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                                                                 CrossAxisAlignment
                                                                     .start,
                                                             children: [
-                                                              Text(
+                                                              TranslatedText(
                                                                 product.name,
                                                                 style:
                                                                     const TextStyle(
@@ -1749,7 +1750,7 @@ class ProductDetailSheetState extends State<ProductDetailSheet> {
                   ),
 
                   const SizedBox(height: 24),
-                  Text(
+                  TranslatedText(
                     p.name,
                     style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.black),
                   ),
@@ -1801,7 +1802,7 @@ class ProductDetailSheetState extends State<ProductDetailSheet> {
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.black),
                   ),
                   const SizedBox(height: 12),
-                  Text(
+                  TranslatedText(
                     p.description ?? 'No detailed description available for this part.',
                     style: TextStyle(fontSize: 15, height: 1.5, fontWeight: FontWeight.w600, color: Colors.grey.shade600),
                   ),

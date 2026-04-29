@@ -45,6 +45,7 @@ import 'offers_screen.dart';
 import '../services/settings_service.dart';
 import '../widgets/cart_badge.dart';
 import '../widgets/notification_badge.dart';
+import '../widgets/translated_text.dart';
 import '../providers/theme_provider.dart';
 import '../services/websocket_service.dart';
 
@@ -3719,7 +3720,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          TranslatedText(
                             p.name,
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
@@ -4255,7 +4256,7 @@ class _InvoicingScreenState extends State<InvoicingScreen> {
                               ? const Icon(Icons.image, color: Colors.grey)
                               : null,
                         ),
-                        title: Text(
+                        title: TranslatedText(
                           p.name,
                           style: TextStyle(
                             color: p.stock <= 0 ? Colors.grey : Colors.black,
@@ -6106,7 +6107,7 @@ class _RecycleBinScreenState extends State<RecycleBinScreen>
               ),
             ),
           ),
-          title: Text(p.name),
+          title: TranslatedText(p.name),
           subtitle: Text('Part: ${p.partNumber}'),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,

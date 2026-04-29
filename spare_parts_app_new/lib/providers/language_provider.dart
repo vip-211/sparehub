@@ -8,6 +8,11 @@ class LanguageProvider with ChangeNotifier {
   bool _autoTranslate = false;
   final GoogleTranslator _translator = GoogleTranslator();
   final Map<String, String> _cache = {};
+  static const Map<String, String> supportedLanguages = {
+    'en': 'English',
+    'hi': 'हिन्दी',
+    'mr': 'मराठी',
+  };
 
   LanguageProvider() {
     _loadLanguage();
@@ -16,18 +21,24 @@ class LanguageProvider with ChangeNotifier {
 
   Locale get currentLocale => _currentLocale;
   bool get isHindi => _currentLocale.languageCode == 'hi';
+  bool get isMarathi => _currentLocale.languageCode == 'mr';
+  bool get isEnglish => _currentLocale.languageCode == 'en';
   bool get autoTranslateEnabled => _autoTranslate;
+  String get currentLanguageLabel =>
+      supportedLanguages[_currentLocale.languageCode] ?? 'English';
+  String get _targetLanguageCode => _currentLocale.languageCode;
 
   void toggleLanguage() async {
-    if (_currentLocale.languageCode == 'en') {
-      _currentLocale = const Locale('hi');
-    } else {
-      _currentLocale = const Locale('en');
-    }
-    notifyListeners();
+    final nextCode = _currentLocale.languageCode == 'en' ? 'hi' : 'en';
+    await setLanguage(nextCode);
+  }
 
+  Future<void> setLanguage(String code) async {
+    if (!supportedLanguages.containsKey(code)) return;
+    _currentLocale = Locale(code);
+    notifyListeners();
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('language_code', _currentLocale.languageCode);
+    await prefs.setString('language_code', code);
   }
 
   void _loadLanguage() async {
@@ -40,27 +51,35 @@ class LanguageProvider with ChangeNotifier {
   void _loadAutoSetting() async {
     await SettingsService.preloadRemoteSettings();
     _autoTranslate =
-        SettingsService.getCachedRemoteSetting('AUTO_TRANSLATE_UI', 'false') ==
+        SettingsService.getCachedRemoteSetting('AUTO_TRANSLATE_UI', 'true') ==
             'true';
     notifyListeners();
   }
 
   String translate(String key) {
-    if (_currentLocale.languageCode == 'hi') {
-      return _hindiTranslations[key] ?? _englishTranslations[key] ?? key;
-    }
-    return _englishTranslations[key] ?? key;
+    final english = _englishTranslations[key] ?? key;
+    return t(english);
   }
 
   String t(String text) {
-    if (!isHindi || !_autoTranslate) return text;
-    final cached = _cache[text];
+    final value = text.trim();
+    if (isEnglish || !_shouldTranslate(value)) return text;
+    final cacheKey = '$_targetLanguageCode::$value';
+    final cached = _cache[cacheKey];
     if (cached != null) return cached;
-    _translator.translate(text, to: 'hi').then((v) {
-      _cache[text] = v.text;
+    _translator.translate(value, to: _targetLanguageCode).then((v) {
+      _cache[cacheKey] = v.text;
       notifyListeners();
     }).catchError((_) {});
     return text;
+  }
+
+  bool _shouldTranslate(String text) {
+    if (text.isEmpty) return false;
+    if (!RegExp(r'[A-Za-z]').hasMatch(text)) return false;
+    if (RegExp(r'^[#₹$€£]?\s*[\d.,%+\-xX/ ]+$').hasMatch(text)) return false;
+    if (RegExp(r'^[A-Z0-9][A-Z0-9\-_./]{2,}$').hasMatch(text)) return false;
+    return true;
   }
 
   static final Map<String, String> _englishTranslations = {

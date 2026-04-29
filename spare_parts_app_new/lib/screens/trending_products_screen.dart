@@ -4,6 +4,7 @@ import '../models/product.dart';
 import '../services/product_service.dart';
 import '../providers/cart_provider.dart';
 import '../widgets/quantity_selector.dart';
+import '../widgets/translated_text.dart';
 import '../utils/image_utils.dart';
 import '../utils/constants.dart';
 import 'wholesaler_shop_screen.dart'; // For ProductDetailSheet
@@ -124,7 +125,7 @@ class _TrendingProductsScreenState extends State<TrendingProductsScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
+                                  TranslatedText(
                                     p.name,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,

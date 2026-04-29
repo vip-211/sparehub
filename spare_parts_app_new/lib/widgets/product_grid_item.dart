@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/product.dart';
 import '../utils/image_utils.dart';
+import 'translated_text.dart';
 
 class ProductGridItem extends StatelessWidget {
   final Product product;
@@ -81,7 +82,7 @@ class ProductGridItem extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      TranslatedText(
                         product.name,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,

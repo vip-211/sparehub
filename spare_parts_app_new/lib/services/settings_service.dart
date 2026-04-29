@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -193,12 +194,54 @@ class SettingsService {
   static Future<Map<String, String>> getRemoteSettings() async {
     if (!Constants.useRemote) return {};
     try {
+      final Map<String, String> res = {};
+
+      final publicList = await _remote.getList('/settings/public');
+      _addSettingsToMap(res, publicList);
+
+      if (!await _canReadAdminSettings()) {
+        return res;
+      }
+
+      final list = await _remote.getList('/admin/settings');
+      _addSettingsToMap(res, list);
+      return res;
+    } catch (_) {
+      return {};
+    }
+  }
+
+  static void _addSettingsToMap(
+      Map<String, String> target, List<dynamic> settings) {
+    for (var item in settings) {
+      final m = item as Map<String, dynamic>;
+      target[m['settingKey']] = m['settingValue'];
+    }
+  }
+
+  static Future<bool> _canReadAdminSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userStr = prefs.getString('user');
+      if (userStr == null) return false;
+      final user = jsonDecode(userStr) as Map<String, dynamic>;
+      final roles = (user['roles'] as List? ?? [])
+          .map((e) => e.toString().toUpperCase())
+          .toSet();
+      return roles.contains(Constants.roleAdmin) ||
+          roles.contains(Constants.roleSuperManager) ||
+          roles.contains(Constants.roleStaff);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<Map<String, String>> getAdminRemoteSettings() async {
+    if (!Constants.useRemote) return {};
+    try {
       final list = await _remote.getList('/admin/settings');
       final Map<String, String> res = {};
-      for (var item in list) {
-        final m = item as Map<String, dynamic>;
-        res[m['settingKey']] = m['settingValue'];
-      }
+      _addSettingsToMap(res, list);
       return res;
     } catch (_) {
       return {};

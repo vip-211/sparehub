@@ -595,11 +595,39 @@ class _LoginScreenState extends State<LoginScreen> {
                   Align(
                     alignment: Alignment.topRight,
                     child: TextButton.icon(
-                      onPressed: () => lp.toggleLanguage(),
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => SimpleDialog(
+                            title: const Text('Choose language'),
+                            children: LanguageProvider.supportedLanguages.entries
+                                .map(
+                                  (entry) => SimpleDialogOption(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      lp.setLanguage(entry.key);
+                                    },
+                                    child: Row(
+                                      children: [
+                                        if (lp.currentLocale.languageCode ==
+                                            entry.key)
+                                          const Icon(Icons.check, size: 18)
+                                        else
+                                          const SizedBox(width: 18),
+                                        const SizedBox(width: 8),
+                                        Text(entry.value),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        );
+                      },
                       icon: const Icon(Icons.language,
                           color: Colors.white, size: 18),
                       label: Text(
-                        lp.isHindi ? 'English' : 'हिन्दी',
+                        lp.currentLanguageLabel,
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,

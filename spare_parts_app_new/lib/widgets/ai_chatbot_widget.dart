@@ -8,6 +8,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../widgets/quantity_selector.dart';
+import '../widgets/translated_text.dart';
 import '../services/ai_training_service.dart';
 import '../services/settings_service.dart';
 
@@ -614,7 +615,7 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          Text(p.name,
+                                          TranslatedText(p.name,
                                               style: const TextStyle(
                                                   fontWeight: FontWeight.bold)),
                                           Text('Part: ${p.partNumber ?? 'N/A'}',

@@ -9,6 +9,7 @@ import '../providers/auth_provider.dart';
 import '../utils/constants.dart';
 import '../utils/image_utils.dart';
 import './wholesaler_shop_screen.dart';
+import '../widgets/translated_text.dart';
 
 class OffersScreen extends StatefulWidget {
   final String? initialOfferType;
@@ -217,7 +218,7 @@ class _OffersScreenState extends State<OffersScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(product.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                TranslatedText(product.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                 const SizedBox(height: 4),
                 Text('₹${price.toStringAsFixed(0)}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Theme.of(context).primaryColor)),
                 const SizedBox(height: 8),
@@ -382,7 +383,7 @@ class _OffersScreenState extends State<OffersScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      TranslatedText(
                         product.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,

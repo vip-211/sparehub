@@ -15,6 +15,7 @@ import '../providers/cart_provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/cart_badge.dart';
 import '../widgets/quantity_selector.dart';
+import '../widgets/translated_text.dart';
 import '../utils/image_utils.dart';
 import '../utils/constants.dart';
 import 'package:shimmer/shimmer.dart';
@@ -992,7 +993,7 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                              TranslatedText(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
                               const SizedBox(height: 4),
                               Text('PN: ${p.partNumber}', style: TextStyle(color: Colors.grey.shade500, fontSize: 12, fontWeight: FontWeight.bold)),
                               const SizedBox(height: 10),

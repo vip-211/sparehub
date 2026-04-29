@@ -12,6 +12,7 @@ import '../services/ocr_service.dart';
 import '../models/product.dart';
 import '../providers/cart_provider.dart';
 import '../widgets/quantity_selector.dart';
+import '../widgets/translated_text.dart';
 import '../services/order_service.dart';
 import 'order_confirmation_screen.dart';
 import '../utils/image_utils.dart';
@@ -739,7 +740,7 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        TranslatedText(
                           p.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -1250,7 +1251,7 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                                                               CrossAxisAlignment
                                                                   .start,
                                                           children: [
-                                                            Text(
+                                                            TranslatedText(
                                                               product.name,
                                                               style:
                                                                   const TextStyle(

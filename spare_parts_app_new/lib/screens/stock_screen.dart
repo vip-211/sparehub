@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/product_service.dart';
 import '../models/product.dart';
+import '../widgets/translated_text.dart';
 
 class StockScreen extends StatefulWidget {
   const StockScreen({super.key});
@@ -98,7 +99,7 @@ class _StockScreenState extends State<StockScreen> {
                 final out = p.stock <= 0;
                 return ListTile(
                   leading: const Icon(Icons.build),
-                  title: Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  title: TranslatedText(p.name, maxLines: 1, overflow: TextOverflow.ellipsis),
                   subtitle: Text('Part: ${p.partNumber ?? 'N/A'}'),
                   trailing: Column(
                     mainAxisAlignment: MainAxisAlignment.center,

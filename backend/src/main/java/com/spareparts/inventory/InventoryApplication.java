@@ -25,13 +25,23 @@ import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.TimeZone;
 
 @SpringBootApplication
 @EnableScheduling
 @EnableAsync(proxyTargetClass = true)
 @EnableCaching
 public class InventoryApplication {
+    private static final Logger log = LoggerFactory.getLogger(InventoryApplication.class);
+    private static final String APP_TIME_ZONE = "Asia/Kolkata";
+
     public static void main(String[] args) {
+        TimeZone.setDefault(TimeZone.getTimeZone(APP_TIME_ZONE));
+        System.setProperty("user.timezone", APP_TIME_ZONE);
+        log.info("InventoryApplication: Application timezone set to {}", APP_TIME_ZONE);
         SpringApplication.run(InventoryApplication.class, args);
     }
 

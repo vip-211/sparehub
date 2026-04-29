@@ -5,6 +5,7 @@ import '../services/product_service.dart';
 import '../providers/cart_provider.dart';
 import '../utils/image_utils.dart';
 import '../utils/constants.dart';
+import '../widgets/translated_text.dart';
 import 'wholesaler_shop_screen.dart'; // For ProductDetailSheet
 
 class CategoryProductsScreen extends StatefulWidget {
@@ -57,7 +58,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.categoryName),
+        title: TranslatedText(widget.categoryName),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
@@ -120,7 +121,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(p.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                  TranslatedText(p.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold)),
                                   const SizedBox(height: 4),
                                   Text('₹${(_prices[p.id] ?? p.sellingPrice).toStringAsFixed(0)}', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.w900, fontSize: 16)),
                                 ],
