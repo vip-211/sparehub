@@ -174,9 +174,10 @@ public class FcmService {
             log.warn("FcmService: Firebase not initialized, skipping FCM role notification.");
             return;
         }
+        String roleTopicCondition = buildRoleTopicCondition(role);
         // Alternatively, use topics per role
         Message fcmMessage = Message.builder()
-                .setTopic("role-" + role)
+                .setCondition(roleTopicCondition)
                 .setNotification(com.google.firebase.messaging.Notification.builder()
                         .setTitle(title)
                         .setBody(message)
@@ -198,7 +199,7 @@ public class FcmService {
 
         try {
             String response = FirebaseMessaging.getInstance().send(fcmMessage);
-            log.info("FcmService: Successfully sent FCM role message to topic role-{}. Response: {}", role, response);
+            log.info("FcmService: Successfully sent FCM role message to condition {}. Response: {}", roleTopicCondition, response);
         } catch (FirebaseMessagingException e) {
             log.error("FcmService: Error sending FCM role message: {}", e.getMessage());
         }
@@ -278,8 +279,9 @@ public class FcmService {
             log.warn("FcmService: Firebase not initialized, skipping staff notification.");
             return;
         }
+        String staffTopicCondition = buildRoleTopicCondition("ROLE_STAFF");
         Message msg = Message.builder()
-                .setTopic("role-ROLE_STAFF")
+                .setCondition(staffTopicCondition)
                 .setNotification(com.google.firebase.messaging.Notification.builder()
                         .setTitle(title)
                         .setBody(message)
@@ -298,10 +300,17 @@ public class FcmService {
                 .build();
         try {
             String response = FirebaseMessaging.getInstance().send(msg);
-            log.info("FcmService: Successfully sent staff order status FCM. Response: {}", response);
+            log.info("FcmService: Successfully sent staff order status FCM to condition {}. Response: {}", staffTopicCondition, response);
         } catch (FirebaseMessagingException e) {
             log.error("FcmService: Error sending staff order status FCM: {}", e.getMessage());
         }
+    }
+
+    private String buildRoleTopicCondition(String role) {
+        String rawRole = role == null ? "" : role.trim();
+        String prefixedRole = rawRole.startsWith("ROLE_") ? rawRole : "ROLE_" + rawRole;
+        String shortRole = prefixedRole.substring("ROLE_".length());
+        return String.format("'role-%s' in topics || 'role-%s' in topics", prefixedRole, shortRole);
     }
 
     private com.spareparts.inventory.entity.Notification saveNotification(Long userId, String title, String message, boolean isBroadcast, String targetRole) {
