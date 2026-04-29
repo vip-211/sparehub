@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 @Service
@@ -588,15 +589,25 @@ public class OrderService {
     public Map<String, Object> getSalesReport(String type) {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime startDate;
+        int intervals;
+        java.util.function.Function<LocalDateTime, String> labelFunc;
 
         if ("DAILY".equals(type)) {
             startDate = now.withHour(0).withMinute(0).withSecond(0).withNano(0);
+            intervals = 24;
+            labelFunc = (dt) -> String.format("%02d:00", dt.getHour());
         } else if ("WEEKLY".equals(type)) {
-            startDate = now.minusDays(7);
+            startDate = now.minusDays(7).withHour(0).withMinute(0).withSecond(0).withNano(0);
+            intervals = 7;
+            labelFunc = (dt) -> dt.getDayOfWeek().name().substring(0, 3);
         } else if ("MONTHLY".equals(type)) {
-            startDate = now.minusDays(30);
+            startDate = now.minusDays(30).withHour(0).withMinute(0).withSecond(0).withNano(0);
+            intervals = 30;
+            labelFunc = (dt) -> String.valueOf(dt.getDayOfMonth());
         } else {
             startDate = now.minusDays(1);
+            intervals = 1;
+            labelFunc = (dt) -> "Total";
         }
 
         List<Order> orders = orderRepository.findAll().stream()
@@ -607,9 +618,35 @@ public class OrderService {
                 .map(Order::getTotalAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        // Calculate chart data
+        List<Map<String, Object>> chartData = new ArrayList<>();
+        for (int i = 0; i <= intervals; i++) {
+            LocalDateTime current;
+            if ("DAILY".equals(type)) current = startDate.plusHours(i);
+            else current = startDate.plusDays(i);
+            
+            if (current.isAfter(now) && !"DAILY".equals(type)) break;
+            if (current.isAfter(now.plusHours(1)) && "DAILY".equals(type)) break;
+
+            LocalDateTime next;
+            if ("DAILY".equals(type)) next = current.plusHours(1);
+            else next = current.plusDays(1);
+
+            BigDecimal periodSales = orders.stream()
+                .filter(o -> o.getCreatedAt().isAfter(current) && o.getCreatedAt().isBefore(next))
+                .map(Order::getTotalAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            Map<String, Object> dataPoint = new HashMap<>();
+            dataPoint.put("name", labelFunc.apply(current));
+            dataPoint.put("sales", periodSales);
+            chartData.add(dataPoint);
+        }
+
         Map<String, Object> result = new HashMap<>();
         result.put("totalSales", totalSales);
         result.put("totalOrders", orders.size());
+        result.put("chartData", chartData);
         return result;
     }
 

@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api, { API_BASE_URL } from '../services/api';
+import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { 
   Users, 
@@ -41,12 +42,16 @@ import useSound from 'use-sound';
 import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
 import { useCart } from '../context/CartContext';
+import { ROLE_ADMIN, ROLE_SUPER_MANAGER } from '../services/constants';
+import { useAuth } from '../context/AuthContext';
 
 const MobileDashboard = () => {
   const { tp } = useLanguage();
   const { reorder } = useCart();
+  const { currentUser } = useAuth();
   const [stats, setStats] = useState<any>(null);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const [chartData, setChartData] = useState<any[]>([]);
   const [cms, setCms] = useState<any>({});
   const [layout, setLayout] = useState<string[]>([]);
   const [hotDeals, setHotDeals] = useState<any[]>([]);
@@ -56,6 +61,15 @@ const MobileDashboard = () => {
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [searchFocused, setSearchFocused] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const navigate = useNavigate();
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      navigate(`/shop?search=${encodeURIComponent(searchTerm)}`);
+    }
+  };
 
   const [playNotification] = useSound('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
@@ -64,11 +78,13 @@ const MobileDashboard = () => {
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
-      const [ordersRes, usersRes, productsRes, salesRes, titleRes, bannerRes, btnRes, layoutRes, catRes, featuredRes, bannersRes] = await Promise.all([
-        api.get('admin/orders'),
-        api.get('admin/users'),
+      const isAdmin = currentUser?.roles?.includes(ROLE_ADMIN) || currentUser?.roles?.includes(ROLE_SUPER_MANAGER);
+      
+      const requests: any[] = [
+        isAdmin ? api.get('admin/orders') : api.get('orders/my-orders'),
+        isAdmin ? api.get('admin/users') : Promise.resolve({ data: [] }),
         api.get('products'),
-        api.get('admin/sales', { params: { type: period } }),
+        isAdmin ? api.get('admin/sales', { params: { type: period } }) : Promise.resolve({ data: { totalSales: 0, totalOrders: 0, chartData: [] } }),
         api.get('cms/settings/mechanic_home_title'),
         api.get('cms/settings/mechanic_banner_text'),
         api.get('cms/settings/mechanic_banner_btn'),
@@ -76,7 +92,9 @@ const MobileDashboard = () => {
         api.get('categories'),
         api.get('products/featured'),
         api.get('banners/active')
-      ]);
+      ];
+
+      const [ordersRes, usersRes, productsRes, salesRes, titleRes, bannerRes, btnRes, layoutRes, catRes, featuredRes, bannersRes] = await Promise.all(requests);
 
       const orders = ordersRes.data || [];
       const totalRevenue = (salesRes.data?.totalSales ?? orders.reduce((acc: number, o: any) => acc + (o.totalAmount || 0), 0));
@@ -91,12 +109,13 @@ const MobileDashboard = () => {
       });
 
       setRecentOrders(orders.slice(0, 5));
+      setChartData(salesRes.data?.chartData || []);
       setCms({
         title: titleRes.data.value || 'Parts Mitra',
         banner: bannerRes.data.value || '',
         btn: btnRes.data.value || 'Buy Now'
       });
-      setLayout((layoutRes.data.value || 'header,search_bar,categories,banner,hot_deals,recent_orders').split(',').filter(Boolean));
+      setLayout((layoutRes.data.value || 'header,search_bar,stats,categories,banner,hot_deals,recent_orders').split(',').filter(Boolean));
       setCategories((catRes.data || []).filter((c: any) => c.showOnHome !== false));
       setHotDeals(featuredRes.data || []);
       
@@ -112,7 +131,7 @@ const MobileDashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, [period]);
+  }, [period, currentUser]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -215,15 +234,7 @@ const MobileDashboard = () => {
     };
   }, [playNotification, fetchDashboardData]);
 
-  const chartData = [
-    { name: 'Mon', sales: 4000 },
-    { name: 'Tue', sales: 3000 },
-    { name: 'Wed', sales: 2000 },
-    { name: 'Thu', sales: 2780 },
-    { name: 'Fri', sales: 1890 },
-    { name: 'Sat', sales: 2390 },
-    { name: 'Sun', sales: 3490 },
-  ];
+
 
   const getCategoryIcon = (cat: any) => {
     if (cat.imagePath || cat.imageLink) {
@@ -273,24 +284,32 @@ const MobileDashboard = () => {
       {/* Sticky Search Bar */}
       <div className={`sticky top-0 z-50 transition-all duration-300 ${searchFocused ? 'bg-white/80 backdrop-blur-xl py-4 shadow-lg shadow-gray-100' : 'bg-transparent py-6'}`}>
         <div className="max-w-7xl mx-auto px-6 md:px-8">
-          <div className="relative group">
+          <form onSubmit={handleSearch} className="relative group">
             <Search className={`absolute left-6 top-1/2 -translate-y-1/2 transition-colors ${searchFocused ? 'text-primary-600' : 'text-gray-400'}`} size={22} />
             <input 
               type="text" 
               placeholder="Search spare parts, brands, or part numbers..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               onFocus={() => setSearchFocused(true)}
               onBlur={() => setSearchFocused(false)}
               className="w-full bg-white border-2 border-gray-100 rounded-[2.5rem] pl-16 pr-24 py-5 font-bold text-gray-700 focus:border-primary-500 focus:ring-4 focus:ring-primary-50 focus:shadow-xl outline-none transition-all"
             />
             <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-              <button className="p-2.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-full transition-all">
+              <button type="button" className="p-2.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-full transition-all">
                 <Mic size={20} />
               </button>
-              <button className="p-2.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-full transition-all">
+              <button type="button" className="p-2.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-full transition-all">
                 <QrCode size={20} />
               </button>
+              <button 
+                type="submit"
+                className="bg-primary-600 text-white px-6 py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-primary-700 transition-all shadow-lg shadow-primary-200 active:scale-95"
+              >
+                Search
+              </button>
             </div>
-          </div>
+          </form>
         </div>
       </div>
 
@@ -316,6 +335,48 @@ const MobileDashboard = () => {
                       </div>
                     </div>
                   </div>
+                </div>
+              );
+            case 'stats':
+              const isAdmin = currentUser?.roles?.includes(ROLE_ADMIN) || currentUser?.roles?.includes(ROLE_SUPER_MANAGER);
+              if (!isAdmin) return (
+                <div key="stats" className="grid grid-cols-2 gap-4">
+                  <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center space-y-2">
+                    <div className="w-12 h-12 bg-primary-50 rounded-2xl flex items-center justify-center text-primary-600">
+                      <Star size={24} className="fill-current" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">My Points</p>
+                      <p className="text-2xl font-black text-gray-900">{currentUser?.points || 0}</p>
+                    </div>
+                  </div>
+                  <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center space-y-2">
+                    <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
+                      <ShoppingBag size={24} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">My Orders</p>
+                      <p className="text-2xl font-black text-gray-900">{stats?.totalOrders || 0}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+              return (
+                <div key="stats" className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                  {[
+                    { label: 'Revenue', value: `₹${(stats?.totalRevenue || 0).toLocaleString()}`, icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50' },
+                    { label: 'Orders', value: stats?.totalOrders || 0, icon: ShoppingBag, color: 'text-primary-600', bg: 'bg-primary-50' },
+                    { label: 'Pending', value: stats?.pendingOrders || 0, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
+                    { label: 'Users', value: stats?.totalUsers || 0, icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+                  ].map((stat, i) => (
+                    <div key={i} className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-xl hover:shadow-gray-100 transition-all group">
+                      <div className={`w-12 h-12 ${stat.bg} ${stat.color} rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                        <stat.icon size={24} />
+                      </div>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{stat.label}</p>
+                      <p className="text-xl font-black text-gray-900">{stat.value}</p>
+                    </div>
+                  ))}
                 </div>
               );
             case 'categories':
@@ -525,6 +586,7 @@ const MobileDashboard = () => {
         })}
 
         {/* Analytics Section - Refined */}
+        {(currentUser?.roles?.includes(ROLE_ADMIN) || currentUser?.roles?.includes(ROLE_SUPER_MANAGER)) && (
         <div className="bg-white p-10 rounded-[3.5rem] shadow-sm border border-gray-100 mb-12">
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-6">
             <div>
@@ -546,6 +608,7 @@ const MobileDashboard = () => {
             </div>
           </div>
           <div className="h-[350px] w-full relative min-h-0 min-w-0">
+            {chartData && chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
@@ -580,8 +643,14 @@ const MobileDashboard = () => {
                 />
               </AreaChart>
             </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-400 font-bold uppercase tracking-widest text-sm">
+                No data available for this period
+              </div>
+            )}
           </div>
         </div>
+        )}
       </div>
 
       {/* WhatsApp Quick Order Button */}
