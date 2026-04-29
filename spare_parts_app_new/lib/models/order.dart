@@ -50,6 +50,7 @@ class Order {
   final int id;
   final int customerId;
   final String customerName;
+  final String? customerPhone;
   final int sellerId;
   final String sellerName;
   final double totalAmount;
@@ -67,6 +68,7 @@ class Order {
     required this.id,
     required this.customerId,
     required this.customerName,
+    this.customerPhone,
     required this.sellerId,
     required this.sellerName,
     required this.totalAmount,
@@ -98,6 +100,7 @@ class Order {
       id: (json['id'] as num).toInt(),
       customerId: (json['customerId'] as num).toInt(),
       customerName: json['customerName'] ?? '',
+      customerPhone: json['customerPhone'],
       sellerId: (json['sellerId'] as num?)?.toInt() ?? 0,
       sellerName: json['sellerName'] ?? '',
       totalAmount: (json['totalAmount'] as num).toDouble(),
@@ -122,6 +125,7 @@ class Order {
       'id': id,
       'customerId': customerId,
       'customerName': customerName,
+      'customerPhone': customerPhone,
       'sellerId': sellerId,
       'sellerName': sellerName,
       'totalAmount': totalAmount,

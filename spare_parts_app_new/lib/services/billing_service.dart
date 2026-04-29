@@ -30,14 +30,37 @@ class BillingService {
         '\n\nThank you for choosing $businessName!';
 
     final encodedText = Uri.encodeComponent(text);
-    final url = Uri.parse('whatsapp://send?text=$encodedText');
+
+    // Check if we have a customer phone
+    String? phoneNumber = order.customerPhone;
+    Uri url;
+
+    if (phoneNumber != null && phoneNumber.isNotEmpty) {
+      // Clean phone number: remove non-numeric chars
+      String cleanNumber = phoneNumber.replaceAll(RegExp(r'\D'), '');
+      // If it's a 10-digit Indian number, prepend 91
+      if (cleanNumber.length == 10) {
+        cleanNumber = '91$cleanNumber';
+      }
+      url = Uri.parse('whatsapp://send?phone=$cleanNumber&text=$encodedText');
+    } else {
+      url = Uri.parse('whatsapp://send?text=$encodedText');
+    }
 
     try {
       if (await canLaunchUrl(url)) {
         await launchUrl(url);
       } else {
         // Fallback to web link if app not installed
-        final webUrl = Uri.parse('https://wa.me/?text=$encodedText');
+        Uri webUrl;
+        if (phoneNumber != null && phoneNumber.isNotEmpty) {
+          String cleanNumber = phoneNumber.replaceAll(RegExp(r'\D'), '');
+          if (cleanNumber.length == 10) cleanNumber = '91$cleanNumber';
+          webUrl = Uri.parse('https://wa.me/$cleanNumber?text=$encodedText');
+        } else {
+          webUrl = Uri.parse('https://wa.me/?text=$encodedText');
+        }
+
         if (await canLaunchUrl(webUrl)) {
           await launchUrl(webUrl, mode: LaunchMode.externalApplication);
         }

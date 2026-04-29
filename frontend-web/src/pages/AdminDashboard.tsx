@@ -430,6 +430,28 @@ const AdminDashboard = () => {
     }
   };
 
+  const sendToWhatsApp = (order: any) => {
+    const phoneNumber = order.customerPhone;
+    
+    if (!phoneNumber) {
+      alert("Customer phone number not found in order details!");
+      return;
+    }
+
+    // Clean phone number: remove non-numeric chars
+    let cleanNumber = phoneNumber.replace(/\D/g, '');
+    
+    // If it's a 10-digit Indian number, prepend 91
+    if (cleanNumber.length === 10) {
+      cleanNumber = '91' + cleanNumber;
+    }
+
+    const itemsText = (order.items || []).map((i: any) => `- ${i.productName} (x${i.quantity}): ₹${i.price}`).join('\n');
+    const message = `Hello ${order.customerName},\n\nYour bill for order #${order.id} is ready.\n\nTotal Amount: ₹${order.totalAmount}\n${order.discountAmount > 0 ? `Discount: ₹${order.discountAmount}\n` : ''}\nItems:\n${itemsText}\n\nThank you for shopping with Parts Mitra!`;
+    const url = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+  };
+
   const generateInvoice = async () => {
     if (!billingUser || (billingItems || []).length === 0) return;
     try {
@@ -449,8 +471,14 @@ const AdminDashboard = () => {
           price: i.sellingPrice
         }))
       };
-      await api.post(`admin/orders`, payload);
+      const res = await api.post(`admin/orders`, payload);
       alert('Invoice generated and reflected in customer orders!');
+      
+      // Ask if admin wants to send via WhatsApp
+      if (window.confirm('Would you like to send this bill to the customer via WhatsApp?')) {
+        sendToWhatsApp(res.data);
+      }
+
       setBillingUser(null);
       setBillingItems([]);
       setBillingDiscount(0);
@@ -1905,6 +1933,13 @@ const AdminDashboard = () => {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-center">
                               <div className="flex items-center justify-center gap-2">
+                                <button
+                                  onClick={() => sendToWhatsApp(order)}
+                                  className="p-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition border border-green-100"
+                                  title="Send Bill via WhatsApp"
+                                >
+                                  <MessageSquare size={16} />
+                                </button>
                                 <button
                                   onClick={() => { setEditingOrder(order); setShowEditOrder(true); }}
                                   className="px-3 py-1.5 bg-gray-50 text-primary-600 rounded-lg text-xs font-bold hover:bg-primary-50 transition"

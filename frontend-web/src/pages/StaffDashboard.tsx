@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { ShoppingBag, CheckCircle, Truck, MapPin, Search } from 'lucide-react';
+import { ShoppingBag, CheckCircle, Truck, MapPin, Search, MessageSquare } from 'lucide-react';
 import { ROLE_STAFF } from '../services/constants';
 import AuthService from '../services/auth.service';
 
@@ -45,6 +45,20 @@ const StaffDashboard = () => {
       console.error('Error updating status:', err);
       alert('Failed to update order status');
     }
+  };
+
+  const sendToWhatsApp = (order: any) => {
+    const phoneNumber = order.customerPhone;
+    if (!phoneNumber) {
+      alert("Customer phone number not found in order details!");
+      return;
+    }
+    let cleanNumber = phoneNumber.replace(/\D/g, '');
+    if (cleanNumber.length === 10) cleanNumber = '91' + cleanNumber;
+    const itemsText = (order.items || []).map((i: any) => `- ${i.productName} (x${i.quantity}): ₹${i.price}`).join('\n');
+    const message = `Hello ${order.customerName},\n\nYour bill for order #${order.id} is ready.\n\nTotal Amount: ₹${order.totalAmount}\nItems:\n${itemsText}\n\nThank you for shopping with Parts Mitra!`;
+    const url = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
   };
 
   const filteredOrders = (orders || []).filter(order => 
@@ -151,6 +165,13 @@ const StaffDashboard = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.deliveredByName || '-'}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex items-center space-x-3">
+                    <button
+                      onClick={() => sendToWhatsApp(order)}
+                      className="p-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition border border-green-100"
+                      title="Send Bill via WhatsApp"
+                    >
+                      <MessageSquare size={16} />
+                    </button>
                     {order.status !== 'DELIVERED' && order.status !== 'CANCELLED' && (
                       <>
                         <button

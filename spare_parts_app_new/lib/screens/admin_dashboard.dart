@@ -4103,16 +4103,17 @@ class _InvoicingScreenState extends State<InvoicingScreen> {
                 subtitle: Text(user.roles.first),
                 onTap: () {
                   setState(() {
-                    _selectedUser = {
-                      'id': user.id,
-                      'name': user.name,
-                      'email': user.email,
-                      'address': user.address,
-                      'role': user.roles.first,
-                    };
-                    _billingItems = [];
-                    _totalAmount = 0;
-                  });
+                      _selectedUser = {
+                        'id': user.id,
+                        'name': user.name,
+                        'email': user.email,
+                        'phone': user.phone,
+                        'address': user.address,
+                        'role': user.roles.first,
+                      };
+                      _billingItems = [];
+                      _totalAmount = 0;
+                    });
                   Navigator.pop(ctx);
                 },
               );
@@ -4584,13 +4585,30 @@ class _InvoicingScreenState extends State<InvoicingScreen> {
               onPressed: () async {
                 final phone = _selectedUser!['phone'] ?? '';
                 if (phone.isNotEmpty) {
-                  final message =
-                      "Hello ${_selectedUser!['name']}, your invoice for Rs. $_totalAmount has been generated. Thank you for shopping with us!";
-                  final url =
-                      'https://wa.me/91$phone?text=${Uri.encodeComponent(message)}';
-                  if (await canLaunchUrl(Uri.parse(url))) {
-                    await launchUrl(Uri.parse(url));
+                  // Clean phone number: remove non-numeric chars
+                  String cleanNumber = phone.replaceAll(RegExp(r'\D'), '');
+                  // If it's a 10-digit Indian number, prepend 91
+                  if (cleanNumber.length == 10) {
+                    cleanNumber = '91$cleanNumber';
                   }
+                  
+                  final itemsText = _billingItems
+                      .map((item) =>
+                          '- ${item['name']} x ${item['quantity']}: Rs. ${((item['price'] as double) * (1 - ((item['discount'] as double? ?? 0.0) / 100)) * (item['quantity'] as int)).toStringAsFixed(2)}')
+                      .join('\n');
+                  
+                  final message =
+                      "Hello ${_selectedUser!['name']},\n\nYour invoice for Rs. ${_totalAmount.toStringAsFixed(2)} has been generated.\n\nItems:\n$itemsText\n\nThank you for shopping with us!";
+                  
+                  final url =
+                      'https://wa.me/$cleanNumber?text=${Uri.encodeComponent(message)}';
+                  if (await canLaunchUrl(Uri.parse(url))) {
+                    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Customer phone number not found!')),
+                  );
                 }
                 if (context.mounted) Navigator.pop(ctx);
               },

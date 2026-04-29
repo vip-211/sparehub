@@ -655,6 +655,7 @@ public class OrderService {
         dto.setId(order.getId());
         dto.setCustomerId(order.getCustomer().getId());
         dto.setCustomerName(order.getCustomer().getName());
+        dto.setCustomerPhone(order.getCustomer().getPhone());
         dto.setCustomerAddress(order.getCustomer().getAddress());
         dto.setSellerId(order.getSeller().getId());
         dto.setSellerName(order.getSeller().getName());

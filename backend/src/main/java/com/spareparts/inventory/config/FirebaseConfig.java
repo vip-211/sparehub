@@ -62,6 +62,12 @@ public class FirebaseConfig {
                         "Please download the correct JSON from: Firebase Console -> Project Settings -> Service Accounts -> Generate New Private Key.");
             }
 
+            if (!jsonContent.contains("\"private_key\"") || !jsonContent.contains("\"client_email\"")) {
+                throw new IllegalStateException("FirebaseConfig: FATAL ERROR! The provided JSON is NOT a valid Firebase Service Account Key. " +
+                        "A valid key must contain 'private_key' and 'client_email' fields. " +
+                        "Please download the correct JSON from: Firebase Console -> Project Settings -> Service Accounts -> Generate New Private Key.");
+            }
+
             FirebaseOptions options;
             try {
                 options = FirebaseOptions.builder()

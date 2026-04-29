@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import api, { API_BASE_URL } from '../services/api';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
-import { Package, ShoppingCart, TrendingUp, Upload } from 'lucide-react';
+import { Package, ShoppingCart, TrendingUp, Upload, MessageSquare } from 'lucide-react';
 import AuthService from '../services/auth.service';
 import { ROLE_ADMIN, ROLE_SUPER_MANAGER } from '../services/constants';
 
@@ -132,6 +132,20 @@ const WholesalerDashboard = () => {
     } catch (err) {
       console.error('Error updating status:', err);
     }
+  };
+
+  const sendToWhatsApp = (order: any) => {
+    const phoneNumber = order.customerPhone;
+    if (!phoneNumber) {
+      alert("Customer phone number not found in order details!");
+      return;
+    }
+    let cleanNumber = phoneNumber.replace(/\D/g, '');
+    if (cleanNumber.length === 10) cleanNumber = '91' + cleanNumber;
+    const itemsText = (order.items || []).map((i: any) => `- ${i.productName} (x${i.quantity}): ₹${i.price}`).join('\n');
+    const message = `Hello ${order.customerName},\n\nYour bill for order #${order.id} is ready.\n\nTotal Amount: ₹${order.totalAmount}\nItems:\n${itemsText}\n\nThank you for shopping with Parts Mitra!`;
+    const url = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
   };
 
   if (loading) return (
@@ -340,6 +354,13 @@ const WholesalerDashboard = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <div className="flex items-center justify-center gap-3">
+                        <button
+                          onClick={() => sendToWhatsApp(order)}
+                          className="p-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition border border-green-100"
+                          title="Send Bill via WhatsApp"
+                        >
+                          <MessageSquare size={16} />
+                        </button>
                         {order.status === 'PENDING' && (
                           <button
                             onClick={() => updateOrderStatus(order.id, 'ACCEPTED')}
