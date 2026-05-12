@@ -264,7 +264,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       color: Colors.blue.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.lock_outline_rounded,
+                    child: const Icon(Icons.lock_outlined,
                         color: Colors.blue, size: 20),
                   ),
                   title: const Text('Change Password',

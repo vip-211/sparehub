@@ -28,6 +28,7 @@ import 'screens/mechanic_search_screen.dart';
 import 'screens/category_list_screen.dart';
 import 'screens/trending_products_screen.dart';
 
+import 'screens/splash_screen.dart';
 import 'services/notification_service.dart';
 import 'services/settings_service.dart';
 import 'utils/app_theme.dart';
@@ -127,7 +128,7 @@ class MyApp extends StatelessWidget {
           ],
         );
       },
-      home: const InitialLoadingWrapper(),
+      home: const SplashScreenWrapper(),
       routes: {
         '/forgot-password': (context) => const ForgotPasswordScreen(),
         '/reset-password': (context) {
@@ -157,6 +158,31 @@ class MyApp extends StatelessWidget {
         '/products/trending': (context) => const TrendingProductsScreen(),
       },
     );
+  }
+}
+
+class SplashScreenWrapper extends StatefulWidget {
+  const SplashScreenWrapper({super.key});
+
+  @override
+  State<SplashScreenWrapper> createState() => _SplashScreenWrapperState();
+}
+
+class _SplashScreenWrapperState extends State<SplashScreenWrapper> {
+  bool _isInitialized = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_isInitialized) {
+      return SplashScreen(
+        onInitializationComplete: () {
+          setState(() {
+            _isInitialized = true;
+          });
+        },
+      );
+    }
+    return const AuthWrapper();
   }
 }
 

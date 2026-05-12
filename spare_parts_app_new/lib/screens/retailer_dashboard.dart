@@ -31,7 +31,7 @@ class _RetailerDashboardState extends State<RetailerDashboard> {
   Widget _buildPage(int index) {
     switch (index) {
       case 0:
-        return const WholesalerShopScreen();
+        return WholesalerShopScreen();
       case 1:
         return const OffersScreen();
       case 2:

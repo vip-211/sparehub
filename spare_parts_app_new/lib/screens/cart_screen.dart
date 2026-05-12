@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:animate_do/animate_do.dart';
 import '../providers/cart_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/order_service.dart';
 import 'order_confirmation_screen.dart';
-import '../models/order.dart';
 import '../services/settings_service.dart';
+import '../utils/app_theme.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -23,393 +24,142 @@ class _CartScreenState extends State<CartScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (cart.items.isEmpty) return;
 
-    if (SettingsService.isOutsideDeliveryHours()) {
-      final proceed = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Outside Delivery Hours'),
-          content: Text(
-              'Orders received after 7:00 PM and before 10:00 AM will be delivered after ${SettingsService.getDeliveryStartTime()}. Do you want to proceed?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Proceed Anyway'),
-            ),
-          ],
-        ),
-      );
-      if (proceed != true) return;
-    }
-
     setState(() => _isPlacingOrder = true);
-
-    final orderService = OrderService();
-    // Use wholesalerId = 1 as default as seen in other parts of the app
     final pointsToRedeem = _usePoints ? auth.user?.points ?? 0 : 0;
-    final deliveryCharge = cart.deliveryCharge;
-
-    final success = await orderService.createOrder(
-      1,
-      cart.items.values.toList(),
-      pointsToRedeem: pointsToRedeem,
-      deliveryCharge: deliveryCharge,
-    );
+    final success = await OrderService().createOrder(1, cart.items.values.toList(), pointsToRedeem: pointsToRedeem, deliveryCharge: cart.deliveryCharge);
 
     setState(() => _isPlacingOrder = false);
-
     if (success != null && mounted) {
-      // Refresh user points
       auth.refreshUser();
       cart.clear();
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => OrderConfirmationScreen(order: success),
-        ),
-      );
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Failed to place order. Please try again.')),
-      );
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => OrderConfirmationScreen(order: success)));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final cart = Provider.of<CartProvider>(context);
-
     return Scaffold(
+      backgroundColor: AppTheme.softWhite,
       appBar: AppBar(
-        title: const Text('My Cart'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        title: const Text('Shopping Cart'),
+        centerTitle: true,
+        backgroundColor: Colors.white,
+        elevation: 0,
       ),
-      body: cart.items.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.shopping_cart_outlined,
-                      size: 100, color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.3)),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Your cart is empty',
-                    style: TextStyle(fontSize: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Theme.of(context).colorScheme.onPrimary),
-                    child: const Text('Continue Shopping'),
-                  ),
-                ],
-              ),
-            )
-          : Column(
-              children: [
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: cart.items.length + 1,
-                    itemBuilder: (ctx, i) {
-                      if (i == cart.items.length) {
-                        // Delivery Info Row
-                        final deliveryCharge = cart.deliveryCharge;
-                        final threshold = cart.deliveryThreshold;
-                        if (deliveryCharge == 0) return const SizedBox.shrink();
+      body: cart.items.isEmpty ? _buildEmptyCart() : _buildCartContent(cart),
+    );
+  }
 
-                        return Container(
-                          margin: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.shade50,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.orange.shade100),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.info_outline,
-                                  color: Colors.orange, size: 20),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  'Add Rs. ${(threshold - cart.subtotalAmount).toStringAsFixed(0)} more for FREE delivery!',
-                                  style: TextStyle(
-                                      color: Colors.orange.shade900,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-                      final item = cart.items.values.toList()[i];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        color: Theme.of(context).colorScheme.surface,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item.productName,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                        color: Theme.of(context).colorScheme.onSurface,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Price: Rs. ${item.price}',
-                                      style: TextStyle(
-                                          color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      children: [
-                                        if (item.isLocked)
-                                          Padding(
-                                            padding: const EdgeInsets.only(right: 8),
-                                            child: Icon(Icons.lock, size: 16, color: Theme.of(context).colorScheme.primary),
-                                          ),
-                                        IconButton(
-                                          icon: Icon(
-                                              Icons.remove_circle_outline,
-                                              color: item.isLocked ? Colors.grey : Theme.of(context).colorScheme.error),
-                                          onPressed: item.isLocked ? null : () => cart
-                                              .decrementItem(item.productId),
-                                          constraints: const BoxConstraints(),
-                                          padding: EdgeInsets.zero,
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 12),
-                                          child: Text(
-                                            '${item.quantity}',
-                                            style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.bold,
-                                                color: Theme.of(context).colorScheme.onSurface),
-                                          ),
-                                        ),
-                                        IconButton(
-                                          icon: Icon(
-                                              Icons.add_circle_outline,
-                                              color: item.isLocked ? Colors.grey : Colors.green),
-                                          onPressed: item.isLocked ? null : () {
-                                            cart.addItemFromCart(
-                                                item.productId);
-                                          },
-                                          constraints: const BoxConstraints(),
-                                          padding: EdgeInsets.zero,
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    'Rs. ${(item.price * item.quantity).toStringAsFixed(2)}',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                      color: Theme.of(context).colorScheme.primary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  IconButton(
-                                    icon: Icon(Icons.delete_outline,
-                                        color: Theme.of(context).colorScheme.onSurfaceVariant, size: 22),
-                                    onPressed: () =>
-                                        cart.removeItem(item.productId),
-                                    constraints: const BoxConstraints(),
-                                    padding: EdgeInsets.zero,
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                // Points Redemption Section
-                Consumer<AuthProvider>(
-                  builder: (context, auth, child) {
-                    final points = auth.user?.points ?? 0;
-                    if (points <= 0) return const SizedBox.shrink();
+  Widget _buildEmptyCart() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          FadeInDown(child: Icon(Icons.shopping_cart_outlined, size: 120, color: Colors.grey.shade300)),
+          const SizedBox(height: 24),
+          FadeInUp(child: const Text('Your cart is empty', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.grey))),
+          const SizedBox(height: 32),
+          FadeInUp(delay: const Duration(milliseconds: 200), child: ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text('Start Shopping'))),
+        ],
+      ),
+    );
+  }
 
-                    return Container(
-                      margin: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Theme.of(context).colorScheme.primaryContainer),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.stars, color: Theme.of(context).colorScheme.primary),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Redeem Points',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(context).colorScheme.onPrimaryContainer,
-                                  ),
-                                ),
-                                Text(
-                                  'You have $points points available',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.8),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Switch(
-                            value: _usePoints,
-                            onChanged: (val) {
-                              setState(() => _usePoints = val);
-                            },
-                            activeColor: Theme.of(context).colorScheme.primary,
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-                SafeArea(
-                  top: false,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 15),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          spreadRadius: 1,
-                          blurRadius: 10,
-                          offset: const Offset(0, -3),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
+  Widget _buildCartContent(CartProvider cart) {
+    return Column(
+      children: [
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            itemCount: cart.items.length,
+            itemBuilder: (ctx, i) {
+              final item = cart.items.values.toList()[i];
+              return FadeInLeft(
+                delay: Duration(milliseconds: i * 100),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)]),
+                  child: Row(
+                    children: [
+                      Container(height: 80, width: 80, decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(16)), child: const Icon(Icons.inventory_2_outlined, color: AppTheme.primaryBlue)),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Total Amount',
-                              style:
-                                  TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                            ),
-                            Consumer<AuthProvider>(
-                              builder: (context, auth, child) {
-                                final subtotal = cart.subtotalAmount;
-                                final deliveryCharge = cart.deliveryCharge;
-                                final points =
-                                    _usePoints ? auth.user?.points ?? 0 : 0;
-                                final totalAfterPoints = subtotal - points;
-                                final finalTotal =
-                                    (totalAfterPoints < 0 ? 0 : totalAfterPoints) +
-                                        deliveryCharge;
-
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (deliveryCharge > 0)
-                                      Text(
-                                        '+ Rs. ${deliveryCharge.toStringAsFixed(0)} Delivery',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Theme.of(context).colorScheme.error,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    if (_usePoints && points > 0)
-                                      Text(
-                                        'Rs. ${(subtotal + deliveryCharge).toStringAsFixed(2)}',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          decoration:
-                                              TextDecoration.lineThrough,
-                                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                        ),
-                                      ),
-                                    Text(
-                                      'Rs. ${finalTotal.toStringAsFixed(2)}',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: Theme.of(context).colorScheme.primary,
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              },
+                            Text(item.productName, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppTheme.charcoalBlack)),
+                            const SizedBox(height: 4),
+                            Text('₹${item.price}', style: const TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.w900)),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                _quantityButton(Icons.remove, () => cart.decrementItem(item.productId)),
+                                Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Text('${item.quantity}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16))),
+                                _quantityButton(Icons.add, () => cart.addItemFromCart(item.productId)),
+                              ],
                             ),
                           ],
                         ),
-                        _isPlacingOrder
-                            ? const CircularProgressIndicator()
-                            : ElevatedButton(
-                                onPressed: _placeOrder,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Theme.of(context).colorScheme.primary,
-                                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 30, vertical: 15),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                                child: const Text(
-                                  'Place Order',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                      ],
-                    ),
+                      ),
+                      IconButton(icon: const Icon(Icons.delete_outline, color: Colors.redAccent), onPressed: () => cart.removeItem(item.productId)),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              );
+            },
+          ),
+        ),
+        _buildSummary(cart),
+      ],
+    );
+  }
+
+  Widget _quantityButton(IconData icon, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)), child: Icon(icon, size: 18, color: AppTheme.primaryBlue)),
+    );
+  }
+
+  Widget _buildSummary(CartProvider cart) {
+    return FadeInUp(
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: const BorderRadius.vertical(top: Radius.circular(32)), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, -5))]),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _summaryRow('Subtotal', '₹${cart.subtotalAmount.toStringAsFixed(2)}'),
+              const SizedBox(height: 8),
+              _summaryRow('Delivery Fee', '₹${cart.deliveryCharge.toStringAsFixed(2)}', isFree: cart.deliveryCharge == 0),
+              const Divider(height: 32),
+              _summaryRow('Total Amount', '₹${(cart.subtotalAmount + cart.deliveryCharge).toStringAsFixed(2)}', isTotal: true),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity, height: 56,
+                child: ElevatedButton(
+                  onPressed: _isPlacingOrder ? null : _placeOrder,
+                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 8, shadowColor: AppTheme.primaryBlue.withOpacity(0.4)),
+                  child: _isPlacingOrder ? const CircularProgressIndicator(color: Colors.white) : const Text('CHECKOUT NOW', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _summaryRow(String label, String value, {bool isTotal = false, bool isFree = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: TextStyle(fontSize: isTotal ? 18 : 14, fontWeight: isTotal ? FontWeight.w900 : FontWeight.w600, color: isTotal ? AppTheme.charcoalBlack : Colors.grey)),
+        Text(isFree ? 'FREE' : value, style: TextStyle(fontSize: isTotal ? 20 : 14, fontWeight: FontWeight.w900, color: isFree ? AppTheme.accentGreen : (isTotal ? AppTheme.primaryBlue : AppTheme.charcoalBlack))),
+      ],
     );
   }
 }

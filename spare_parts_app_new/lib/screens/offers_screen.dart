@@ -115,7 +115,7 @@ class _OffersScreenState extends State<OffersScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.star_outline_rounded,
+            Icon(Icons.star_border_rounded,
                 size: 80, color: Colors.grey.shade300),
             const SizedBox(height: 16),
             const Text(

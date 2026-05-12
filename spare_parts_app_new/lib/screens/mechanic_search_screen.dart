@@ -996,7 +996,7 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                           _buildActionChip(
                             icon: _isListening
                                 ? Icons.mic_rounded
-                                : Icons.mic_none_rounded,
+                                : Icons.mic_none,
                             label: 'Voice',
                             color: Theme.of(context).colorScheme.error,
                             onTap: _listen,
@@ -1004,7 +1004,7 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                           ),
                           const SizedBox(width: 8),
                           _buildActionChip(
-                            icon: Icons.qr_code_scanner_rounded,
+                            icon: Icons.qr_code_scanner,
                             label: 'Scan',
                             color: Theme.of(context).colorScheme.primary,
                             onTap: _scanQRCode,
