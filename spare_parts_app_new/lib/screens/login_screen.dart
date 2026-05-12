@@ -540,7 +540,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ElevatedButton(
             onPressed: () async {
               final email = emailCtrl.text.trim();
-              final regex = RegExp(r'^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$');
+              final regex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
               if (!regex.hasMatch(email)) {
                 _showFeedback('Enter a valid email address.', isError: true);
                 return;

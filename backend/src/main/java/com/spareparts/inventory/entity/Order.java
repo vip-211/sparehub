@@ -65,6 +65,9 @@ public class Order {
     @Column(name = "discount_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal discountAmount = BigDecimal.ZERO;
 
+    @Column(name = "delivery_charge", nullable = false, precision = 10, scale = 2)
+    private BigDecimal deliveryCharge = BigDecimal.ZERO;
+
     public enum OrderStatus {
         PENDING, APPROVED, PACKED, OUT_FOR_DELIVERY, DELIVERED, CANCELLED
     }

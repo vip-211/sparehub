@@ -226,6 +226,13 @@ public class OrderService {
 
         order.setTotalAmount(totalAmount);
 
+        // Delivery Charge
+        if (orderRequest.getDeliveryCharge() != null) {
+            BigDecimal deliveryCharge = BigDecimal.valueOf(orderRequest.getDeliveryCharge());
+            order.setDeliveryCharge(deliveryCharge);
+            order.setTotalAmount(order.getTotalAmount().add(deliveryCharge));
+        }
+
         // Points logic: Redeem points if requested
         if (orderRequest.getPointsToRedeem() != null && orderRequest.getPointsToRedeem() > 0) {
             long pointsToRedeem = orderRequest.getPointsToRedeem();

@@ -154,7 +154,7 @@ class OrderService {
   // ===============================
 
   Future<Order?> createOrder(int sellerId, List<OrderItem> items,
-      {int pointsToRedeem = 0}) async {
+      {int pointsToRedeem = 0, double deliveryCharge = 0}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userStr = prefs.getString('user');
@@ -168,6 +168,7 @@ class OrderService {
           'sellerId': sellerId,
           'customerId': currentUser.id,
           'pointsToRedeem': pointsToRedeem,
+          'deliveryCharge': deliveryCharge,
           'items': items
               .map(
                 (e) => {
@@ -187,18 +188,20 @@ class OrderService {
 
       final db = await _dbService.database;
 
-      double totalAmount = 0;
+      double subtotal = 0;
 
       for (var item in items) {
-        totalAmount += item.price * item.quantity;
+        subtotal += item.price * item.quantity;
       }
 
       int orderId = await db.insert('orders', {
         'customerId': currentUser.id,
         'sellerId': sellerId,
-        'totalAmount': totalAmount,
+        'totalAmount': subtotal + deliveryCharge,
+        'deliveryCharge': deliveryCharge,
         'status': 'PENDING',
         'createdAt': DateTime.now().toIso8601String(),
+        'pointsRedeemed': pointsToRedeem,
       });
 
       for (var item in items) {

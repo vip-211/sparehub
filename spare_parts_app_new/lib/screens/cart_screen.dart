@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../services/order_service.dart';
 import 'order_confirmation_screen.dart';
 import '../models/order.dart';
+import '../services/settings_service.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -22,16 +23,40 @@ class _CartScreenState extends State<CartScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (cart.items.isEmpty) return;
 
+    if (SettingsService.isOutsideDeliveryHours()) {
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Outside Delivery Hours'),
+          content: Text(
+              'Orders received after 7:00 PM and before 10:00 AM will be delivered after ${SettingsService.getDeliveryStartTime()}. Do you want to proceed?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Proceed Anyway'),
+            ),
+          ],
+        ),
+      );
+      if (proceed != true) return;
+    }
+
     setState(() => _isPlacingOrder = true);
 
     final orderService = OrderService();
     // Use wholesalerId = 1 as default as seen in other parts of the app
     final pointsToRedeem = _usePoints ? auth.user?.points ?? 0 : 0;
+    final deliveryCharge = cart.deliveryCharge;
 
     final success = await orderService.createOrder(
       1,
       cart.items.values.toList(),
       pointsToRedeem: pointsToRedeem,
+      deliveryCharge: deliveryCharge,
     );
 
     setState(() => _isPlacingOrder = false);
@@ -95,8 +120,41 @@ class _CartScreenState extends State<CartScreen> {
               children: [
                 Expanded(
                   child: ListView.builder(
-                    itemCount: cart.items.length,
+                    itemCount: cart.items.length + 1,
                     itemBuilder: (ctx, i) {
+                      if (i == cart.items.length) {
+                        // Delivery Info Row
+                        final deliveryCharge = cart.deliveryCharge;
+                        final threshold = cart.deliveryThreshold;
+                        if (deliveryCharge == 0) return const SizedBox.shrink();
+
+                        return Container(
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.orange.shade100),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.info_outline,
+                                  color: Colors.orange, size: 20),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Add Rs. ${(threshold - cart.subtotalAmount).toStringAsFixed(0)} more for FREE delivery!',
+                                  style: TextStyle(
+                                      color: Colors.orange.shade900,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
                       final item = cart.items.values.toList()[i];
                       return Card(
                         margin: const EdgeInsets.symmetric(
@@ -282,19 +340,30 @@ class _CartScreenState extends State<CartScreen> {
                             ),
                             Consumer<AuthProvider>(
                               builder: (context, auth, child) {
-                                final total = cart.totalAmount;
+                                final subtotal = cart.subtotalAmount;
+                                final deliveryCharge = cart.deliveryCharge;
                                 final points =
                                     _usePoints ? auth.user?.points ?? 0 : 0;
-                                final discountedTotal = total - points;
+                                final totalAfterPoints = subtotal - points;
                                 final finalTotal =
-                                    discountedTotal < 0 ? 0 : discountedTotal;
+                                    (totalAfterPoints < 0 ? 0 : totalAfterPoints) +
+                                        deliveryCharge;
 
                                 return Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
+                                    if (deliveryCharge > 0)
+                                      Text(
+                                        '+ Rs. ${deliveryCharge.toStringAsFixed(0)} Delivery',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Theme.of(context).colorScheme.error,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
                                     if (_usePoints && points > 0)
                                       Text(
-                                        'Rs. ${total.toStringAsFixed(2)}',
+                                        'Rs. ${(subtotal + deliveryCharge).toStringAsFixed(2)}',
                                         style: TextStyle(
                                           fontSize: 14,
                                           decoration:

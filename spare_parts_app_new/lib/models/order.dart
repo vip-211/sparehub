@@ -63,6 +63,7 @@ class Order {
   final String? deliveredAt;
   final int pointsRedeemed;
   final int pointsEarned;
+  final double deliveryCharge;
 
   Order({
     required this.id,
@@ -81,6 +82,7 @@ class Order {
     this.deliveredAt,
     this.pointsRedeemed = 0,
     this.pointsEarned = 0,
+    this.deliveryCharge = 0,
   });
 
   factory Order.fromJson(Map<String, dynamic> json) {
@@ -117,6 +119,7 @@ class Order {
       deliveredAt: json['deliveredAt'],
       pointsRedeemed: (json['pointsRedeemed'] as num? ?? 0).toInt(),
       pointsEarned: (json['pointsEarned'] as num? ?? 0).toInt(),
+      deliveryCharge: (json['deliveryCharge'] as num? ?? 0).toDouble(),
     );
   }
 

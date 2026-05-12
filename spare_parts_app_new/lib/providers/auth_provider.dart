@@ -152,6 +152,19 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> refreshUser() async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      _user = await _authService.getCurrentUser();
+    } catch (e) {
+      debugPrint('AuthProvider: Error refreshing user: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> updateAddress(String newAddress) async {
     if (_user != null) {
       await _authService.updateUserAddress(_user!.id, newAddress);

@@ -19,8 +19,8 @@ import '../utils/image_utils.dart';
 import '../utils/constants.dart';
 import 'wholesaler_shop_screen.dart'; // For ProductDetailSheet
 
-import 'package:spare_parts_app/providers/auth_provider.dart';
-import 'package:spare_parts_app/screens/edit_product_screen.dart';
+import '../providers/auth_provider.dart';
+import 'edit_product_screen.dart';
 import '../services/ai_training_service.dart';
 
 class MechanicSearchScreen extends StatefulWidget {
@@ -740,6 +740,25 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        if (p.isCombo)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.purple.shade50,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: Colors.purple.shade200),
+                            ),
+                            child: Text(
+                              'COMBO OFFER',
+                              style: TextStyle(
+                                color: Colors.purple.shade700,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                         TranslatedText(
                           p.name,
                           maxLines: 1,
@@ -750,6 +769,32 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
+                        if (p.isCombo && p.comboItems.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: p.comboItems.take(2).map((item) => 
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 1),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.check_circle_outline, size: 10, color: Colors.purple),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          '${item['name']} x ${item['quantity'] ?? 1}',
+                                          style: const TextStyle(fontSize: 10, color: Colors.black54),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              ).toList(),
+                            ),
+                          ),
                         const SizedBox(height: 2),
                         Text(
                           p.partNumber,
@@ -1405,7 +1450,7 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
             FloatingActionButton.extended(
               heroTag: 'checkout',
               onPressed: _placeOrder,
-              label: Text('Checkout (₹${cart.totalAmount})'),
+              label: Text('Checkout (₹${cart.totalAmount.toStringAsFixed(0)})'),
               icon: const Icon(Icons.shopping_cart_checkout),
               backgroundColor: Colors.blue,
             ),

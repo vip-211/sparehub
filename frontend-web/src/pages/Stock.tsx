@@ -14,6 +14,8 @@ type Product = {
   sellingPrice?: number;
   mrp?: number;
   stock: number;
+  offerType?: string;
+  comboItems?: any[];
 };
 
 const Stock: React.FC = () => {

@@ -7,16 +7,17 @@ import { useNavigate } from 'react-router-dom';
 import { Trash2, Plus, Minus, ShoppingCart, ArrowRight, Package, Star } from 'lucide-react';
 
 const Cart: React.FC = () => {
-  const { items, updateQty, removeItem, total, clear } = useCart();
+  const { items, updateQty, removeItem, subtotal, total, deliveryCharge, clear } = useCart();
   const { currentUser, setCurrentUser } = useAuth();
   const { t, tp } = useLanguage();
   const [placing, setPlacing] = useState(false);
   const [usePoints, setUsePoints] = useState(false);
   const [msg, setMsg] = useState('');
+  const [showTimeWarning, setShowTimeWarning] = useState(false);
   const navigate = useNavigate();
 
   const userPoints = currentUser?.points || 0;
-  const pointsToRedeem = usePoints ? Math.min(userPoints, total) : 0;
+  const pointsToRedeem = usePoints ? Math.min(userPoints, subtotal) : 0;
   const finalTotal = total - pointsToRedeem;
 
   const getImageUrl = (path: string | undefined | null) => {
@@ -26,8 +27,19 @@ const Cart: React.FC = () => {
     return `${base}${path.startsWith('/') ? '' : '/'}${path}`;
   };
 
-  const checkout = async () => {
+  const checkout = async (force = false) => {
     if (!items.length) return;
+
+    // Time Check Logic
+    if (!force) {
+      const now = new Date();
+      const hour = now.getHours();
+      if (hour >= 19 || hour < 10) {
+        setShowTimeWarning(true);
+        return;
+      }
+    }
+
     setPlacing(true);
     setMsg('');
     try {
@@ -52,7 +64,8 @@ const Cart: React.FC = () => {
       const orderPromises = Object.entries(wholesalerGroups).map(([wid, groupItems]) => {
         const payload = {
           sellerId: parseInt(wid),
-          pointsToRedeem: usePoints ? pointsToRedeem : 0, // In multi-seller cart, this might need refinement
+          pointsToRedeem: usePoints ? pointsToRedeem : 0,
+          deliveryCharge: deliveryCharge,
           items: groupItems.map((i) => ({
             productId: i.productId,
             productName: i.name,
@@ -249,12 +262,19 @@ const Cart: React.FC = () => {
               <div className="space-y-4 mb-8">
                 <div className="flex justify-between text-gray-600">
                   <span>Items Total</span>
-                  <span className="font-medium">₹{total}</span>
+                  <span className="font-medium">₹{subtotal}</span>
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span>Delivery Fee</span>
-                  <span className="text-blue-600 font-medium">Free</span>
+                  <span className={`font-medium ${deliveryCharge > 0 ? 'text-red-500' : 'text-blue-600'}`}>
+                    {deliveryCharge > 0 ? `₹${deliveryCharge}` : 'Free'}
+                  </span>
                 </div>
+                {deliveryCharge > 0 && (
+                  <div className="text-[10px] text-orange-600 bg-orange-50 p-2 rounded-lg border border-orange-100 font-medium">
+                    Tip: Add ₹{1000 - subtotal} more for FREE delivery!
+                  </div>
+                )}
                 {userPoints > 0 && (
                   <div className="pt-4 border-t border-gray-100">
                     <div className="flex items-center justify-between mb-2">
@@ -292,7 +312,7 @@ const Cart: React.FC = () => {
               </div>
 
               <button
-                onClick={checkout}
+                onClick={() => checkout()}
                 disabled={placing}
                 className="w-full bg-primary-600 text-white py-4 rounded-xl font-bold hover:bg-primary-700 transition-all shadow-lg shadow-primary-200 disabled:opacity-50 flex items-center justify-center gap-2"
               >
@@ -311,6 +331,35 @@ const Cart: React.FC = () => {
                   {msg}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Time Warning Modal */}
+      {showTimeWarning && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl animate-in fade-in zoom-in duration-200">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Outside Delivery Hours</h3>
+            <p className="text-gray-600 mb-8">
+              Orders received after 7:00 PM and before 10:00 AM will be delivered after 10:00 AM. Do you want to proceed?
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setShowTimeWarning(false)}
+                className="flex-1 px-6 py-3 rounded-xl border border-gray-200 font-bold text-gray-600 hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowTimeWarning(false);
+                  checkout(true);
+                }}
+                className="flex-1 px-6 py-3 rounded-xl bg-primary-600 text-white font-bold hover:bg-primary-700 transition"
+              >
+                Proceed Anyway
+              </button>
             </div>
           </div>
         </div>

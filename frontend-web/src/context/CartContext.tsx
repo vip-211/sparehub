@@ -21,12 +21,34 @@ type CartContextValue = {
   reorder: (items: Omit<CartItem, 'isLocked' | 'bannerId' | 'offerId'>[]) => void;
   clear: () => void;
   count: number;
+  subtotal: number;
   total: number;
+  deliveryCharge: number;
 };
 
 const CartContext = createContext<CartContextValue | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [settings, setSettings] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    // Fetch public settings for delivery logic
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || '/api'}/settings/public`);
+        if (res.ok) {
+          const data = await res.json();
+          const mapped: Record<string, string> = {};
+          data.forEach((s: any) => mapped[s.key] = s.value);
+          setSettings(mapped);
+        }
+      } catch (e) {
+        console.error('Failed to fetch settings:', e);
+      }
+    };
+    fetchSettings();
+  }, []);
+
   const [items, setItems] = useState<CartItem[]>(() => {
     try {
       const raw = localStorage.getItem('cart');
@@ -91,7 +113,16 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const count = useMemo(() => items.reduce((acc, i) => acc + i.quantity, 0), [items]);
-  const total = useMemo(() => items.reduce((acc, i) => acc + i.price * i.quantity, 0), [items]);
+  const subtotal = useMemo(() => items.reduce((acc, i) => acc + (i.price || 0) * i.quantity, 0), [items]);
+  
+  const deliveryCharge = useMemo(() => {
+    if (subtotal === 0) return 0;
+    const threshold = parseFloat(settings['DELIVERY_CHARGE_THRESHOLD'] || '1000');
+    const charge = parseFloat(settings['DELIVERY_CHARGE_AMOUNT'] || '20');
+    return subtotal < threshold ? charge : 0;
+  }, [subtotal, settings]);
+
+  const total = useMemo(() => subtotal + deliveryCharge, [subtotal, deliveryCharge]);
 
   const value: CartContextValue = {
     items,
@@ -101,7 +132,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     reorder,
     clear,
     count,
+    subtotal,
     total,
+    deliveryCharge,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

@@ -14,6 +14,8 @@ public class OrderRequest {
 
     private Long pointsToRedeem;
     
+    private Double deliveryCharge;
+    
     @NotEmpty
     private List<OrderItemDto> items;
 }

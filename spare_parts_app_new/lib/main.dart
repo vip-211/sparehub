@@ -271,8 +271,10 @@ class _InitialLoadingWrapperState extends State<InitialLoadingWrapper> {
       future: _settingsFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done) {
-          // The service handles its own errors and falls back to cache,
-          // so we can always proceed.
+          // Trigger update check after settings are preloaded
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            SettingsService.checkAppUpdate(context);
+          });
           return const AuthWrapper();
         } else {
           // Show a loading screen while settings are being fetched.

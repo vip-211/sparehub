@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/product.dart';
 import '../models/order.dart';
+import '../services/settings_service.dart';
 
 class CartProvider with ChangeNotifier {
   final Map<int, OrderItem> _items = {};
@@ -9,12 +10,36 @@ class CartProvider with ChangeNotifier {
 
   int get itemCount => _items.length;
 
-  double get totalAmount {
+  double get subtotalAmount {
     var total = 0.0;
     _items.forEach((key, cartItem) {
       total += cartItem.price * cartItem.quantity;
     });
     return total;
+  }
+
+  double get totalAmount {
+    return subtotalAmount + deliveryCharge;
+  }
+
+  double get deliveryCharge {
+    final subtotal = subtotalAmount;
+    if (subtotal == 0) return 0;
+
+    final threshold = double.tryParse(SettingsService.getCachedRemoteSetting(
+            'DELIVERY_CHARGE_THRESHOLD', '1000')) ??
+        1000.0;
+    final charge = double.tryParse(SettingsService.getCachedRemoteSetting(
+            'DELIVERY_CHARGE_AMOUNT', '20')) ??
+        20.0;
+
+    return subtotal < threshold ? charge : 0.0;
+  }
+
+  double get deliveryThreshold {
+    return double.tryParse(SettingsService.getCachedRemoteSetting(
+            'DELIVERY_CHARGE_THRESHOLD', '1000')) ??
+        1000.0;
   }
 
   void addItem(Product product, double price, {int? quantity, bool isLocked = false, int? bannerId, int? offerId}) {
@@ -65,6 +90,8 @@ class CartProvider with ChangeNotifier {
         price: existing.price,
         minQty: existing.minQty,
         isLocked: existing.isLocked,
+        bannerId: existing.bannerId,
+        offerId: existing.offerId,
       ),
     );
     notifyListeners();
@@ -89,6 +116,8 @@ class CartProvider with ChangeNotifier {
           price: existing.price,
           minQty: existing.minQty,
           isLocked: existing.isLocked,
+          bannerId: existing.bannerId,
+          offerId: existing.offerId,
         ),
       );
     } else {

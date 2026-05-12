@@ -23,6 +23,7 @@ class Product {
   final List<String> imageLinks;
   final int minOrderQty;
   final bool isFeatured;
+  final List<Map<String, dynamic>> comboItems;
 
   Product({
     required this.id,
@@ -49,7 +50,10 @@ class Product {
     this.imageLinks = const [],
     this.minOrderQty = 1,
     this.isFeatured = false,
+    this.comboItems = const [],
   });
+
+  bool get isCombo => offerType == 'COMBO' || comboItems.isNotEmpty;
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
@@ -91,6 +95,10 @@ class Product {
       minOrderQty: json['minOrderQty'] ?? 1,
       isFeatured:
           json['isFeatured'] == 1 || json['isFeatured'] == true,
+      comboItems: (json['comboItems'] as List<dynamic>?)
+              ?.map((e) => e as Map<String, dynamic>)
+              .toList() ??
+          [],
     );
   }
 
@@ -120,6 +128,7 @@ class Product {
       'imageLinks': imageLinks,
       'minOrderQty': minOrderQty,
       'isFeatured': isFeatured ? 1 : 0,
+      'comboItems': comboItems,
     };
   }
 
@@ -148,6 +157,7 @@ class Product {
     List<String>? imageLinks,
     int? minOrderQty,
     bool? isFeatured,
+    List<Map<String, dynamic>>? comboItems,
   }) {
     return Product(
       id: id ?? this.id,
@@ -174,6 +184,7 @@ class Product {
       imageLinks: imageLinks ?? this.imageLinks,
       minOrderQty: minOrderQty ?? this.minOrderQty,
       isFeatured: isFeatured ?? this.isFeatured,
+      comboItems: comboItems ?? this.comboItems,
     );
   }
 }

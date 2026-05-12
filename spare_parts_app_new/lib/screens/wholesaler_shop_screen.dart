@@ -30,8 +30,8 @@ import 'order_confirmation_screen.dart';
 import 'cart_screen.dart';
 import '../utils/constants.dart';
 
-import 'package:spare_parts_app/screens/edit_product_screen.dart';
-import 'package:spare_parts_app/providers/auth_provider.dart';
+import 'edit_product_screen.dart';
+import '../providers/auth_provider.dart';
 
 class WholesalerShopScreen extends StatefulWidget {
   const WholesalerShopScreen({super.key});
@@ -1222,6 +1222,24 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                                                                 CrossAxisAlignment
                                                                     .start,
                                                             children: [
+                                                              if (product.isCombo)
+                                                                Container(
+                                                                  margin: const EdgeInsets.only(bottom: 6),
+                                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                                  decoration: BoxDecoration(
+                                                                    color: Colors.purple.shade50,
+                                                                    borderRadius: BorderRadius.circular(6),
+                                                                    border: Border.all(color: Colors.purple.shade200),
+                                                                  ),
+                                                                  child: Text(
+                                                                    'COMBO OFFER',
+                                                                    style: TextStyle(
+                                                                      color: Colors.purple.shade700,
+                                                                      fontSize: 10,
+                                                                      fontWeight: FontWeight.bold,
+                                                                    ),
+                                                                  ),
+                                                                ),
                                                               TranslatedText(
                                                                 product.name,
                                                                 style:
@@ -1313,6 +1331,39 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                                                                       ),
                                                                     ),
                                                                   ],
+                                                                ),
+                                                              if (product.isCombo && product.comboItems.isNotEmpty)
+                                                                Padding(
+                                                                  padding: const EdgeInsets.only(top: 12),
+                                                                  child: Column(
+                                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                                    children: [
+                                                                      const Text(
+                                                                        'Includes:',
+                                                                        style: TextStyle(
+                                                                          fontSize: 12,
+                                                                          fontWeight: FontWeight.bold,
+                                                                          color: Colors.purple,
+                                                                        ),
+                                                                      ),
+                                                                      const SizedBox(height: 4),
+                                                                      ...product.comboItems.map((item) => Padding(
+                                                                        padding: const EdgeInsets.only(bottom: 2),
+                                                                        child: Row(
+                                                                          children: [
+                                                                            const Icon(Icons.check_circle_outline, size: 12, color: Colors.purple),
+                                                                            const SizedBox(width: 4),
+                                                                            Expanded(
+                                                                              child: Text(
+                                                                                '${item['name']} x ${item['quantity'] ?? 1}',
+                                                                                style: const TextStyle(fontSize: 11, color: Colors.black54),
+                                                                              ),
+                                                                            ),
+                                                                          ],
+                                                                        ),
+                                                                      )),
+                                                                    ],
+                                                                  ),
                                                                 ),
                                                             ],
                                                           ),
@@ -1437,7 +1488,7 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                       context,
                       MaterialPageRoute(builder: (_) => const CartScreen()),
                     ),
-                    label: Text('Cart (₹${cart.totalAmount})'),
+                    label: Text('Cart (₹${cart.totalAmount.toStringAsFixed(0)})'),
                     icon: const Icon(Icons.shopping_cart),
                     backgroundColor: Colors.green,
                   ),

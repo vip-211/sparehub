@@ -345,6 +345,26 @@ const Shop: React.FC = () => {
                   <div className="flex justify-between items-start gap-2 mb-2">
                     <h3 className="text-xl font-black text-gray-900 leading-tight line-clamp-2">{tp(p.name)}</h3>
                   </div>
+                  {p.offerType === 'COMBO' && (
+                    <div className="mb-4">
+                      <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-lg font-bold text-[10px] uppercase tracking-wider border border-purple-200">
+                        Combo Offer
+                      </span>
+                      {p.comboItems && p.comboItems.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {p.comboItems.slice(0, 2).map((item: any, idx: number) => (
+                            <div key={idx} className="flex items-center gap-2 text-[10px] text-gray-500 font-medium">
+                              <CheckCircle2 className="w-3 h-3 text-purple-500" />
+                              <span className="truncate">{item.name} x {item.quantity || 1}</span>
+                            </div>
+                          ))}
+                          {p.comboItems.length > 2 && (
+                            <div className="text-[9px] text-purple-600 font-bold ml-5">+{p.comboItems.length - 2} more items</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {!isMechanic && (
                     <div className="flex items-center gap-2 mb-4">
                       <span className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${inStock ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>
@@ -560,6 +580,25 @@ const Shop: React.FC = () => {
                       <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex items-center justify-between">
                         <span className="text-xs font-black text-amber-700 uppercase tracking-widest">Minimum Order</span>
                         <span className="text-lg font-black text-amber-600">{selectedProduct.minOrderQty} Units</span>
+                      </div>
+                    )}
+
+                    {selectedProduct.offerType === 'COMBO' && selectedProduct.comboItems && selectedProduct.comboItems.length > 0 && (
+                      <div className="p-6 bg-purple-50 rounded-2xl border border-purple-100">
+                        <h5 className="text-xs font-black text-purple-700 uppercase tracking-[0.2em] mb-4">Combo Items Included</h5>
+                        <div className="space-y-3">
+                          {selectedProduct.comboItems.map((item: any, idx: number) => (
+                            <div key={idx} className="flex items-center justify-between py-2 border-b border-purple-100/50 last:border-0">
+                              <div className="flex items-center gap-3">
+                                <CheckCircle2 className="w-5 h-5 text-purple-500" />
+                                <span className="font-bold text-gray-700">{item.name}</span>
+                              </div>
+                              <span className="bg-purple-200 text-purple-700 px-3 py-1 rounded-full text-xs font-black">
+                                x{item.quantity || 1}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>

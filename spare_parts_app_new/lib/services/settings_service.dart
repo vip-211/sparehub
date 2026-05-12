@@ -15,10 +15,33 @@ class SettingsService {
   static Stream<String> get onSettingsChanged =>
       _settingsChangedController.stream;
 
+  static bool _updateCheckedInThisSession = false;
+
+  static bool isOutsideDeliveryHours() {
+    final now = DateTime.now();
+    final startHour = int.tryParse(getCachedRemoteSetting('DELIVERY_START_HOUR', '10')) ?? 10;
+    final endHour = int.tryParse(getCachedRemoteSetting('DELIVERY_END_HOUR', '19')) ?? 19;
+
+    // Delivery hours: e.g. 10 AM to 7 PM (19:00)
+    // If endHour < startHour (e.g. night shift), logic would be different, 
+    // but assuming typical day hours.
+    if (now.hour < startHour || now.hour >= endHour) {
+      return true;
+    }
+    return false;
+  }
+
+  static String getDeliveryStartTime() {
+    return getCachedRemoteSetting('DELIVERY_START_HOUR', '10') + ':00 AM';
+  }
+
   static Future<void> checkAppUpdate(BuildContext context) async {
+    if (_updateCheckedInThisSession) return;
+
     try {
       final latestVersion = getCachedRemoteSetting('LATEST_APP_VERSION', '1.0.0');
       final updateUrl = getCachedRemoteSetting('APP_UPDATE_URL', '');
+      final isForceUpdate = getCachedRemoteSetting('FORCE_UPDATE_REQUIRED', 'false') == 'true';
       
       if (updateUrl.isEmpty) return;
 
@@ -26,29 +49,66 @@ class SettingsService {
       final currentVersion = packageInfo.version;
 
       if (_isVersionNewer(currentVersion, latestVersion)) {
+        _updateCheckedInThisSession = true;
         if (!context.mounted) return;
         
         showDialog(
           context: context,
-          barrierDismissible: false,
-          builder: (context) => AlertDialog(
-            title: const Text('Update Available'),
-            content: Text('A newer version ($latestVersion) of the app is available. Please update to continue using the latest features.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Later'),
+          barrierDismissible: !isForceUpdate,
+          builder: (context) => PopScope(
+            canPop: !isForceUpdate,
+            child: AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: Row(
+                children: [
+                  Icon(Icons.system_update_alt, color: Theme.of(context).colorScheme.primary),
+                  const SizedBox(width: 12),
+                  const Text('Update Available'),
+                ],
               ),
-              ElevatedButton(
-                onPressed: () async {
-                  final url = Uri.parse(updateUrl);
-                  if (await canLaunchUrl(url)) {
-                    await launchUrl(url, mode: LaunchMode.externalApplication);
-                  }
-                },
-                child: const Text('Update Now'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'A newer version ($latestVersion) of the app is available. Please update to continue using the latest features and security improvements.',
+                    style: const TextStyle(fontSize: 15),
+                  ),
+                  if (isForceUpdate)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 16),
+                      child: Text(
+                        'This is a required update.',
+                        style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                ],
               ),
-            ],
+              actions: [
+                if (!isForceUpdate)
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(
+                      'Later',
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                  ),
+                ElevatedButton(
+                  onPressed: () async {
+                    final url = Uri.parse(updateUrl);
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url, mode: LaunchMode.externalApplication);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Update Now'),
+                ),
+              ],
+            ),
           ),
         );
       }
@@ -59,8 +119,12 @@ class SettingsService {
 
   static bool _isVersionNewer(String current, String latest) {
     try {
-      List<int> currentParts = current.split('.').map(int.parse).toList();
-      List<int> latestParts = latest.split('.').map(int.parse).toList();
+      // Remove build numbers (e.g. 1.0.0+1 -> 1.0.0)
+      String cleanCurrent = current.split('+')[0];
+      String cleanLatest = latest.split('+')[0];
+
+      List<int> currentParts = cleanCurrent.split('.').map(int.parse).toList();
+      List<int> latestParts = cleanLatest.split('.').map(int.parse).toList();
 
       for (int i = 0; i < latestParts.length; i++) {
         int currentPart = i < currentParts.length ? currentParts[i] : 0;
