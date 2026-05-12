@@ -27,32 +27,32 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
             }
 
             try {
-                stmt.execute("ALTER TABLE orders ADD COLUMN delivery_charge DECIMAL(10, 2) DEFAULT 0.0");
+                stmt.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_charge DECIMAL(10, 2) DEFAULT 0.0");
             } catch (Exception ignored) {
             }
 
             try {
-                stmt.execute("ALTER TABLE orders ADD COLUMN discount_amount DECIMAL(10, 2) DEFAULT 0.0");
+                stmt.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount_amount DECIMAL(10, 2) DEFAULT 0.0");
             } catch (Exception ignored) {
             }
 
             try {
-                stmt.execute("ALTER TABLE orders ADD COLUMN points_earned BIGINT DEFAULT 0");
+                stmt.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS points_earned BIGINT DEFAULT 0");
             } catch (Exception ignored) {
             }
 
             try {
-                stmt.execute("ALTER TABLE orders ADD COLUMN points_redeemed BIGINT DEFAULT 0");
+                stmt.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS points_redeemed BIGINT DEFAULT 0");
             } catch (Exception ignored) {
             }
 
             try {
-                stmt.execute("ALTER TABLE orders ADD COLUMN deleted BOOLEAN DEFAULT FALSE");
+                stmt.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS deleted BOOLEAN DEFAULT FALSE");
             } catch (Exception ignored) {
             }
 
             try {
-                stmt.execute("ALTER TABLE orders ADD COLUMN delivered_by_id BIGINT");
+                stmt.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivered_by_id BIGINT");
             } catch (Exception ignored) {
             }
             

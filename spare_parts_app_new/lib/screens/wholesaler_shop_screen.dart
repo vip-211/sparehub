@@ -101,8 +101,8 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          Image.network(
-                            p.imageLink ?? '',
+                          Image(
+                            image: getImageProvider(p.imageLink),
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => const Icon(Icons.inventory_2_outlined, color: Colors.grey),
                           ),

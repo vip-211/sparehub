@@ -20,8 +20,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<MessageResponse> handleRuntimeException(RuntimeException ex) {
         log.error("Runtime error caught: {}", ex.getMessage(), ex);
+        HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
+        if (ex.getMessage() != null && (ex.getMessage().contains("Invalid") || ex.getMessage().contains("required"))) {
+            status = HttpStatus.BAD_REQUEST;
+        }
         return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
+                .status(status)
                 .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                 .body(new MessageResponse(ex.getMessage()));
     }

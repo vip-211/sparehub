@@ -107,38 +107,6 @@ dev_dependencies:
 
 
 # -------------------------
-# APP ICON CONFIGURATION
-# -------------------------
-
-flutter_launcher_icons:
-  android: true
-  ios: true
-  image_path: "assets/images/logo.png"
-
-  adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/images/logo.png"
-  min_sdk_android: 21
-
-
-# -------------------------
-# SPLASH SCREEN
-# -------------------------
-
-flutter_native_splash:
-  color: "#FFFFFF"
-  image: "assets/images/logo.png"
-
-  android: true
-  ios: true
-  web: true
-  fullscreen: true
-
-  android_12:
-    image: "assets/images/logo.png"
-    icon_background_color: "#FFFFFF"
-
-
-# -------------------------
 # FLUTTER CONFIG
 # -------------------------
 

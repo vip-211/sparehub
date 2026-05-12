@@ -6,6 +6,7 @@ import 'package:animate_do/animate_do.dart';
 import 'package:shimmer/shimmer.dart';
 import '../screens/category_products_screen.dart';
 import '../screens/category_list_screen.dart';
+import '../screens/wholesaler_shop_screen.dart';
 import '../services/product_service.dart';
 import '../services/order_service.dart';
 import '../models/product.dart';
@@ -238,23 +239,42 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
           final cat = _categories[i];
           return FadeInRight(
             delay: Duration(milliseconds: i * 100),
-            child: Container(
-              width: 80,
-              margin: const EdgeInsets.symmetric(horizontal: 8),
-              child: Column(
-                children: [
-                  Container(
-                    height: 64, width: 64,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+            child: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CategoryProductsScreen(
+                      categoryId: cat['id'],
+                      categoryName: cat['name'],
                     ),
-                    child: ClipOval(child: Image.network(cat['imagePath'] ?? '', errorBuilder: (_, __, ___) => const Icon(Icons.motorcycle, color: AppTheme.primaryBlue))),
                   ),
-                  const SizedBox(height: 8),
-                  Text(cat['name'], maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                ],
+                );
+              },
+              child: Container(
+                width: 80,
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+                child: Column(
+                  children: [
+                    Container(
+                      height: 64, width: 64,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+                      ),
+                      child: ClipOval(
+                        child: Image(
+                          image: getImageProvider(cat['imagePath'] ?? cat['categoryImagePath']),
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Icon(Icons.motorcycle, color: AppTheme.primaryBlue),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(cat['name'], maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                  ],
+                ),
               ),
             ),
           );
@@ -274,20 +294,28 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
           final b = _banners[i];
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                image: DecorationImage(image: NetworkImage(b['imageUrl'] ?? ''), fit: BoxFit.cover),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 15, offset: const Offset(0, 5))],
-              ),
+            child: GestureDetector(
+              onTap: () {
+                // If banner has product info, we could open it
+              },
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(24),
-                  gradient: LinearGradient(begin: Alignment.bottomRight, colors: [Colors.black.withOpacity(0.6), Colors.transparent]),
+                  image: DecorationImage(
+                    image: getImageProvider(b['imageUrl'] ?? b['imagePath']),
+                    fit: BoxFit.cover,
+                  ),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 15, offset: const Offset(0, 5))],
                 ),
-                padding: const EdgeInsets.all(20),
-                alignment: Alignment.bottomLeft,
-                child: Text(b['title'] ?? '', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(24),
+                    gradient: LinearGradient(begin: Alignment.bottomRight, colors: [Colors.black.withOpacity(0.6), Colors.transparent]),
+                  ),
+                  padding: const EdgeInsets.all(20),
+                  alignment: Alignment.bottomLeft,
+                  child: Text(b['title'] ?? '', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
+                ),
               ),
             ),
           );
@@ -307,45 +335,59 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
         final p = _hotDeals[i];
         return FadeInUp(
           delay: Duration(milliseconds: i * 150),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                    child: Stack(
-                      fit: StackFit.expand,
+          child: GestureDetector(
+            onTap: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) => ProductDetailSheet(product: p),
+              );
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image(
+                            image: getImageProvider(p.imageLink ?? p.imagePath ?? p.categoryImageLink ?? p.categoryImagePath),
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported_outlined),
+                          ),
+                          Positioned(top: 12, right: 12, child: Container(padding: const EdgeInsets.all(6), decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle), child: const Icon(Icons.favorite_border, size: 18, color: Colors.red))),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Image.network(p.imageLink ?? '', fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported_outlined)),
-                        Positioned(top: 12, right: 12, child: Container(padding: const EdgeInsets.all(6), decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle), child: const Icon(Icons.favorite_border, size: 18, color: Colors.red))),
+                        Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Text('₹${p.sellingPrice}', style: const TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.w900, fontSize: 16)),
+                            const SizedBox(width: 8),
+                            Text('₹${p.mrp}', style: TextStyle(color: Colors.grey.shade400, decoration: TextDecoration.lineThrough, fontSize: 12)),
+                          ],
+                        ),
                       ],
                     ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Text('₹${p.sellingPrice}', style: const TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.w900, fontSize: 16)),
-                          const SizedBox(width: 8),
-                          Text('₹${p.mrp}', style: TextStyle(color: Colors.grey.shade400, decoration: TextDecoration.lineThrough, fontSize: 12)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );

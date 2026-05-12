@@ -53,19 +53,19 @@ public class Order {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @Column(name = "deleted", nullable = false, columnDefinition = "boolean default false")
+    @Column(name = "deleted", columnDefinition = "boolean default false")
     private boolean deleted = false;
 
-    @Column(name = "points_redeemed", nullable = false, columnDefinition = "bigint default 0")
+    @Column(name = "points_redeemed", columnDefinition = "bigint default 0")
     private Long pointsRedeemed = 0L;
 
-    @Column(name = "points_earned", nullable = false, columnDefinition = "bigint default 0")
+    @Column(name = "points_earned", columnDefinition = "bigint default 0")
     private Long pointsEarned = 0L;
 
-    @Column(name = "discount_amount", nullable = false, precision = 10, scale = 2, columnDefinition = "decimal(10,2) default 0.0")
+    @Column(name = "discount_amount", columnDefinition = "decimal(10,2) default 0.0")
     private BigDecimal discountAmount = BigDecimal.ZERO;
 
-    @Column(name = "delivery_charge", nullable = false, precision = 10, scale = 2, columnDefinition = "decimal(10,2) default 0.0")
+    @Column(name = "delivery_charge", columnDefinition = "decimal(10,2) default 0.0")
     private BigDecimal deliveryCharge = BigDecimal.ZERO;
 
     public enum OrderStatus {

@@ -41,23 +41,18 @@ class _SplashScreenState extends State<SplashScreen> {
               child: Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withOpacity(0.1),
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withOpacity(0.2), width: 2),
+                  border: Border.all(color: Colors.white.withOpacity(0.1), width: 1.5),
                 ),
-                child: Image.asset(
-                  'assets/images/logo.png',
-                  width: 120,
-                  height: 120,
-                  errorBuilder: (context, error, stackTrace) => const Icon(
-                    Icons.settings_suggest,
-                    size: 80,
-                    color: Colors.white,
-                  ),
+                child: const Icon(
+                  Icons.settings_suggest,
+                  size: 100,
+                  color: Colors.white,
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
             FadeInUp(
               duration: const Duration(milliseconds: 1000),
               child: Column(
@@ -67,17 +62,26 @@ class _SplashScreenState extends State<SplashScreen> {
                     style: Theme.of(context).textTheme.displaySmall?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.w900,
-                          letterSpacing: 4.0,
+                          letterSpacing: 6.0,
                         ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Smart Spare Parts Management',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Colors.white.withOpacity(0.8),
-                          letterSpacing: 1.2,
-                          fontWeight: FontWeight.w500,
-                        ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppTheme.secondaryAmber.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppTheme.secondaryAmber.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      'SMART SPARE PARTS MANAGEMENT',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: AppTheme.secondaryAmber,
+                            letterSpacing: 1.5,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 10,
+                          ),
+                    ),
                   ),
                 ],
               ),
@@ -86,15 +90,15 @@ class _SplashScreenState extends State<SplashScreen> {
             FadeIn(
               delay: const Duration(milliseconds: 1500),
               child: const SizedBox(
-                width: 40,
-                height: 40,
+                width: 32,
+                height: 32,
                 child: CircularProgressIndicator(
-                  strokeWidth: 3,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white30),
                 ),
               ),
             ),
-            const SizedBox(height: 48),
+            const SizedBox(height: 64),
           ],
         ),
       ),

@@ -197,6 +197,14 @@ class _AuthWrapperState extends State<AuthWrapper> {
   bool _showingExpiredDialog = false;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      SettingsService.checkAppUpdate(context);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
 
@@ -272,65 +280,5 @@ class _AuthWrapperState extends State<AuthWrapper> {
     } else {
       return const LoginScreen();
     }
-  }
-}
-
-class InitialLoadingWrapper extends StatefulWidget {
-  const InitialLoadingWrapper({super.key});
-
-  @override
-  State<InitialLoadingWrapper> createState() => _InitialLoadingWrapperState();
-}
-
-class _InitialLoadingWrapperState extends State<InitialLoadingWrapper> {
-  late Future<void> _settingsFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _settingsFuture = SettingsService.preloadRemoteSettings();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: _settingsFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.done) {
-          // Trigger update check after settings are preloaded
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            SettingsService.checkAppUpdate(context);
-          });
-          return const AuthWrapper();
-        } else {
-          // Show a loading screen while settings are being fetched.
-          return Scaffold(
-            backgroundColor: Colors.white,
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset('assets/images/logo.png',
-                      width: 120, height: 120),
-                  const SizedBox(height: 30),
-                  const CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.redAccent),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Connecting to server...',
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
-                  ),
-                  const Text(
-                    'This might take a moment.',
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-      },
-    );
   }
 }
