@@ -105,14 +105,14 @@ const AdminCategories: React.FC = () => {
     setError('');
     try {
       // Search for product by part number
-      const searchRes = await api.get(`/products/search?query=${encodeURIComponent(pn)}&size=1`);
+      const searchRes = await api.get(`products/search?query=${encodeURIComponent(pn)}&size=1`);
       const products = searchRes.data.content || [];
       const product = products.find((p: any) => p.partNumber.toLowerCase() === pn.toLowerCase());
       
       if (!product) throw new Error('Product not found with this part number');
       
       const body = { ...product, categoryId: cid };
-      await api.put(`/products/${product.id}`, body);
+      await api.put(`products/${product.id}`, body);
       setAssignPartNumber('');
       setAssignCategoryId('');
       alert('Category assigned to product successfully');

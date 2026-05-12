@@ -12,7 +12,7 @@ class NotificationService {
   static const String _fcmConfigVersion = '2'; // Increment this to force token refresh
   static final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
-  static final FirebaseMessaging _fcm = FirebaseMessaging.instance;
+  static FirebaseMessaging get _fcm => FirebaseMessaging.instance;
   static GlobalKey<NavigatorState>? _navKey;
   static final RemoteClient _remote = RemoteClient();
   static Map<String, String?>? _pendingNav;

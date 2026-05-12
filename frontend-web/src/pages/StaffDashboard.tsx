@@ -93,24 +93,30 @@ const StaffDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
-          <div className="p-3 rounded-lg bg-blue-100 text-blue-600">
+        <button 
+          onClick={() => setActiveTab('orders')}
+          className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4 hover:shadow-md hover:border-blue-200 transition text-left group"
+        >
+          <div className="p-3 rounded-lg bg-blue-100 text-blue-600 group-hover:bg-blue-200 transition-colors">
             <ShoppingBag size={24} />
           </div>
           <div>
             <p className="text-gray-500 text-sm">Active Orders</p>
             <p className="text-2xl font-bold">{(orders || []).filter(o => o.status !== 'DELIVERED' && o.status !== 'CANCELLED').length}</p>
           </div>
-        </div>
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
-          <div className="p-3 rounded-lg bg-indigo-100 text-indigo-600">
+        </button>
+        <button 
+          onClick={() => setActiveTab('users')}
+          className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4 hover:shadow-md hover:border-indigo-200 transition text-left group"
+        >
+          <div className="p-3 rounded-lg bg-indigo-100 text-indigo-600 group-hover:bg-indigo-200 transition-colors">
             <MapPin size={24} />
           </div>
           <div>
             <p className="text-gray-500 text-sm">Total Users</p>
             <p className="text-2xl font-bold">{(users || []).length}</p>
           </div>
-        </div>
+        </button>
       </div>
 
       <div className="flex border-b border-gray-200 mb-6">

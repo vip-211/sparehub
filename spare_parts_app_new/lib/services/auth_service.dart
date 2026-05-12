@@ -18,7 +18,8 @@ class AuthService {
   final EmailService _emailService = EmailService();
   final GoogleSSO _googleSSO = GoogleSSO();
   final RemoteClient _remote = RemoteClient();
-  final fb_auth.FirebaseAuth _firebaseAuth = fb_auth.FirebaseAuth.instance;
+  
+  fb_auth.FirebaseAuth get _firebaseAuth => fb_auth.FirebaseAuth.instance;
 
   String? _otp;
   String? _verificationId;

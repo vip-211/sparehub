@@ -109,7 +109,7 @@ const AdminDashboard = () => {
   const fetchDashboardData = useCallback(async () => {
     setLoadingDashboard(true);
     try {
-      const res = await api.get('/admin/dashboard');
+      const res = await api.get('admin/dashboard');
       setDashboardData(res.data);
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -177,7 +177,7 @@ const AdminDashboard = () => {
   const fetchOffers = async () => {
     setLoadingOffers(true);
     try {
-      const res = await api.get('/offers');
+      const res = await api.get('offers');
       setOffers(res.data);
     } catch (err) {
       console.error('Error fetching offers:', err);
@@ -189,7 +189,7 @@ const AdminDashboard = () => {
   const handleAddOffer = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/offers', newOffer);
+      await api.post('offers', newOffer);
       setShowAddOffer(false);
       setNewOffer({ productId: '', offerPrice: '', minimumQuantity: 1, isQuantityLocked: false, isActive: true, description: '' });
       fetchOffers();
@@ -201,7 +201,7 @@ const AdminDashboard = () => {
   const handleUpdateOffer = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.put(`/offers/${editingOffer.id}`, editingOffer);
+      await api.put(`offers/${editingOffer.id}`, editingOffer);
       setShowEditOffer(false);
       setEditingOffer(null);
       fetchOffers();
@@ -213,7 +213,7 @@ const AdminDashboard = () => {
   const deleteOffer = async (id: number) => {
     if (!window.confirm('Are you sure you want to delete this offer?')) return;
     try {
-      await api.delete(`/offers/${id}`);
+      await api.delete(`offers/${id}`);
       fetchOffers();
     } catch (err) {
       alert('Failed to delete offer');
@@ -223,7 +223,7 @@ const AdminDashboard = () => {
   const fetchBanners = async () => {
     setLoadingBanners(true);
     try {
-      const res = await api.get('/banners');
+      const res = await api.get('banners');
       setBanners(res.data);
     } catch (err) {
       console.error('Error fetching banners:', err);
@@ -235,7 +235,7 @@ const AdminDashboard = () => {
   const handleAddBanner = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/banners', newBanner);
+      await api.post('banners', newBanner);
       setShowAddBanner(false);
       setNewBanner({ title: '', text: '', imagePath: '', imageLink: '', targetUrl: '', displayOrder: 0, active: true, size: 'medium' });
       fetchBanners();
@@ -247,7 +247,7 @@ const AdminDashboard = () => {
   const handleUpdateBanner = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.put(`/banners/${editingBanner.id}`, editingBanner);
+      await api.put(`banners/${editingBanner.id}`, editingBanner);
       setShowEditBanner(false);
       setEditingBanner(null);
       fetchBanners();
@@ -259,7 +259,7 @@ const AdminDashboard = () => {
   const deleteBanner = async (id: number) => {
     if (!window.confirm('Are you sure?')) return;
     try {
-      await api.delete(`/banners/${id}`);
+      await api.delete(`banners/${id}`);
       fetchBanners();
     } catch (err) {
       alert('Failed to delete banner');
@@ -292,7 +292,7 @@ const AdminDashboard = () => {
       const keys = ['mechanic_home_title', 'mechanic_banner_text', 'mechanic_banner_btn', 'hide_chat_support'];
       const results: Record<string, string> = {};
       for (const key of keys) {
-        const res = await api.get(`/cms/settings/${key}`);
+        const res = await api.get(`cms/settings/${key}`);
         results[key] = res.data.value;
       }
       setCmsSettings(results);
@@ -307,7 +307,7 @@ const AdminDashboard = () => {
     setLoadingCms(true);
     try {
       for (const [key, value] of Object.entries(cmsSettings)) {
-        await api.put(`/cms/settings/${key}`, { value });
+        await api.put(`cms/settings/${key}`, { value });
       }
       alert('CMS settings saved successfully!');
     } catch (err) {
@@ -321,7 +321,7 @@ const AdminDashboard = () => {
   const fetchHomeLayout = async () => {
     setLoadingLayout(true);
     try {
-      const res = await api.get('/cms/settings/mechanic_home_layout');
+      const res = await api.get('cms/settings/mechanic_home_layout');
       const layoutStr = res.data.value || 'header,search_bar,categories,banner,hot_deals';
       setHomeLayout(layoutStr.split(',').filter(Boolean));
     } catch (err) {
@@ -335,7 +335,7 @@ const AdminDashboard = () => {
   const saveHomeLayout = async () => {
     setLoadingLayout(true);
     try {
-      await api.put('/cms/settings/mechanic_home_layout', { value: homeLayout.join(',') });
+      await api.put('cms/settings/mechanic_home_layout', { value: homeLayout.join(',') });
       alert('Home layout saved successfully!');
     } catch (err) {
       console.error('Error saving home layout:', err);
@@ -964,7 +964,7 @@ const AdminDashboard = () => {
     setIsGeneratingAI(true);
     try {
       const categoryName = categories.find((c: any) => c.id.toString() === product.categoryId?.toString())?.name || '';
-      const response = await api.post('/products/ai-description', {
+      const response = await api.post('products/ai-description', {
         name: product.name,
         partNumber: product.partNumber,
         category: categoryName
@@ -1351,12 +1351,23 @@ const AdminDashboard = () => {
     <div className={`container mx-auto p-4 md:p-6 ${isSuperManager ? 'bg-purple-50 min-h-screen' : ''}`}>
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
         <div className="flex items-center gap-3">
-          <img
-            src="/logo.png"
-            onError={handleLogoError}
-            alt="Logo"
-            className="h-10 w-auto rounded-xl border border-gray-200 bg-white p-1 shadow-sm"
-          />
+          <button 
+            onClick={() => {
+              fetchDashboardData();
+              fetchProducts();
+              fetchUsers();
+              fetchOrders();
+            }}
+            className="transition-transform active:scale-95"
+            title="Refresh dashboard"
+          >
+            <img
+              src="/logo.png"
+              onError={handleLogoError}
+              alt="Logo"
+              className="h-10 w-auto rounded-xl border border-gray-200 bg-white p-1 shadow-sm"
+            />
+          </button>
           <h1 className={`text-2xl md:text-3xl font-black ${isSuperManager ? 'text-purple-800' : 'text-gray-900'}`}>
             {isSuperManager ? 'Super Manager Panel' : 'Admin Panel'}
           </h1>
@@ -1459,42 +1470,54 @@ const AdminDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-10">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition">
-          <div className={`p-4 rounded-xl ${isSuperManager ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
+        <button 
+          onClick={() => setActiveTab('users')}
+          className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md hover:border-blue-200 transition text-left w-full group"
+        >
+          <div className={`p-4 rounded-xl transition-colors ${isSuperManager ? 'bg-purple-100 text-purple-600 group-hover:bg-purple-200' : 'bg-blue-100 text-blue-600 group-hover:bg-blue-200'}`}>
             <Users size={24} />
           </div>
           <div>
             <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">Total Users</p>
             <p className="text-2xl font-black text-gray-900">{(users || []).length}</p>
           </div>
-        </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition">
-          <div className={`p-4 rounded-xl ${isSuperManager ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
+        </button>
+        <button 
+          onClick={() => setActiveTab('orders')}
+          className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md hover:border-blue-200 transition text-left w-full group"
+        >
+          <div className={`p-4 rounded-xl transition-colors ${isSuperManager ? 'bg-purple-100 text-purple-600 group-hover:bg-purple-200' : 'bg-blue-100 text-blue-600 group-hover:bg-blue-200'}`}>
             <ShoppingBag size={24} />
           </div>
           <div>
             <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">Total Orders</p>
             <p className="text-2xl font-black text-gray-900">{salesReport?.totalOrders ?? (orders || []).length}</p>
           </div>
-        </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition">
-          <div className={`p-4 rounded-xl ${isSuperManager ? 'bg-purple-100 text-purple-600' : 'bg-yellow-100 text-yellow-600'}`}>
+        </button>
+        <button 
+          onClick={() => setActiveTab('reports')}
+          className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md hover:border-yellow-200 transition text-left w-full group"
+        >
+          <div className={`p-4 rounded-xl transition-colors ${isSuperManager ? 'bg-purple-100 text-purple-600 group-hover:bg-purple-200' : 'bg-yellow-100 text-yellow-600 group-hover:bg-yellow-200'}`}>
             <BarChart2 size={24} />
           </div>
           <div>
             <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">Total Revenue</p>
             <p className="text-2xl font-black text-gray-900">₹{(salesReport?.totalSales ?? (orders || []).reduce((acc, o) => acc + (o.totalAmount || 0), 0)).toLocaleString()}</p>
           </div>
-        </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition">
-          <div className={`p-4 rounded-xl ${isSuperManager ? 'bg-purple-100 text-purple-600' : 'bg-orange-100 text-orange-600'}`}>
+        </button>
+        <button 
+          onClick={() => setActiveTab('products')}
+          className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md hover:border-orange-200 transition text-left w-full group"
+        >
+          <div className={`p-4 rounded-xl transition-colors ${isSuperManager ? 'bg-purple-100 text-purple-600 group-hover:bg-purple-200' : 'bg-orange-100 text-orange-600 group-hover:bg-orange-200'}`}>
             <Package size={24} />
           </div>
           <div>
             <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">Products</p>
             <p className="text-2xl font-black text-gray-900">{(products || []).length}</p>
           </div>
-        </div>
+        </button>
       </div>
 
       <div className="flex overflow-x-auto no-scrollbar border-b border-gray-100 mb-8 gap-2 md:gap-8 pb-1">
@@ -2143,7 +2166,7 @@ const AdminDashboard = () => {
                         onClick={async () => {
                           if (!window.confirm(`Delete product ${product.name}?`)) return;
                           try {
-                            await api.delete(`/products/${product.id}`);
+                            await api.delete(`products/${product.id}`);
                             fetchProducts();
                           } catch (err) {
                             console.error(err);
@@ -2959,12 +2982,16 @@ const AdminDashboard = () => {
                   <div className="space-y-3">
                     {(dashboardData?.lowStock || []).length > 0 ? (
                       dashboardData.lowStock.map((alert: string, idx: number) => (
-                        <div key={idx} className={`p-4 rounded-xl flex items-center gap-3 border ${
-                          alert.includes('Restock needed') ? 'bg-red-50 border-red-100 text-red-700' : 'bg-amber-50 border-amber-100 text-amber-700'
-                        }`}>
+                        <button 
+                          key={idx} 
+                          onClick={() => setActiveTab('products')}
+                          className={`w-full p-4 rounded-xl flex items-center gap-3 border transition-all hover:scale-[1.02] active:scale-[0.98] text-left ${
+                            alert.includes('Restock needed') ? 'bg-red-50 border-red-100 text-red-700' : 'bg-amber-50 border-amber-100 text-amber-700'
+                          }`}
+                        >
                           <Bell size={18} />
                           <span className="text-sm font-bold">{alert}</span>
-                        </div>
+                        </button>
                       ))
                     ) : (
                       <div className="p-10 text-center">

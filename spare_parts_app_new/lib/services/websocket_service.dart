@@ -109,10 +109,14 @@ class WebSocketService {
           }
         },
         onWebSocketError: (error) {
-          debugPrint('WebSocket Error: $error');
+          // Silent log for common connection issues on mobile (switching networks, app backgrounding)
           if (error.toString().contains('Failed host lookup')) {
-            debugPrint(
-                'Check your internet connection and the host URL: $wsUrl');
+            // DNS issue usually means no internet or Render.com is down/spinning up
+            if (kDebugMode) {
+              debugPrint('WebSocket: DNS lookup failed for $wsUrl (Possible no internet)');
+            }
+          } else {
+            debugPrint('WebSocket Error: $error');
           }
         },
         onStompError: (frame) => debugPrint('STOMP Error: ${frame.body}'),

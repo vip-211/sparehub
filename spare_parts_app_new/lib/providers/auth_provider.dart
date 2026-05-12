@@ -45,22 +45,14 @@ class AuthProvider with ChangeNotifier {
       if (token != null) {
         await NotificationService.updateTokenOnServer(_user!.id, token);
         await NotificationService.attemptPendingFcmSync(userId: _user!.id);
+        
+        // Ensure topics are subscribed for the current user's roles
+        if (_user!.roles.isNotEmpty) {
+          await NotificationService.subscribeToTopicsForRoles(_user!.roles);
+          final rolesStr = _user!.roles.join(',');
+          await NotificationService.rememberIdentity(rolesStr, userId: _user!.id);
+        }
       }
-    }
-  }
-
-  Future<void> refreshUser() async {
-    _isLoading = true;
-    notifyListeners();
-    try {
-      await SettingsService.preloadRemoteSettings(); // Refresh settings
-      _user = await _authService.getCurrentUser();
-      if (_user != null) {
-        _updateFcmToken();
-      }
-    } finally {
-      _isLoading = false;
-      notifyListeners();
     }
   }
 

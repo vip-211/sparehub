@@ -165,24 +165,30 @@ const WholesalerDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-10">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition">
-          <div className="bg-blue-100 p-4 rounded-xl text-blue-600">
+        <button 
+          onClick={() => setActiveTab('products')}
+          className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md hover:border-blue-200 transition text-left group"
+        >
+          <div className="bg-blue-100 p-4 rounded-xl text-blue-600 group-hover:bg-blue-200 transition-colors">
             <Package size={24} />
           </div>
           <div>
             <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">Total Products</p>
             <p className="text-2xl font-black text-gray-900">{products.length}</p>
           </div>
-        </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition">
-          <div className="bg-blue-100 p-4 rounded-xl text-blue-600">
+        </button>
+        <button 
+          onClick={() => setActiveTab('orders')}
+          className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md hover:border-blue-200 transition text-left group"
+        >
+          <div className="bg-blue-100 p-4 rounded-xl text-blue-600 group-hover:bg-blue-200 transition-colors">
             <ShoppingCart size={24} />
           </div>
           <div>
             <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">Total Orders</p>
             <p className="text-2xl font-black text-gray-900">{orders.length}</p>
           </div>
-        </div>
+        </button>
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition">
           <div className="bg-yellow-100 p-4 rounded-xl text-yellow-600">
             <TrendingUp size={24} />
