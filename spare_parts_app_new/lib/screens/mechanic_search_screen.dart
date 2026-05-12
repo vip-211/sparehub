@@ -15,6 +15,7 @@ import '../widgets/quantity_selector.dart';
 import '../widgets/translated_text.dart';
 import '../services/order_service.dart';
 import 'order_confirmation_screen.dart';
+import 'cart_screen.dart';
 import '../utils/image_utils.dart';
 import '../utils/constants.dart';
 import 'wholesaler_shop_screen.dart'; // For ProductDetailSheet
@@ -565,26 +566,11 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
     );
   }
 
-  void _placeOrder() async {
-    final cart = Provider.of<CartProvider>(context, listen: false);
-    if (cart.items.isEmpty) return;
-
-    final wholesalerId = _products.isNotEmpty ? _products[0].wholesalerId : 1;
-
-    final success = await _orderService.createOrder(
-      wholesalerId,
-      cart.items.values.toList(),
+  void _placeOrder() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const CartScreen()),
     );
-
-    if (success != null) {
-      cart.clear();
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => OrderConfirmationScreen(order: success),
-        ),
-      );
-    }
   }
 
   IconData _getCategoryIcon(String name) {

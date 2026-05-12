@@ -1602,6 +1602,21 @@ class ProductDetailSheet extends StatefulWidget {
 
 class ProductDetailSheetState extends State<ProductDetailSheet> {
   int _currentImageIndex = 0;
+  late TextEditingController _priceController;
+
+  @override
+  void initState() {
+    super.initState();
+    _priceController = TextEditingController(
+      text: (widget.product.sellingPrice).toStringAsFixed(0),
+    );
+  }
+
+  @override
+  void dispose() {
+    _priceController.dispose();
+    super.dispose();
+  }
 
   void _showFullScreenGallery(BuildContext context, List<String> images, int initialIndex) {
     Navigator.push(
@@ -1847,6 +1862,27 @@ class ProductDetailSheetState extends State<ProductDetailSheet> {
                     ],
                   ),
 
+                  if (widget.offerId != null || widget.bannerId != null) ...[
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Special Deal Price',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.black),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _priceController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintText: 'Enter agreed price',
+                        prefixText: '₹ ',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                        filled: true,
+                        fillColor: Colors.amber.shade50,
+                      ),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black),
+                    ),
+                  ],
+
                   const SizedBox(height: 32),
                   const Text(
                     'Description',
@@ -1959,9 +1995,10 @@ class ProductDetailSheetState extends State<ProductDetailSheet> {
                   flex: 2,
                   child: ElevatedButton(
                     onPressed: p.stock > 0 ? () {
+                      final double? customPrice = double.tryParse(_priceController.text);
                       cart.addItem(
                         p, 
-                        p.sellingPrice, 
+                        customPrice ?? p.sellingPrice, 
                         quantity: widget.initialQuantity ?? p.minOrderQty,
                         isLocked: widget.isQuantityLocked,
                         bannerId: widget.bannerId,

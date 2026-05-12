@@ -25,6 +25,36 @@ public class DatabaseMigrationRunner implements CommandLineRunner {
                 stmt.execute("ALTER TABLE categories ADD COLUMN showOnHome INTEGER DEFAULT 1");
             } catch (Exception ignored) {
             }
+
+            try {
+                stmt.execute("ALTER TABLE orders ADD COLUMN delivery_charge DECIMAL(10, 2) DEFAULT 0.0");
+            } catch (Exception ignored) {
+            }
+
+            try {
+                stmt.execute("ALTER TABLE orders ADD COLUMN discount_amount DECIMAL(10, 2) DEFAULT 0.0");
+            } catch (Exception ignored) {
+            }
+
+            try {
+                stmt.execute("ALTER TABLE orders ADD COLUMN points_earned BIGINT DEFAULT 0");
+            } catch (Exception ignored) {
+            }
+
+            try {
+                stmt.execute("ALTER TABLE orders ADD COLUMN points_redeemed BIGINT DEFAULT 0");
+            } catch (Exception ignored) {
+            }
+
+            try {
+                stmt.execute("ALTER TABLE orders ADD COLUMN deleted BOOLEAN DEFAULT FALSE");
+            } catch (Exception ignored) {
+            }
+
+            try {
+                stmt.execute("ALTER TABLE orders ADD COLUMN delivered_by_id BIGINT");
+            } catch (Exception ignored) {
+            }
             
             // Seed CMS settings if they don't exist
             stmt.execute("CREATE TABLE IF NOT EXISTS system_settings (setting_key VARCHAR(255) PRIMARY KEY, setting_value TEXT NOT NULL)");

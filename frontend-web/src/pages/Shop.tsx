@@ -150,6 +150,7 @@ const Shop: React.FC = () => {
 
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [customPrice, setCustomPrice] = useState<string>('');
 
   const filteredProducts = products.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -314,6 +315,7 @@ const Shop: React.FC = () => {
                 onClick={() => {
                   setSelectedProduct(p);
                   setCurrentImageIndex(0);
+                  setCustomPrice(getPriceForRole(p).toString());
                 }}
               >
                 <div className="relative mb-4 aspect-square bg-gray-50 rounded-xl flex items-center justify-center overflow-hidden">
@@ -601,6 +603,18 @@ const Shop: React.FC = () => {
                         </div>
                       </div>
                     )}
+
+                    {selectedProduct.offerType === 'COMBO' && (
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Negotiated Deal Price</label>
+                        <input 
+                          type="number"
+                          value={customPrice}
+                          onChange={(e) => setCustomPrice(e.target.value)}
+                          className="w-full px-4 py-3 bg-amber-50 border-2 border-amber-100 rounded-2xl focus:outline-none focus:border-amber-400 font-bold text-lg"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -614,7 +628,7 @@ const Shop: React.FC = () => {
                             productId: selectedProduct.id,
                             name: selectedProduct.name,
                             partNumber: selectedProduct.partNumber,
-                            price: getPriceForRole(selectedProduct),
+                            price: parseFloat(customPrice) || getPriceForRole(selectedProduct),
                             wholesalerId: selectedProduct.wholesalerId,
                             image: selectedProduct.imageLink || selectedProduct.imagePath || selectedProduct.categoryImageLink || selectedProduct.categoryImagePath,
                           },

@@ -12,6 +12,7 @@ const Offers: React.FC = () => {
   const [error, setError] = useState('');
   const { addItem } = useCart();
   const [selectedOffer, setSelectedOffer] = useState<any>(null);
+  const [customPrices, setCustomPrices] = useState<Record<number, string>>({});
 
   const getImageUrl = (path: string | undefined | null) => {
     if (!path) return '';
@@ -38,10 +39,11 @@ const Offers: React.FC = () => {
 
   const handleBuyNow = (offer: any) => {
     const p = offer.product;
+    const price = customPrices[offer.id] ? parseFloat(customPrices[offer.id]) : (offer.offerPrice || p.sellingPrice);
     addItem({
       productId: p.id,
       name: p.name,
-      price: offer.offerPrice || p.sellingPrice,
+      price: price,
       partNumber: p.partNumber,
       wholesalerId: p.wholesalerId,
       image: p.imageLink || p.imagePath || p.categoryImagePath || p.categoryImageLink
@@ -124,14 +126,27 @@ const Offers: React.FC = () => {
                 <h3 className="text-2xl font-black text-gray-900 mb-2 truncate">{p.name}</h3>
                 <p className="text-gray-500 text-sm font-medium mb-6 line-clamp-2 h-10">{offer.description || 'Exclusive bundle offer available for a limited time.'}</p>
                 
-                <div className="flex items-end justify-between mb-8">
-                  <div>
-                    <div className="text-4xl font-black text-primary-600">₹{(offer.offerPrice || p.sellingPrice).toLocaleString()}</div>
-                    <div className="text-gray-400 font-bold line-through">₹{p.mrp.toLocaleString()}</div>
+                <div className="flex flex-col gap-4 mb-8">
+                  <div className="flex items-end justify-between">
+                    <div>
+                      <div className="text-4xl font-black text-primary-600">₹{(offer.offerPrice || p.sellingPrice).toLocaleString()}</div>
+                      <div className="text-gray-400 font-bold line-through">₹{p.mrp.toLocaleString()}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Minimum Order</div>
+                      <div className="text-xl font-black text-gray-900">{offer.minimumQuantity} Units</div>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Minimum Order</div>
-                    <div className="text-xl font-black text-gray-900">{offer.minimumQuantity} Units</div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Negotiated Price</label>
+                    <input 
+                      type="number"
+                      placeholder="Enter agreed amount"
+                      value={customPrices[offer.id] || ''}
+                      onChange={(e) => setCustomPrices({ ...customPrices, [offer.id]: e.target.value })}
+                      className="w-full px-4 py-3 bg-amber-50 border-2 border-amber-100 rounded-2xl focus:outline-none focus:border-amber-400 font-bold text-lg"
+                    />
                   </div>
                 </div>
 
