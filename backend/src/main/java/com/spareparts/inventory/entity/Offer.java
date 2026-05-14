@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
@@ -26,13 +27,16 @@ public class Offer {
     @Column(name = "offer_price")
     private BigDecimal offerPrice;
 
-    @Column(name = "minimum_quantity", nullable = false, columnDefinition = "integer default 1")
+    @Column(name = "minimum_quantity", nullable = false)
+    @ColumnDefault("1")
     private Integer minimumQuantity = 1;
 
-    @Column(name = "is_quantity_locked", columnDefinition = "boolean default false")
+    @Column(name = "is_quantity_locked", nullable = false)
+    @ColumnDefault("false")
     private boolean quantityLocked = false;
 
-    @Column(name = "is_active", columnDefinition = "boolean default true")
+    @Column(name = "is_active", nullable = false)
+    @ColumnDefault("true")
     private boolean active = true;
 
     @Column(name = "description")

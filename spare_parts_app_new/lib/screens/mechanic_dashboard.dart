@@ -14,6 +14,7 @@ import '../widgets/cart_badge.dart';
 import '../widgets/notification_badge.dart';
 import '../services/auth_service.dart';
 import '../utils/app_theme.dart';
+import '../utils/image_utils.dart';
 import 'stock_screen.dart';
 import 'mechanic_home_screen.dart';
 
@@ -79,21 +80,20 @@ class _MechanicDashboardState extends State<MechanicDashboard> {
                     padding: const EdgeInsets.only(top: 4.0),
                     child: Text(message),
                   ),
-                if (imageUrl != null && imageUrl.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        imageUrl,
-                        height: 80,
-                        width: double.maxFinite,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            const Icon(Icons.inventory_2_outlined),
-                      ),
-                    ),
-                  ),
+                if (imageUrl != null && imageUrl.isNotEmpty) 
+                   Padding( 
+                     padding: const EdgeInsets.only(top: 8.0), 
+                     child: ClipRRect( 
+                       borderRadius: BorderRadius.circular(8), 
+                       child: buildOptimizedImage(
+                         imageUrl,
+                         height: 80,
+                         width: double.maxFinite,
+                         fit: BoxFit.cover,
+                         placeholder: const Icon(Icons.inventory_2_outlined),
+                       ), 
+                     ), 
+                   ),
               ],
             ),
             leading: const Icon(Icons.local_offer),

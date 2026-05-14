@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -67,10 +68,12 @@ public class User {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @Column(name = "deleted", nullable = false, columnDefinition = "boolean default false")
+    @Column(name = "deleted", nullable = false)
+    @ColumnDefault("false")
     private boolean deleted = false;
 
-    @Column(name = "points", nullable = false, columnDefinition = "bigint default 0")
+    @Column(name = "points", nullable = false)
+    @ColumnDefault("0")
     private Long points = 0L;
 
     @Column(name = "last_notification_read_at")

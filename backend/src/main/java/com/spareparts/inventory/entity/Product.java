@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -41,37 +42,43 @@ public class Product {
     private String rackNumber;
 
     @NotNull
-    @Column(columnDefinition = "numeric(38,2) default 0.0")
+    @Column(precision = 38, scale = 2)
+    @ColumnDefault("0.0")
     private BigDecimal mrp = BigDecimal.ZERO;
 
     @NotNull
-    @Column(columnDefinition = "numeric(38,2) default 0.0")
+    @Column(precision = 38, scale = 2)
+    @ColumnDefault("0.0")
     private BigDecimal sellingPrice = BigDecimal.ZERO;
 
     @NotNull
-    @Column(columnDefinition = "numeric(38,2) default 0.0")
+    @Column(precision = 38, scale = 2)
+    @ColumnDefault("0.0")
     private BigDecimal wholesalerPrice = BigDecimal.ZERO;
 
     @NotNull
-    @Column(columnDefinition = "numeric(38,2) default 0.0")
+    @Column(precision = 38, scale = 2)
+    @ColumnDefault("0.0")
     private BigDecimal retailerPrice = BigDecimal.ZERO;
 
     @NotNull
-    @Column(columnDefinition = "numeric(38,2) default 0.0")
+    @Column(precision = 38, scale = 2)
+    @ColumnDefault("0.0")
     private BigDecimal mechanicPrice = BigDecimal.ZERO;
 
     @NotNull
-    @Column(columnDefinition = "integer default 0")
+    @ColumnDefault("0")
     private Integer stock = 0;
 
     @NotNull
-    @Column(columnDefinition = "boolean default true")
+    @ColumnDefault("true")
     private boolean enabled = true;
 
-    @Column(columnDefinition = "integer default 1")
+    @ColumnDefault("1")
     private Integer minOrderQty = 1;
 
-    @Column(name = "is_featured", columnDefinition = "boolean default false")
+    @Column(name = "is_featured", nullable = false)
+    @ColumnDefault("false")
     private boolean featured = false;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)

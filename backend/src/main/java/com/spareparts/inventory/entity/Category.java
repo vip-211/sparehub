@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
@@ -35,19 +36,22 @@ public class Category {
     @Column(length = 500)
     private String imageLink;
 
-    @Column(name = "display_order", columnDefinition = "integer default 0")
+    @Column(name = "display_order")
+    @ColumnDefault("0")
     private Integer displayOrder = 0;
 
     @Column(name = "icon_code_point")
     private Integer iconCodePoint;
 
-    @Column(name = "show_on_home", columnDefinition = "integer default 1")
+    @Column(name = "show_on_home")
+    @ColumnDefault("1")
     private Integer showOnHome = 1;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
     
-    @Column(name = "deleted", nullable = false, columnDefinition = "boolean default false")
+    @Column(name = "deleted", nullable = false)
+    @ColumnDefault("false")
     private boolean deleted = false;
 }

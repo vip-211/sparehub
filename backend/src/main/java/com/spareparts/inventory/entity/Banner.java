@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
@@ -33,31 +34,38 @@ public class Banner {
     @Column(name = "banner_text")
     private String text;
 
-    @Column(name = "display_order", columnDefinition = "integer default 0")
+    @Column(name = "display_order")
+    @ColumnDefault("0")
     private Integer displayOrder = 0;
 
-    @Column(name = "is_active", columnDefinition = "boolean default true")
+    @Column(name = "is_active", nullable = false)
+    @ColumnDefault("true")
     private boolean active = true;
 
-    @Column(name = "size", length = 20, columnDefinition = "varchar(20) default 'medium'")
+    @Column(name = "size", length = 20)
+    @ColumnDefault("'medium'")
     private String size = "medium"; // small, medium, large
 
-    @Column(name = "is_buy_enabled", columnDefinition = "boolean default false")
+    @Column(name = "is_buy_enabled", nullable = false)
+    @ColumnDefault("false")
     private boolean buyEnabled = false;
 
     @Column(name = "product_id")
     private Long productId;
 
-    @Column(name = "minimum_quantity", columnDefinition = "integer default 1")
+    @Column(name = "minimum_quantity")
+    @ColumnDefault("1")
     private Integer minimumQuantity = 1;
 
-    @Column(name = "is_quantity_locked", columnDefinition = "boolean default false")
+    @Column(name = "is_quantity_locked", nullable = false)
+    @ColumnDefault("false")
     private boolean quantityLocked = false;
 
     @Column(name = "fixed_price")
     private Double fixedPrice;
 
-    @Column(name = "button_text", length = 50, columnDefinition = "varchar(50) default 'Buy Now'")
+    @Column(name = "button_text", length = 50)
+    @ColumnDefault("'Buy Now'")
     private String buttonText = "Buy Now";
 
     @CreationTimestamp

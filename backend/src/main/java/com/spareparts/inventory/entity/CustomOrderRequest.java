@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -34,7 +36,8 @@ public class CustomOrderRequest {
     @JoinColumn(name = "assigned_staff_id")
     private User assignedStaff;
 
-    @Column(name = "deleted", nullable = false, columnDefinition = "boolean default false")
+    @Column(name = "deleted", nullable = false)
+    @ColumnDefault("false")
     private boolean deleted = false;
 
     public enum RequestStatus {
