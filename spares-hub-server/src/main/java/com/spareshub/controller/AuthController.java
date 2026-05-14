@@ -19,9 +19,16 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, Object> body) {
-        String email = String.valueOf(body.get("email"));
-        String password = String.valueOf(body.get("password"));
-        return userRepo.findByEmailAndPassword(email, password)
+        String inputIdentifier = String.valueOf(body.get("identifier"));
+        if (inputIdentifier == null || inputIdentifier.equals("null")) {
+            inputIdentifier = String.valueOf(body.get("email"));
+        }
+        final String finalIdentifier = inputIdentifier;
+        final String password = String.valueOf(body.get("password"));
+        
+        return userRepo.findAll().stream()
+                .filter(u -> (finalIdentifier.equals(u.getEmail()) || finalIdentifier.equals(u.getPhone())) && password.equals(u.getPassword()))
+                .findFirst()
                 .map(u -> ResponseEntity.ok(Map.of(
                         "id", u.getId(),
                         "email", u.getEmail(),

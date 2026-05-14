@@ -246,9 +246,15 @@ class SettingsService {
   }
 
   static Map<String, String> _remoteCache = {};
+  static DateTime? _lastCacheTime;
+  static const Duration _cacheExpiry = Duration(minutes: 15);
 
-  static Future<void> preloadRemoteSettings() async {
+  static Future<void> preloadRemoteSettings({bool force = false}) async {
+    if (!force && _lastCacheTime != null && DateTime.now().difference(_lastCacheTime!) < _cacheExpiry) {
+      return;
+    }
     _remoteCache = await getRemoteSettings();
+    _lastCacheTime = DateTime.now();
   }
 
   static String getCachedRemoteSetting(String key, String defaultValue) {
@@ -270,8 +276,9 @@ class SettingsService {
       final list = await _remote.getList('/admin/settings');
       _addSettingsToMap(res, list);
       return res;
-    } catch (_) {
-      return {};
+    } catch (e) {
+      debugPrint('SettingsService: Error fetching remote settings: $e');
+      return _remoteCache; // Return existing cache on failure
     }
   }
 

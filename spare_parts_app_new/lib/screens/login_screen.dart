@@ -44,10 +44,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _loadSavedCredentials() async {
     final prefs = await SharedPreferences.getInstance();
-    final email = prefs.getString('last_email') ?? '';
-    if (mounted && email.isNotEmpty) {
+    final identifier = prefs.getString('last_identifier') ?? prefs.getString('last_email') ?? '';
+    if (mounted && identifier.isNotEmpty) {
       setState(() {
-        _identifierController.text = email;
+        _identifierController.text = identifier;
       });
     }
   }
@@ -102,7 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (success) {
         if (_rememberMe) {
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('last_email', identifier);
+          await prefs.setString('last_identifier', identifier);
         }
         _navigateToDashboard();
       } else {

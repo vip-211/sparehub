@@ -107,12 +107,18 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                               child: ClipRRect(
                                 borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                                 child: Image(
-                                  image: getImageProvider(p.imageLink ??
-                                      p.imagePath ??
-                                      p.categoryImageLink ??
-                                      p.categoryImagePath),
+                                  image: getImageProvider(getProductImage(
+                                    imageLink: p.imageLink,
+                                    imagePath: p.imagePath,
+                                    categoryImageLink: p.categoryImageLink,
+                                    categoryImagePath: p.categoryImagePath,
+                                  )),
                                   fit: BoxFit.cover,
                                   width: double.infinity,
+                                  errorBuilder: (context, error, stackTrace) => Container(
+                                    color: Colors.blue.withOpacity(0.05),
+                                    child: const Icon(Icons.image_not_supported_outlined, color: Colors.blue),
+                                  ),
                                 ),
                               ),
                             ),

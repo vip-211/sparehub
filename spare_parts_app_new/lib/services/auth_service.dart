@@ -202,7 +202,7 @@ class AuthService {
     try {
       if (Constants.useRemote) {
         final json = await _remote.postJson('/auth/signin', {
-          'email': normalizedIdentifier,
+          'identifier': normalizedIdentifier,
           'password': password,
         });
 

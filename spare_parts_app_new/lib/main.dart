@@ -47,17 +47,31 @@ final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-  } catch (e) {
-    debugPrint("Firebase initialization failed: $e");
+  
+  // 1. Centralized Initialization with Duplicate Prevention
+  if (Firebase.apps.isEmpty) {
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    } catch (e) {
+      debugPrint("Firebase initialization failed: $e");
+    }
   }
+
+  // 2. Preload Settings & Services
   await SettingsService.preloadRemoteSettings();
   await NotificationService.initialize();
   NotificationService.configureNavigationKey(_navigatorKey);
+
+  // 3. Error Handling (Production Hardening)
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    debugPrint("Flutter Error: ${details.exceptionAsString()}");
+    // TODO: Add Crashlytics recordError here
+  };
+
   runApp(
     MultiProvider(
       providers: [

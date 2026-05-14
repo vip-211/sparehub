@@ -27,6 +27,7 @@ class _AuthHomeScreenState extends State<AuthHomeScreen>
     });
     // Check for updates after preloading settings
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // preloadRemoteSettings now has internal 15-min caching
       await SettingsService.preloadRemoteSettings();
       if (mounted) {
         SettingsService.checkAppUpdate(context);
@@ -44,6 +45,7 @@ class _AuthHomeScreenState extends State<AuthHomeScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      // Debounce/Throttle lifecycle refreshes
       _refresh();
     }
   }
@@ -51,7 +53,8 @@ class _AuthHomeScreenState extends State<AuthHomeScreen>
   Future<void> _refresh() async {
     if (_loading) return;
     setState(() => _loading = true);
-    await SettingsService.preloadRemoteSettings();
+    // Passing force: true only when user explicitly refreshes or resumed
+    await SettingsService.preloadRemoteSettings(force: true);
     if (mounted) setState(() => _loading = false);
   }
 

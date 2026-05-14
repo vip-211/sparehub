@@ -182,16 +182,38 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
         onSubmitted: (q) => Navigator.pushNamed(context, '/search', arguments: {'query': q}),
         decoration: InputDecoration(
           hintText: 'Search spare parts...',
-          prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.primaryBlue),
-          suffixIcon: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(icon: const Icon(Icons.mic_none, color: AppTheme.secondaryAmber), onPressed: () {}),
-              IconButton(icon: const Icon(Icons.qr_code_scanner, color: AppTheme.primaryBlue), onPressed: () {}),
-            ],
+          hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.w600),
+          prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.primaryBlue, size: 28),
+          suffixIcon: Container(
+            margin: const EdgeInsets.only(right: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildSearchActionIcon(Icons.mic_none_rounded, AppTheme.secondaryAmber, () {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Voice search coming soon!')));
+                }),
+                _buildSearchActionIcon(Icons.qr_code_scanner_rounded, AppTheme.primaryBlue, () {
+                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Scanner coming soon!')));
+                }),
+              ],
+            ),
           ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 18),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchActionIcon(IconData icon, Color color, VoidCallback onTap) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Icon(icon, color: color, size: 24),
         ),
       ),
     );
@@ -203,25 +225,40 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
       children: [
         _buildSectionHeader('Top Categories', () => Navigator.pushNamed(context, '/categories')),
         _buildCategoriesList(),
-        const SizedBox(height: 24),
+        const SizedBox(height: 32),
         _buildBannerSlider(),
-        const SizedBox(height: 24),
-        _buildSectionHeader('Trending Deals', () {}),
+        const SizedBox(height: 32),
+        _buildSectionHeader('Trending Deals', () => Navigator.pushNamed(context, '/search', arguments: {'query': ''})),
         _buildTrendingGrid(),
+        const SizedBox(height: 40),
       ],
     );
   }
 
   Widget _buildSectionHeader(String title, VoidCallback onTap) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.charcoalBlack)),
-          GestureDetector(
+          Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppTheme.charcoalBlack, letterSpacing: -0.5)),
+          InkWell(
             onTap: onTap,
-            child: const Text('View All', style: TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.w700)),
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryBlue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                children: [
+                  Text('View All', style: TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.w800, fontSize: 13)),
+                  SizedBox(width: 4),
+                  Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppTheme.primaryBlue),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -229,51 +266,96 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
   }
 
   Widget _buildCategoriesList() {
+    if (_categories.isEmpty && !_isLoading) {
+      return const Center(child: Padding(
+        padding: EdgeInsets.all(20.0),
+        child: Text('No categories available', style: TextStyle(color: Colors.grey)),
+      ));
+    }
     return SizedBox(
-      height: 120,
+      height: 110,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: _categories.length,
         itemBuilder: (context, i) {
           final cat = _categories[i];
+          final imgPath = cat['imageLink'] ?? cat['imagePath'] ?? cat['categoryImageLink'] ?? cat['categoryImagePath'];
+          
           return FadeInRight(
-            delay: Duration(milliseconds: i * 100),
-            child: GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => CategoryProductsScreen(
-                      categoryId: cat['id'],
-                      categoryName: cat['name'],
-                    ),
-                  ),
-                );
-              },
-              child: Container(
-                width: 80,
-                margin: const EdgeInsets.symmetric(horizontal: 8),
-                child: Column(
-                  children: [
-                    Container(
-                      height: 64, width: 64,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
-                      ),
-                      child: ClipOval(
-                        child: Image(
-                          image: getImageProvider(cat['imagePath'] ?? cat['categoryImagePath']),
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Icon(Icons.motorcycle, color: AppTheme.primaryBlue),
+            delay: Duration(milliseconds: i * 50),
+            child: Container(
+              width: 85,
+              margin: const EdgeInsets.symmetric(horizontal: 6),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CategoryProductsScreen(
+                          categoryId: cat['id'],
+                          categoryName: cat['name'],
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(cat['name'], maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                  ],
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(20),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        height: 68,
+                        width: 68,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(22),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.primaryBlue.withOpacity(0.08),
+                              blurRadius: 15,
+                              offset: const Offset(0, 8),
+                            )
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(22),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Image(
+                                image: getImageProvider(imgPath),
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  color: AppTheme.primaryBlue.withOpacity(0.05),
+                                  child: const Icon(Icons.category_outlined, color: AppTheme.primaryBlue, size: 30),
+                                ),
+                              ),
+                              Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [Colors.transparent, Colors.black.withOpacity(0.1)],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        cat['name'],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppTheme.charcoalBlack),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -285,42 +367,120 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
 
   Widget _buildBannerSlider() {
     if (_banners.isEmpty) return const SizedBox.shrink();
-    return SizedBox(
-      height: 180,
-      child: PageView.builder(
-        controller: _bannerPageController,
-        itemCount: _banners.length,
-        itemBuilder: (context, i) {
-          final b = _banners[i];
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: GestureDetector(
-              onTap: () {
-                // If banner has product info, we could open it
-              },
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  image: DecorationImage(
-                    image: getImageProvider(b['imageUrl'] ?? b['imagePath']),
-                    fit: BoxFit.cover,
+    return Column(
+      children: [
+        SizedBox(
+          height: 190,
+          child: PageView.builder(
+            controller: _bannerPageController,
+            onPageChanged: (i) => setState(() => _currentBannerIndex = i),
+            itemCount: _banners.length,
+            itemBuilder: (context, i) {
+              final b = _banners[i];
+              return AnimatedBuilder(
+                animation: _bannerPageController,
+                builder: (context, child) {
+                  double value = 1.0;
+                  if (_bannerPageController.position.haveDimensions) {
+                    value = _bannerPageController.page! - i;
+                    value = (1 - (value.abs() * 0.2)).clamp(0.0, 1.0);
+                  }
+                  return Center(
+                    child: SizedBox(
+                      height: Curves.easeInOut.transform(value) * 190,
+                      width: Curves.easeInOut.transform(value) * MediaQuery.of(context).size.width,
+                      child: child,
+                    ),
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: GestureDetector(
+                    onTap: () {
+                      if (b['categoryId'] != null) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CategoryProductsScreen(
+                              categoryId: b['categoryId'],
+                              categoryName: b['categoryName'] ?? 'Category',
+                            ),
+                          ),
+                        );
+                      } else {
+                        Navigator.pushNamed(context, '/search', arguments: {'query': b['title'] ?? ''});
+                      }
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(28),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.15),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          )
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(28),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Image(
+                              image: getImageProvider(b['imageUrl'] ?? b['imagePath'] ?? b['categoryImageLink'] ?? b['categoryImagePath']),
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Container(
+                                color: AppTheme.primaryBlue.withOpacity(0.1),
+                                child: const Icon(Icons.image_not_supported_outlined, color: AppTheme.primaryBlue),
+                              ),
+                            ),
+                            Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.bottomCenter,
+                                  end: Alignment.topCenter,
+                                  colors: [Colors.black.withOpacity(0.7), Colors.transparent],
+                                ),
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  if (b['subtitle'] != null)
+                                    Text(b['subtitle'].toString().toUpperCase(), style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 2)),
+                                  const SizedBox(height: 4),
+                                  Text(b['title'] ?? '', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 15, offset: const Offset(0, 5))],
                 ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(24),
-                    gradient: LinearGradient(begin: Alignment.bottomRight, colors: [Colors.black.withOpacity(0.6), Colors.transparent]),
-                  ),
-                  padding: const EdgeInsets.all(20),
-                  alignment: Alignment.bottomLeft,
-                  child: Text(b['title'] ?? '', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
-                ),
-              ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(_banners.length, (index) => Container(
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            width: _currentBannerIndex == index ? 24 : 8,
+            height: 8,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(4),
+              color: _currentBannerIndex == index ? AppTheme.primaryBlue : AppTheme.primaryBlue.withOpacity(0.2),
             ),
-          );
-        },
-      ),
+          )),
+        ),
+      ],
     );
   }
 
@@ -329,12 +489,19 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 0.75, mainAxisSpacing: 16, crossAxisSpacing: 16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2, 
+        childAspectRatio: 0.7, 
+        mainAxisSpacing: 20, 
+        crossAxisSpacing: 20
+      ),
       itemCount: _hotDeals.length.clamp(0, 4),
       itemBuilder: (context, i) {
         final p = _hotDeals[i];
+        final discount = p.mrp > p.sellingPrice ? (((p.mrp - p.sellingPrice) / p.mrp) * 100).round() : 0;
+        
         return FadeInUp(
-          delay: Duration(milliseconds: i * 150),
+          delay: Duration(milliseconds: i * 100),
           child: GestureDetector(
             onTap: () {
               showModalBottomSheet(
@@ -347,40 +514,72 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)],
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  )
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: ClipRRect(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
                           Image(
                             image: getImageProvider(p.imageLink ?? p.imagePath ?? p.categoryImageLink ?? p.categoryImagePath),
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported_outlined),
+                            errorBuilder: (_, __, ___) => Container(
+                              color: AppTheme.primaryBlue.withOpacity(0.05),
+                              child: const Icon(Icons.image_not_supported_outlined, color: AppTheme.primaryBlue),
+                            ),
                           ),
-                          Positioned(top: 12, right: 12, child: Container(padding: const EdgeInsets.all(6), decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle), child: const Icon(Icons.favorite_border, size: 18, color: Colors.red))),
+                          if (discount > 0)
+                            Positioned(
+                              top: 12,
+                              left: 12,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(10)),
+                                child: Text('$discount% OFF', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                              ),
+                            ),
+                          Positioned(
+                            top: 12,
+                            right: 12,
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                              child: const Icon(Icons.favorite_border, size: 18, color: Colors.red)
+                            )
+                          ),
                         ],
                       ),
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
-                        const SizedBox(height: 4),
+                        Text(p.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, height: 1.2, color: AppTheme.charcoalBlack)),
+                        const SizedBox(height: 8),
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text('₹${p.sellingPrice}', style: const TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.w900, fontSize: 16)),
-                            const SizedBox(width: 8),
-                            Text('₹${p.mrp}', style: TextStyle(color: Colors.grey.shade400, decoration: TextDecoration.lineThrough, fontSize: 12)),
+                            Text('₹${p.sellingPrice}', style: const TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.w900, fontSize: 18)),
+                            const SizedBox(width: 6),
+                            if (discount > 0)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 2),
+                                child: Text('₹${p.mrp}', style: TextStyle(color: Colors.grey.shade400, decoration: TextDecoration.lineThrough, fontSize: 12)),
+                              ),
                           ],
                         ),
                       ],

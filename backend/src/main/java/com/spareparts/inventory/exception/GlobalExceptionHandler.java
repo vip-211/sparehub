@@ -79,23 +79,23 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(org.springframework.http.converter.HttpMessageNotWritableException.class)
     public void handleMessageNotWritableException(org.springframework.http.converter.HttpMessageNotWritableException ex, jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
-        log.warn("HttpMessageNotWritableException caught: {}", ex.getMessage());
+        // If the error is about 'application/javascript', it's usually a bot or a misconfigured client.
+        // We log it at a lower level unless it's a genuine internal error.
+        if (ex.getMessage() != null && ex.getMessage().contains("application/javascript")) {
+            log.debug("Suppressing HttpMessageNotWritableException for application/javascript: {}", ex.getMessage());
+        } else {
+            log.warn("HttpMessageNotWritableException caught: {}", ex.getMessage());
+        }
 
         try {
             if (!response.isCommitted()) {
                 response.resetBuffer();
+                // Force JSON response regardless of what was requested
                 response.setContentType("application/json");
                 response.setCharacterEncoding("UTF-8");
                 response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
-                response.getWriter().write("{\"message\":\"Error writing response: " + ex.getMessage().replace("\"", "'").replace("\n", " ") + "\"}");
+                response.getWriter().write("{\"message\":\"Error writing response: Content type mismatch or internal error.\"}");
                 response.getWriter().flush();
-            } else {
-                // If already committed, try to write a simple message if it's SSE
-                String contentType = response.getContentType();
-                if (contentType != null && contentType.contains("text/event-stream")) {
-                    response.getWriter().write("event: error\ndata: {\"message\": \"" + ex.getMessage().replace("\"", "'") + "\"}\n\n");
-                    response.getWriter().flush();
-                }
             }
         } catch (Exception e) {
             log.debug("Silent failure writing error response: {}", e.getMessage());

@@ -104,7 +104,14 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
                           Image(
                             image: getImageProvider(p.imageLink),
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(Icons.inventory_2_outlined, color: Colors.grey),
+                            errorBuilder: (_, __, ___) {
+                              final fallback = p.categoryImageLink ?? p.categoryImagePath;
+                              return Image(
+                                image: getImageProvider(fallback),
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Icon(Icons.inventory_2_outlined, color: Colors.grey),
+                              );
+                            },
                           ),
                           Positioned(
                             top: 12, right: 12,

@@ -42,6 +42,10 @@ public class FcmService {
             "INVALID_ARGUMENT".equals(errorCode) || 
             "SENDER_ID_MISMATCH".equals(errorCode)) {
             
+            if ("SENDER_ID_MISMATCH".equals(errorCode)) {
+                log.error("FcmService: SENDER_ID_MISMATCH for user {}. This means the app was built with a different Firebase project (google-services.json) than the server's service account key.", user.getId());
+            }
+
             log.warn("FcmService: Token is invalid or mismatched for user {}. Removing from database.", user.getId());
             user.setFcmToken(null);
             userRepository.save(user);

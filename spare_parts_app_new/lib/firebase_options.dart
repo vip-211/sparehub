@@ -45,38 +45,36 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyCo4W9V0h9WLfUK2tABzafZ1VizjdEBdCc',
-    appId: '1:231449365632:web:1d017f3e43c3aa3ba85130',
-    messagingSenderId: '231449365632',
-    projectId: 'jms-spare-parts',
-    authDomain: 'jms-spare-parts.firebaseapp.com',
-    storageBucket: 'jms-spare-parts.firebasestorage.app',
-    measurementId: 'G-DBV4YBCNHQ',
+    appId: '1:1055897818769:web:1d017f3e43c3aa3ba85130',
+    messagingSenderId: '1055897818769',
+    projectId: 'spare-parts-app-c1094',
+    authDomain: 'spare-parts-app-c1094.firebaseapp.com',
+    storageBucket: 'spare-parts-app-c1094.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyCo4W9V0h9WLfUK2tABzafZ1VizjdEBdCc',
-    appId: '1:231449365632:android:7dbc4fc4b13b3530232a65',
-    messagingSenderId: '231449365632',
-    projectId: 'jms-spare-parts',
-    storageBucket: 'jms-spare-parts.firebasestorage.app',
+    appId: '1:1055897818769:android:53e089cd3941bd1ea85130',
+    messagingSenderId: '1055897818769',
+    projectId: 'spare-parts-app-c1094',
+    storageBucket: 'spare-parts-app-c1094.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyCo4W9V0h9WLfUK2tABzafZ1VizjdEBdCc',
-    appId: '1:231449365632:ios:9975ba9c6837793aa85130',
-    messagingSenderId: '231449365632',
-    projectId: 'jms-spare-parts',
-    storageBucket: 'jms-spare-parts.firebasestorage.app',
+    appId: '1:1055897818769:ios:9975ba9c6837793aa85130',
+    messagingSenderId: '1055897818769',
+    projectId: 'spare-parts-app-c1094',
+    storageBucket: 'spare-parts-app-c1094.firebasestorage.app',
     iosBundleId: 'com.spareshub.app',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
     apiKey: 'AIzaSyCo4W9V0h9WLfUK2tABzafZ1VizjdEBdCc',
-    appId: '1:231449365632:web:ca269eaa09074d10a85130',
-    messagingSenderId: '231449365632',
-    projectId: 'jms-spare-parts',
-    authDomain: 'jms-spare-parts.firebaseapp.com',
-    storageBucket: 'jms-spare-parts.firebasestorage.app',
-    measurementId: 'G-15SZYM8KSG',
+    appId: '1:1055897818769:web:ca269eaa09074d10a85130',
+    messagingSenderId: '1055897818769',
+    projectId: 'spare-parts-app-c1094',
+    authDomain: 'spare-parts-app-c1094.firebaseapp.com',
+    storageBucket: 'spare-parts-app-c1094.firebasestorage.app',
   );
 }
