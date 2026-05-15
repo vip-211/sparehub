@@ -15,9 +15,11 @@ import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
 
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
+import { useNavigate } from 'react-router-dom';
 
 const AdminDashboard = () => {
   const { tp } = useLanguage();
+  const navigate = useNavigate();
   const currentUser = AuthService.getCurrentUser();
   const isSuperManager = currentUser?.roles?.includes(ROLE_SUPER_MANAGER);
 
@@ -1538,9 +1540,17 @@ const AdminDashboard = () => {
           { id: 'offers', label: 'Offer Page', icon: Star },
           { id: 'layout', label: 'Layout Editor', icon: LayoutGrid },
           { id: 'settings', label: 'Settings', icon: Settings },
+          { id: 'purchases', label: 'Purchases', icon: ShoppingCart },
         ].map((tab) => (
           <button
             key={tab.id}
+            onClick={() => {
+              if (tab.id === 'purchases') {
+                navigate('/purchases');
+              } else {
+                setActiveTab(tab.id);
+              }
+            }}
             className={`flex items-center gap-2 px-4 py-3 font-bold text-sm whitespace-nowrap transition-all relative ${
               activeTab === tab.id
                 ? 'text-primary-600'

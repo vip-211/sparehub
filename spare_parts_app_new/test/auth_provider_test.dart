@@ -3,6 +3,7 @@ import 'package:spare_parts_app/providers/auth_provider.dart';
 import 'package:spare_parts_app/models/user.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   group('AuthProvider Tests', () {
     test('Initial state should be loading or not logged in', () {
       final authProvider = AuthProvider();

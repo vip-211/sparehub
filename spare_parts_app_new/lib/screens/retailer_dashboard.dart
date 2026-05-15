@@ -84,13 +84,12 @@ class _RetailerDashboardState extends State<RetailerDashboard> {
                     padding: const EdgeInsets.only(top: 8.0),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
+                      child: buildOptimizedImage(
                         imageUrl,
                         height: 80,
                         width: double.maxFinite,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            const Icon(Icons.inventory_2_outlined),
+                        placeholder: const Icon(Icons.inventory_2_outlined),
                       ),
                     ),
                   ),

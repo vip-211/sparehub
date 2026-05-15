@@ -362,21 +362,41 @@ const MobileDashboard = () => {
                 </div>
               );
               return (
-                <div key="stats" className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-                  {[
-                    { label: 'Revenue', value: `₹${(stats?.totalRevenue || 0).toLocaleString()}`, icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50' },
-                    { label: 'Orders', value: stats?.totalOrders || 0, icon: ShoppingBag, color: 'text-primary-600', bg: 'bg-primary-50' },
-                    { label: 'Pending', value: stats?.pendingOrders || 0, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
-                    { label: 'Users', value: stats?.totalUsers || 0, icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-                  ].map((stat, i) => (
-                    <div key={i} className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-xl hover:shadow-gray-100 transition-all group">
-                      <div className={`w-12 h-12 ${stat.bg} ${stat.color} rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                        <stat.icon size={24} />
+                <div key="stats" className="space-y-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                    {[
+                      { label: 'Revenue', value: `₹${(stats?.totalRevenue || 0).toLocaleString()}`, icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50' },
+                      { label: 'Orders', value: stats?.totalOrders || 0, icon: ShoppingBag, color: 'text-primary-600', bg: 'bg-primary-50' },
+                      { label: 'Pending', value: stats?.pendingOrders || 0, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
+                      { label: 'Users', value: stats?.totalUsers || 0, icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+                    ].map((stat, i) => (
+                      <div key={i} className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-xl hover:shadow-gray-100 transition-all group">
+                        <div className={`w-12 h-12 ${stat.bg} ${stat.color} rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                          <stat.icon size={24} />
+                        </div>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{stat.label}</p>
+                        <p className="text-xl font-black text-gray-900">{stat.value}</p>
                       </div>
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{stat.label}</p>
-                      <p className="text-xl font-black text-gray-900">{stat.value}</p>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+
+                  {/* Admin Quick Actions */}
+                  <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
+                    <button 
+                      onClick={() => navigate('/purchases')}
+                      className="flex-shrink-0 flex items-center gap-3 bg-primary-600 text-white px-6 py-4 rounded-3xl shadow-lg shadow-primary-100 font-bold active:scale-95 transition-all"
+                    >
+                      <ShoppingCart size={20} />
+                      Manage Purchases
+                    </button>
+                    <button 
+                      onClick={() => navigate('/stock')}
+                      className="flex-shrink-0 flex items-center gap-3 bg-white border border-gray-100 px-6 py-4 rounded-3xl shadow-sm text-gray-700 font-bold active:scale-95 transition-all"
+                    >
+                      <Package size={20} />
+                      Check Stock
+                    </button>
+                  </div>
                 </div>
               );
             case 'categories':

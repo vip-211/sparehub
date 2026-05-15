@@ -24,6 +24,8 @@ import { ROLE_MECHANIC, ROLE_RETAILER } from './services/constants';
 import Stock from './pages/Stock';
 import Offers from './pages/Offers';
 
+import Purchases from './pages/Purchases';
+
 const App: React.FC = () => {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
@@ -117,6 +119,9 @@ const App: React.FC = () => {
                     <Link to="/stock" className="text-gray-600 hover:text-primary-600 font-medium">
                       Stock
                     </Link>
+                    <Link to="/purchases" className="text-gray-600 hover:text-primary-600 font-medium">
+                      Purchases
+                    </Link>
                   </>
                 )}
                 {currentUser?.roles.includes(ROLE_WHOLESALER) && (
@@ -190,6 +195,12 @@ const App: React.FC = () => {
             path="/shop"
             element={
               !currentUser ? <Navigate to="/login" /> : (isPending ? <Navigate to="/pending-approval" /> : <Shop />)
+            }
+          />
+          <Route
+            path="/purchases"
+            element={
+              !currentUser ? <Navigate to="/login" /> : (isPending ? <Navigate to="/pending-approval" /> : <Purchases />)
             }
           />
           <Route

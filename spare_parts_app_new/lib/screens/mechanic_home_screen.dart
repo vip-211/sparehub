@@ -393,72 +393,69 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                     ),
                   );
                 },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: GestureDetector(
-                    onTap: () {
-                      if (b['categoryId'] != null) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => CategoryProductsScreen(
-                              categoryId: b['categoryId'],
-                              categoryName: b['categoryName'] ?? 'Category',
+                child: GestureDetector(
+                  onTap: () {
+                    if (b['categoryId'] != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CategoryProductsScreen(
+                            categoryId: b['categoryId'],
+                            categoryName: b['categoryName'] ?? 'Category',
+                          ),
+                        ),
+                      );
+                    } else {
+                      Navigator.pushNamed(context, '/search', arguments: {'query': b['title'] ?? ''});
+                    }
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.15),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        )
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(28),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image(
+                            image: getImageProvider(b['imageUrl'] ?? b['imageLink'] ?? b['imagePath'] ?? b['categoryImageLink'] ?? b['categoryImagePath']),
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              color: AppTheme.primaryBlue.withOpacity(0.1),
+                              child: const Icon(Icons.image_not_supported_outlined, color: AppTheme.primaryBlue),
                             ),
                           ),
-                        );
-                      } else {
-                        Navigator.pushNamed(context, '/search', arguments: {'query': b['title'] ?? ''});
-                      }
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(28),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.15),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          )
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                if (b['subtitle'] != null)
+                                  Text(b['subtitle'].toString().toUpperCase(), style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 2)),
+                                const SizedBox(height: 4),
+                                Text(b['title'] ?? '', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+                              ],
+                            ),
+                          ),
                         ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(28),
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            Image(
-                              image: getImageProvider(b['imageUrl'] ?? b['imagePath'] ?? b['categoryImageLink'] ?? b['categoryImagePath']),
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => Container(
-                                color: AppTheme.primaryBlue.withOpacity(0.1),
-                                child: const Icon(Icons.image_not_supported_outlined, color: AppTheme.primaryBlue),
-                              ),
-                            ),
-                            Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.bottomCenter,
-                                  end: Alignment.topCenter,
-                                  colors: [Colors.black.withOpacity(0.7), Colors.transparent],
-                                ),
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  if (b['subtitle'] != null)
-                                    Text(b['subtitle'].toString().toUpperCase(), style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 2)),
-                                  const SizedBox(height: 4),
-                                  Text(b['title'] ?? '', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
                       ),
                     ),
                   ),
@@ -537,7 +534,7 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => Container(
                               color: AppTheme.primaryBlue.withOpacity(0.05),
-                              child: const Icon(Icons.image_not_supported_outlined, color: AppTheme.primaryBlue),
+                              child: const Icon(Icons.image_not_supported_outlined, color: AppTheme.primaryBlue, size: 30),
                             ),
                           ),
                           if (discount > 0)

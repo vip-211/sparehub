@@ -49,6 +49,7 @@ import '../widgets/translated_text.dart';
 import '../providers/theme_provider.dart';
 import '../services/websocket_service.dart';
 
+import 'admin_purchase_screen.dart';
 import '../utils/app_theme.dart';
 
 class AdminDashboard extends StatefulWidget {
@@ -78,6 +79,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     const ProfileScreen(),
     const ManageCmsScreen(),
     const ManageHomeLayoutScreen(),
+    const AdminPurchaseScreen(),
   ];
 
   void _sendNotification() {
@@ -489,6 +491,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   selected: _selectedIndex == 7,
                   onTap: () {
                     setState(() => _selectedIndex = 7);
+                    Navigator.pop(context);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.shopping_bag),
+                  title: const Text('Purchases'),
+                  selected: _selectedIndex == 14,
+                  onTap: () {
+                    setState(() => _selectedIndex = 14);
                     Navigator.pop(context);
                   },
                 ),
@@ -2617,7 +2628,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
         }
       }
 
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
+      FilePickerResult? result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['xlsx'],
         withData: true,
@@ -2734,7 +2745,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
           "products_export_${DateTime.now().millisecondsSinceEpoch}.xlsx";
 
       if (kIsWeb) {
-        await FilePicker.platform.saveFile(
+        await FilePicker.saveFile(
           fileName: fileName,
           bytes: bytes,
         );
@@ -2743,7 +2754,7 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
 
       String? path;
       if (kIsWeb) {
-        // Web export is already handled by FilePicker.platform.saveFile
+        // Web export is already handled by FilePicker.saveFile
         return;
       }
       if (Platform.isAndroid) {

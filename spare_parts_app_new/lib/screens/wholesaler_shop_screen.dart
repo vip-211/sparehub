@@ -24,18 +24,31 @@ class WholesalerShopScreen extends StatefulWidget {
 class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
   final ProductService _productService = ProductService();
   List<Product> _products = [];
+  List<Map<String, dynamic>> _banners = [];
   bool _isLoading = true;
   Map<int, double> _prices = {};
+  late PageController _bannerPageController;
+  Timer? _bannerTimer;
+  int _currentBannerIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadProducts();
+    _bannerPageController = PageController();
+    _loadData();
   }
 
-  Future<void> _loadProducts() async {
+  @override
+  void dispose() {
+    _bannerPageController.dispose();
+    _bannerTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadData() async {
     try {
       final products = await _productService.getAllProducts(page: 0, size: 50);
+      final bannerData = await _productService.getActiveBanners();
       final Map<int, double> prices = {};
       for (var p in products) {
         prices[p.id] = await _productService.getPriceForUser(p);
@@ -43,13 +56,28 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
       if (mounted) {
         setState(() {
           _products = products;
+          _banners = (bannerData['banners'] as List? ?? []).map((e) => e as Map<String, dynamic>).toList();
           _prices = prices;
           _isLoading = false;
         });
+        _startBannerTimer();
       }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _startBannerTimer() {
+    _bannerTimer?.cancel();
+    if (_banners.length <= 1) return;
+    _bannerTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      _currentBannerIndex = (_currentBannerIndex + 1) % _banners.length;
+      if (_bannerPageController.hasClients) {
+        _bannerPageController.animateToPage(_currentBannerIndex,
+            duration: const Duration(milliseconds: 800),
+            curve: Curves.fastOutSlowIn);
+      }
+    });
   }
 
   @override
@@ -62,93 +90,254 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
       ),
-      body: _isLoading 
-        ? _buildShimmer()
-        : _products.isEmpty 
-          ? _buildEmptyState()
-          : _buildProductGrid(),
+      body: _isLoading
+          ? _buildShimmer()
+          : CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                if (_banners.isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 16.0),
+                      child: _buildBannerSlider(),
+                    ),
+                  ),
+                if (_products.isEmpty)
+                  SliverFillRemaining(child: _buildEmptyState())
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.all(20),
+                    sliver: _buildProductGrid(),
+                  ),
+              ],
+            ),
     );
   }
 
-  Widget _buildProductGrid() {
-    return GridView.builder(
-      padding: const EdgeInsets.all(20),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.7,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-      ),
-      itemCount: _products.length,
-      itemBuilder: (context, index) {
-        final p = _products[index];
-        return FadeInUp(
-          delay: Duration(milliseconds: index * 50),
-          child: GestureDetector(
-            onTap: () => _showProductDetails(p),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
+  Widget _buildBannerSlider() {
+    return Column(
+      children: [
+        SizedBox(
+          height: 180,
+          child: PageView.builder(
+            controller: _bannerPageController,
+            onPageChanged: (i) => setState(() => _currentBannerIndex = i),
+            itemCount: _banners.length,
+            itemBuilder: (context, i) {
+              final b = _banners[i];
+              return AnimatedBuilder(
+                animation: _bannerPageController,
+                builder: (context, child) {
+                  double value = 1.0;
+                  if (_bannerPageController.position.haveDimensions) {
+                    value = _bannerPageController.page! - i;
+                    value = (1 - (value.abs() * 0.1)).clamp(0.0, 1.0);
+                  }
+                  return Center(
+                    child: SizedBox(
+                      height: Curves.easeInOut.transform(value) * 180,
+                      width: Curves.easeInOut.transform(value) *
+                          MediaQuery.of(context).size.width,
+                      child: child,
+                    ),
+                  );
+                },
+                child: GestureDetector(
+                  onTap: () {
+                    if (b['productId'] != null) {
+                      _loadAndShowProduct(b['productId']);
+                    } else if (b['categoryId'] != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CategoryProductsScreen(
+                            categoryId: b['categoryId'],
+                            categoryName: b['categoryName'] ?? 'Category',
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5))
+                      ],
+                    ),
                     child: ClipRRect(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                      borderRadius: BorderRadius.circular(24),
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          Image(
-                            image: getImageProvider(p.imageLink),
+                          buildOptimizedImage(
+                            b['imageUrl'] ?? b['imageLink'] ?? b['imagePath'],
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) {
-                              final fallback = p.categoryImageLink ?? p.categoryImagePath;
-                              return Image(
-                                image: getImageProvider(fallback),
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const Icon(Icons.inventory_2_outlined, color: Colors.grey),
-                              );
-                            },
                           ),
-                          Positioned(
-                            top: 12, right: 12,
-                            child: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                              child: const Icon(Icons.favorite_border, size: 18, color: Colors.red),
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black.withOpacity(0.6)
+                                ],
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Text(b['title'] ?? '',
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold)),
+                                if (b['text'] != null)
+                                  Text(b['text'],
+                                      style: TextStyle(
+                                          color: Colors.white.withOpacity(0.9),
+                                          fontSize: 12)),
+                              ],
                             ),
                           ),
                         ],
                       ),
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
-                        const SizedBox(height: 4),
-                        Row(
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(
+              _banners.length,
+              (index) => Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    width: _currentBannerIndex == index ? 16 : 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(3),
+                      color: _currentBannerIndex == index
+                          ? AppTheme.primaryBlue
+                          : AppTheme.primaryBlue.withOpacity(0.2),
+                    ),
+                  )),
+        ),
+      ],
+    );
+  }
+
+  void _loadAndShowProduct(dynamic productId) async {
+    try {
+      final p = await _productService.getProductById(productId is int ? productId : int.parse(productId.toString()));
+      if (mounted) _showProductDetails(p);
+    } catch (e) {
+      debugPrint('Error loading product for banner: $e');
+    }
+  }
+
+  Widget _buildProductGrid() {
+    return SliverGrid(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.7,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+      ),
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          final p = _products[index];
+          return FadeInUp(
+            delay: Duration(milliseconds: index * 50),
+            child: GestureDetector(
+              onTap: () => _showProductDetails(p),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withOpacity(0.03), blurRadius: 10)
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(24)),
+                        child: Stack(
+                          fit: StackFit.expand,
                           children: [
-                            Text('₹${_prices[p.id]?.toStringAsFixed(0) ?? p.sellingPrice}', style: const TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.w900, fontSize: 16)),
-                            const SizedBox(width: 8),
-                            if (p.mrp > p.sellingPrice)
-                              Text('₹${p.mrp}', style: TextStyle(color: Colors.grey.shade400, decoration: TextDecoration.lineThrough, fontSize: 12)),
+                            buildOptimizedImage(p.imageLink ?? p.imagePath),
+                            Positioned(
+                              top: 12,
+                              right: 12,
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle),
+                                child: const Icon(Icons.favorite_border,
+                                    size: 18, color: Colors.red),
+                              ),
+                            ),
                           ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ],
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(p.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w800, fontSize: 14)),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Text(
+                                  '₹${_prices[p.id]?.toStringAsFixed(0) ?? p.sellingPrice}',
+                                  style: const TextStyle(
+                                      color: AppTheme.primaryBlue,
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 16)),
+                              const SizedBox(width: 8),
+                              if (p.mrp > p.sellingPrice)
+                                Text('₹${p.mrp}',
+                                    style: TextStyle(
+                                        color: Colors.grey.shade400,
+                                        decoration: TextDecoration.lineThrough,
+                                        fontSize: 12)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+        childCount: _products.length,
+      ),
     );
   }
 
@@ -325,7 +514,11 @@ class ProductDetailSheetState extends State<ProductDetailSheet> {
                                 onTap: () => _showFullScreenGallery(context, images, idx),
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(24),
-                                  child: Image(image: getImageProvider(images[idx]), fit: BoxFit.contain, width: double.infinity),
+                                  child: buildOptimizedImage(
+                                    images[idx],
+                                    fit: BoxFit.contain,
+                                    width: double.infinity,
+                                  ),
                                 ),
                               ),
                             )

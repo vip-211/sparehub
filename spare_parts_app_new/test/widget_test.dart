@@ -7,15 +7,30 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
+import 'package:spare_parts_app/providers/auth_provider.dart';
+import 'package:spare_parts_app/providers/cart_provider.dart';
+import 'package:spare_parts_app/providers/language_provider.dart';
+import 'package:spare_parts_app/providers/theme_provider.dart';
+import 'package:spare_parts_app/providers/notification_provider.dart';
 
 import 'package:spare_parts_app/main.dart';
 
 void main() {
   testWidgets('App basic load test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    // We wrap it in a try-catch because it might require providers
-    // but we just want to see if it pumps.
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => LanguageProvider()),
+          ChangeNotifierProvider(create: (_) => ThemeProvider()),
+          ChangeNotifierProvider(create: (_) => AuthProvider()),
+          ChangeNotifierProvider(create: (_) => CartProvider()),
+          ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ],
+        child: const MyApp(),
+      ),
+    );
 
     // Basic verification that the app starts.
     expect(find.byType(MaterialApp), findsOneWidget);

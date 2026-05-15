@@ -228,7 +228,7 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
 
   Future<void> _handleVoiceSearch() async {
     try {
-      final result = await FilePicker.platform.pickFiles(type: FileType.audio);
+      final result = await FilePicker.pickFiles(type: FileType.audio);
       if (result == null || result.files.isEmpty) return;
       final file = result.files.first;
       if (file.bytes == null) return;
