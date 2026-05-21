@@ -4,6 +4,7 @@ import { useLanguage } from '../context/LanguageContext';
 import AuthService from '../services/auth.service';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../services/api';
+import { ROLE_ADMIN, ROLE_SUPER_MANAGER } from '../services/constants';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Mail, 
@@ -43,7 +44,16 @@ const Login: React.FC = () => {
       if (user.status === 'PENDING') {
         navigate('/pending-approval', { replace: true });
       } else {
-        const from = (location.state as any)?.from?.pathname || '/dashboard';
+        const roles = user.roles || [];
+        const isAdminOrSuper = roles.includes(ROLE_ADMIN) || roles.includes(ROLE_SUPER_MANAGER);
+        
+        let defaultPath = '/dashboard';
+        if (isAdminOrSuper) defaultPath = '/admin';
+        else if (roles.includes('ROLE_WHOLESALER')) defaultPath = '/wholesaler';
+        else if (roles.includes('ROLE_STAFF')) defaultPath = '/staff';
+        else if (roles.includes('ROLE_RETAILER')) defaultPath = '/shop';
+
+        const from = (location.state as any)?.from?.pathname || defaultPath;
         navigate(from, { replace: true });
       }
     }
@@ -111,7 +121,16 @@ const Login: React.FC = () => {
         if (user?.status === 'PENDING') {
           navigate('/pending-approval', { replace: true });
         } else {
-          const from = (location.state as any)?.from?.pathname || '/dashboard';
+          const roles = user?.roles || [];
+          const isAdminOrSuper = roles.includes(ROLE_ADMIN) || roles.includes(ROLE_SUPER_MANAGER);
+          
+          let defaultPath = '/dashboard';
+          if (isAdminOrSuper) defaultPath = '/admin';
+          else if (roles.includes('ROLE_WHOLESALER')) defaultPath = '/wholesaler';
+          else if (roles.includes('ROLE_STAFF')) defaultPath = '/staff';
+          else if (roles.includes('ROLE_RETAILER')) defaultPath = '/shop';
+
+          const from = (location.state as any)?.from?.pathname || defaultPath;
           navigate(from, { replace: true });
         }
       },

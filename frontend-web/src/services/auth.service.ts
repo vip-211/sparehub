@@ -13,7 +13,7 @@ const normalizeRoles = (roles: any[] | undefined) => {
     if (roleLower === 'wholesaler' || roleLower === 'role_wholesaler') return ROLE_WHOLESALER;
     if (roleLower === 'admin' || roleLower === 'role_admin') return ROLE_ADMIN;
     if (roleLower === 'staff' || roleLower === 'role_staff') return ROLE_STAFF;
-    if (roleLower === 'supermanager' || roleLower === 'role_super_manager' || roleLower === 'super_manager') return ROLE_SUPER_MANAGER;
+    if (roleLower === 'supermanager' || roleLower === 'role_super_manager' || roleLower === 'super_manager' || roleLower === 'role_supermanager') return ROLE_SUPER_MANAGER;
     return roleStr;
   });
 };

@@ -14,6 +14,7 @@ import '../widgets/notification_badge.dart';
 import '../providers/theme_provider.dart';
 import '../services/auth_service.dart';
 import '../utils/app_theme.dart';
+import '../utils/image_utils.dart';
 import 'stock_screen.dart';
 
 class RetailerDashboard extends StatefulWidget {

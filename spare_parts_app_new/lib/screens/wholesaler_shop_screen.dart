@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:carousel_slider/carousel_slider.dart';
@@ -13,6 +14,7 @@ import '../services/product_service.dart';
 import '../utils/image_utils.dart';
 import '../utils/app_theme.dart';
 import '../utils/constants.dart';
+import 'category_products_screen.dart';
 
 class WholesalerShopScreen extends StatefulWidget {
   const WholesalerShopScreen({super.key});
@@ -242,7 +244,7 @@ class _WholesalerShopScreenState extends State<WholesalerShopScreen> {
   void _loadAndShowProduct(dynamic productId) async {
     try {
       final p = await _productService.getProductById(productId is int ? productId : int.parse(productId.toString()));
-      if (mounted) _showProductDetails(p);
+      if (mounted && p != null) _showProductDetails(p);
     } catch (e) {
       debugPrint('Error loading product for banner: $e');
     }

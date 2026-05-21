@@ -263,7 +263,7 @@ const App: React.FC = () => {
               )
             }
           />
-          <Route path="/" element={<Navigate to={currentUser ? (isPending ? "/pending-approval" : "/shop") : "/login"} />} />
+          <Route path="/" element={<Navigate to={currentUser ? (isPending ? "/pending-approval" : (isAdminOrSuper ? "/admin" : "/shop")) : "/login"} />} />
         </Routes>
       </main>
 
