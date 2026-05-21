@@ -80,7 +80,7 @@ const sendOtp = (email: string, purpose: string = 'login') => {
 const login = async (email: string, password: string) => {
   const normalizedEmail = normalizeIdentifier(email);
   const response = await api.post('auth/signin', {
-    email: normalizedEmail,
+    identifier: normalizedEmail,
     password,
   });
   if (response.data.token) {
