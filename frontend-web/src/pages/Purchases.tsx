@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import api, { API_BASE_URL } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
 import { Search, Plus, FileText, Download, Trash2, Calendar, User, Phone, Tag, Hash, ShoppingCart, DollarSign, Percent, FileCheck, X, Upload, Eye } from 'lucide-react';
@@ -36,6 +36,8 @@ const Purchases = () => {
     sellingPrice: 0,
     gst: 0,
     totalAmount: 0,
+    dailyAmount: 0,
+    remainingAmount: 0,
     notes: '',
     billImageUrl: '',
     billPdfUrl: ''
@@ -108,6 +110,20 @@ const Purchases = () => {
     }
   };
 
+  const groupedPurchases = useMemo(() => {
+    const groups: { [key: string]: any[] } = {};
+    purchases.forEach(p => {
+      const date = p.purchaseDate;
+      if (!groups[date]) groups[date] = [];
+      groups[date].push(p);
+    });
+    return Object.keys(groups).sort((a, b) => b.localeCompare(a)).map(date => ({
+      date,
+      items: groups[date],
+      totalDaily: groups[date].reduce((sum, item) => sum + (item.dailyAmount || 0), 0)
+    }));
+  }, [purchases]);
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -136,6 +152,8 @@ const Purchases = () => {
       sellingPrice: 0,
       gst: 0,
       totalAmount: 0,
+      dailyAmount: 0,
+      remainingAmount: 0,
       notes: '',
       billImageUrl: '',
       billPdfUrl: ''
@@ -239,75 +257,108 @@ const Purchases = () => {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50/50 border-b border-gray-100">
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Date & Invoice</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Supplier</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Product</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Amount</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Bills</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {purchases.map((p) => (
-                  <tr key={p.id} className="hover:bg-gray-50/50 transition-colors group">
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold text-gray-900">{p.purchaseDate}</span>
-                        <span className="text-xs font-medium text-gray-400">#{p.invoiceNumber}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold text-gray-900">{p.supplierName}</span>
-                        <span className="text-xs font-medium text-gray-400">{p.supplierMobile}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold text-gray-900">{p.productName}</span>
-                        <span className="text-xs font-medium text-primary-600 bg-primary-50 px-2 py-0.5 rounded-md inline-block w-fit">
-                          {p.partNumber}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-black text-gray-900">₹{p.totalAmount?.toLocaleString()}</span>
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
-                          {p.quantity} x ₹{p.costPrice} + ₹{p.gst} GST
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2">
-                        {p.billImageUrl && (
-                          <a href={getImageUrl(p.billImageUrl)} target="_blank" rel="noreferrer" className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors" title="View Image">
-                            <Eye className="w-4 h-4" />
-                          </a>
-                        )}
-                        {p.billPdfUrl && (
-                          <a href={getImageUrl(p.billPdfUrl)} target="_blank" rel="noreferrer" className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors" title="View PDF">
-                            <FileText className="w-4 h-4" />
-                          </a>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => handleDelete(p.id)}
-                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-8">
+            {groupedPurchases.map((group) => (
+              <div key={group.date} className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Calendar className="w-5 h-5 text-primary-600" />
+                    <span className="text-lg font-black text-gray-900">{group.date}</span>
+                  </div>
+                  {group.totalDaily > 0 && (
+                    <div className="flex items-center gap-2 bg-primary-100 text-primary-700 px-4 py-1.5 rounded-full">
+                      <DollarSign className="w-4 h-4" />
+                      <span className="text-sm font-bold">Daily Purchase: ₹{group.totalDaily.toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-white border-b border-gray-50">
+                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Invoice</th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Supplier</th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Product</th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Amount</th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Daily / Remaining</th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Bills</th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {group.items.map((p) => (
+                        <tr key={p.id} className="hover:bg-gray-50/50 transition-colors group">
+                          <td className="px-6 py-4">
+                            <span className="text-sm font-bold text-gray-900">#{p.invoiceNumber}</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-bold text-gray-900">{p.supplierName}</span>
+                              <span className="text-xs font-medium text-gray-400">{p.supplierMobile}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-bold text-gray-900">{p.productName}</span>
+                              <span className="text-xs font-medium text-primary-600 bg-primary-50 px-2 py-0.5 rounded-md inline-block w-fit">
+                                {p.partNumber}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-black text-gray-900">₹{p.totalAmount?.toLocaleString()}</span>
+                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                                {p.quantity} x ₹{p.costPrice} + ₹{p.gst} GST
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col gap-1">
+                                {p.dailyAmount > 0 && (
+                                    <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md w-fit">
+                                        Daily: ₹{p.dailyAmount.toLocaleString()}
+                                    </span>
+                                )}
+                                {p.remainingAmount > 0 && (
+                                    <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-md w-fit">
+                                        Remaining: ₹{p.remainingAmount.toLocaleString()}
+                                    </span>
+                                )}
+                                {!(p.dailyAmount > 0) && !(p.remainingAmount > 0) && (
+                                    <span className="text-sm text-gray-300">-</span>
+                                )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex gap-2">
+                              {p.billImageUrl && (
+                                <a href={getImageUrl(p.billImageUrl)} target="_blank" rel="noreferrer" className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors" title="View Image">
+                                  <Eye className="w-4 h-4" />
+                                </a>
+                              )}
+                              {p.billPdfUrl && (
+                                <a href={getImageUrl(p.billPdfUrl)} target="_blank" rel="noreferrer" className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors" title="View PDF">
+                                  <FileText className="w-4 h-4" />
+                                </a>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <button
+                              onClick={() => handleDelete(p.id)}
+                              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -451,6 +502,32 @@ const Purchases = () => {
                         readOnly
                         value={newPurchase.totalAmount}
                         className="w-full pl-8 pr-4 py-3 rounded-xl border-2 border-primary-200 bg-primary-50/50 outline-none font-black text-lg text-primary-700 cursor-default"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-gray-500 ml-1">Daily Purchase Money</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">₹</span>
+                      <input
+                        type="number"
+                        value={newPurchase.dailyAmount}
+                        onChange={(e) => setNewPurchase({ ...newPurchase, dailyAmount: Number(e.target.value) })}
+                        className="w-full pl-8 pr-4 py-3 rounded-xl border border-gray-200 focus:bg-white outline-none transition-all font-bold text-lg"
+                        placeholder="Optional"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-gray-500 ml-1">Remaining Money</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">₹</span>
+                      <input
+                        type="number"
+                        value={newPurchase.remainingAmount}
+                        onChange={(e) => setNewPurchase({ ...newPurchase, remainingAmount: Number(e.target.value) })}
+                        className="w-full pl-8 pr-4 py-3 rounded-xl border border-gray-200 focus:bg-white outline-none transition-all font-bold text-lg"
+                        placeholder="Optional"
                       />
                     </div>
                   </div>

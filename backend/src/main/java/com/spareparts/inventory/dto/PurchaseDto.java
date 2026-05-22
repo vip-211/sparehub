@@ -27,6 +27,8 @@ public class PurchaseDto {
     private String notes;
     private String billImageUrl;
     private String billPdfUrl;
+    private BigDecimal dailyAmount;
+    private BigDecimal remainingAmount;
     private Long createdById;
     private String createdByName;
     private LocalDateTime createdAt;

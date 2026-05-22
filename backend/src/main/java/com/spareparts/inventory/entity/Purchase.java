@@ -71,6 +71,12 @@ public class Purchase {
     @Column(name = "bill_pdf_url")
     private String billPdfUrl;
 
+    @Column(name = "daily_amount", precision = 10, scale = 2)
+    private BigDecimal dailyAmount;
+
+    @Column(name = "remaining_amount", precision = 10, scale = 2)
+    private BigDecimal remainingAmount;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by_id")
     private User createdBy;

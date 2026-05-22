@@ -14,6 +14,8 @@ class Purchase {
   final String? notes;
   final String? billImageUrl;
   final String? billPdfUrl;
+  final double? dailyAmount;
+  final double? remainingAmount;
   final int? createdById;
   final String? createdByName;
   final DateTime? createdAt;
@@ -34,6 +36,8 @@ class Purchase {
     this.notes,
     this.billImageUrl,
     this.billPdfUrl,
+    this.dailyAmount,
+    this.remainingAmount,
     this.createdById,
     this.createdByName,
     this.createdAt,
@@ -58,6 +62,8 @@ class Purchase {
       notes: json['notes'],
       billImageUrl: json['billImageUrl'],
       billPdfUrl: json['billPdfUrl'],
+      dailyAmount: (json['dailyAmount'] as num?)?.toDouble(),
+      remainingAmount: (json['remainingAmount'] as num?)?.toDouble(),
       createdById: json['createdById'],
       createdByName: json['createdByName'],
       createdAt: json['createdAt'] != null 
@@ -83,6 +89,8 @@ class Purchase {
       'notes': notes,
       'billImageUrl': billImageUrl,
       'billPdfUrl': billPdfUrl,
+      'dailyAmount': dailyAmount,
+      'remainingAmount': remainingAmount,
     };
   }
 }

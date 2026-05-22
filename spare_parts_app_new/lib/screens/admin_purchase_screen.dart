@@ -207,34 +207,73 @@ class _AdminPurchaseScreenState extends State<AdminPurchaseScreen> {
   }
 
   Widget _buildPurchaseList() {
+    // Group purchases by date
+    final Map<String, List<Purchase>> grouped = {};
+    for (var p in _filteredPurchases) {
+      final dateStr = DateFormat('yyyy-MM-dd').format(p.purchaseDate);
+      if (!grouped.containsKey(dateStr)) grouped[dateStr] = [];
+      grouped[dateStr]!.add(p);
+    }
+
+    final sortedDates = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
+
     return ListView.builder(
-      itemCount: _filteredPurchases.length,
-      itemBuilder: (context, index) {
-        final p = _filteredPurchases[index];
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: ListTile(
-            title: Text(p.supplierName, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('${p.productName} (${p.quantity} units)'),
-                Text('Inv: ${p.invoiceNumber} | ${DateFormat('dd MMM yyyy').format(p.purchaseDate)}'),
-              ],
+      itemCount: sortedDates.length,
+      itemBuilder: (context, dateIndex) {
+        final dateStr = sortedDates[dateIndex];
+        final purchasesInGroup = grouped[dateStr]!;
+        final displayDate = DateFormat('dd MMM yyyy').format(DateTime.parse(dateStr));
+        final dailyTotal = purchasesInGroup.fold(0.0, (sum, p) => sum + (p.dailyAmount ?? 0));
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(displayDate, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue)),
+                  if (dailyTotal > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(color: AppTheme.primaryBlue.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                      child: Text('Daily: ₹${dailyTotal.toStringAsFixed(0)}', 
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue)),
+                    ),
+                ],
+              ),
             ),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text('₹${p.totalAmount.toStringAsFixed(2)}', 
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryBlue, fontSize: 16)),
-                if (p.billImageUrl != null || p.billPdfUrl != null)
-                  const Icon(Icons.attachment, size: 16, color: Colors.grey),
-              ],
-            ),
-            onTap: () => _showPurchaseDetails(p),
-          ),
+            ...purchasesInGroup.map((p) => Card(
+              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: ListTile(
+                title: Text(p.supplierName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('${p.productName} (${p.quantity} units)'),
+                    Text('Inv: ${p.invoiceNumber}'),
+                    if (p.dailyAmount != null && p.dailyAmount! > 0)
+                      Text('Daily Money: ₹${p.dailyAmount!.toStringAsFixed(2)}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w500)),
+                    if (p.remainingAmount != null && p.remainingAmount! > 0)
+                      Text('Remaining: ₹${p.remainingAmount!.toStringAsFixed(2)}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w500)),
+                  ],
+                ),
+                trailing: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text('₹${p.totalAmount.toStringAsFixed(2)}', 
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryBlue, fontSize: 16)),
+                    if (p.billImageUrl != null || p.billPdfUrl != null)
+                      const Icon(Icons.attachment, size: 16, color: Colors.grey),
+                  ],
+                ),
+                onTap: () => _showPurchaseDetails(p),
+              ),
+            )).toList(),
+          ],
         );
       },
     );
@@ -268,6 +307,10 @@ class _AdminPurchaseScreenState extends State<AdminPurchaseScreen> {
             _detailRow('Quantity', p.quantity.toString()),
             _detailRow('Cost Price', '₹${p.costPrice.toStringAsFixed(2)}'),
             _detailRow('Total', '₹${p.totalAmount.toStringAsFixed(2)}'),
+            if (p.dailyAmount != null && p.dailyAmount! > 0)
+                _detailRow('Daily Money', '₹${p.dailyAmount!.toStringAsFixed(2)}'),
+            if (p.remainingAmount != null && p.remainingAmount! > 0)
+                _detailRow('Remaining Money', '₹${p.remainingAmount!.toStringAsFixed(2)}'),
             if (p.notes != null && p.notes!.isNotEmpty) _detailRow('Notes', p.notes!),
             const SizedBox(height: 20),
             Row(

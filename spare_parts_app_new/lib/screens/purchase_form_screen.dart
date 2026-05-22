@@ -29,6 +29,8 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
   late TextEditingController _sellingPriceController;
   late TextEditingController _gstController;
   late TextEditingController _totalAmountController;
+  late TextEditingController _dailyAmountController;
+  late TextEditingController _remainingAmountController;
   late TextEditingController _notesController;
   
   DateTime _selectedDate = DateTime.now();
@@ -50,6 +52,8 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
     _sellingPriceController = TextEditingController(text: p?.sellingPrice?.toString());
     _gstController = TextEditingController(text: p?.gst?.toString());
     _totalAmountController = TextEditingController(text: p?.totalAmount.toString());
+    _dailyAmountController = TextEditingController(text: p?.dailyAmount?.toString());
+    _remainingAmountController = TextEditingController(text: p?.remainingAmount?.toString());
     _notesController = TextEditingController(text: p?.notes);
     if (p != null) _selectedDate = p.purchaseDate;
   }
@@ -115,6 +119,8 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
         sellingPrice: double.tryParse(_sellingPriceController.text),
         gst: double.tryParse(_gstController.text),
         totalAmount: double.parse(_totalAmountController.text),
+        dailyAmount: double.tryParse(_dailyAmountController.text),
+        remainingAmount: double.tryParse(_remainingAmountController.text),
         notes: _notesController.text,
         billImageUrl: _isPdf ? null : (fileUrl ?? widget.purchase?.billImageUrl),
         billPdfUrl: _isPdf ? (fileUrl ?? widget.purchase?.billPdfUrl) : null,
@@ -175,6 +181,8 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
                       ],
                     ),
                     _buildField(_totalAmountController, 'Total Amount', required: true, keyboardType: TextInputType.number, readOnly: true),
+                    _buildField(_dailyAmountController, 'Daily Purchase Money (Optional)', keyboardType: TextInputType.number),
+                    _buildField(_remainingAmountController, 'Remaining Money (Optional)', keyboardType: TextInputType.number),
                     
                     const SizedBox(height: 20),
                     _buildSection('Other Info'),

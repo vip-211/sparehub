@@ -140,6 +140,8 @@ public class PurchaseService {
         purchase.setNotes(dto.getNotes());
         purchase.setBillImageUrl(dto.getBillImageUrl());
         purchase.setBillPdfUrl(dto.getBillPdfUrl());
+        purchase.setDailyAmount(dto.getDailyAmount());
+        purchase.setRemainingAmount(dto.getRemainingAmount());
     }
 
     private PurchaseDto convertToDto(Purchase p) {
@@ -159,6 +161,8 @@ public class PurchaseService {
         dto.setNotes(p.getNotes());
         dto.setBillImageUrl(p.getBillImageUrl());
         dto.setBillPdfUrl(p.getBillPdfUrl());
+        dto.setDailyAmount(p.getDailyAmount());
+        dto.setRemainingAmount(p.getRemainingAmount());
         if (p.getCreatedBy() != null) {
             dto.setCreatedById(p.getCreatedBy().getId());
             dto.setCreatedByName(p.getCreatedBy().getName());

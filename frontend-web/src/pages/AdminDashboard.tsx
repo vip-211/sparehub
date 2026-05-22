@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import api, { API_BASE_URL } from '../services/api';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
-import { Users, ShoppingBag, BarChart2, CheckCircle, XCircle, Plus, Package, UserPlus, Upload, Truck, Trash2, RotateCcw, Settings, Bell, MessageSquare, Search, Star, FileText, List, LayoutGrid, Store, ScanBarcode, Keyboard, Cpu, TrendingUp, Move, Sparkles } from 'lucide-react';
+import { Users, ShoppingBag, ShoppingCart, BarChart2, CheckCircle, XCircle, Plus, Package, UserPlus, Upload, Truck, Trash2, RotateCcw, Settings, Bell, MessageSquare, Search, Star, FileText, List, LayoutGrid, Store, ScanBarcode, Keyboard, Cpu, TrendingUp, Move, Sparkles } from 'lucide-react';
 import { ROLE_SUPER_MANAGER, ROLE_ADMIN, ROLE_MECHANIC, ROLE_RETAILER, ROLE_WHOLESALER, ROLE_STAFF } from '../services/constants';
 import AuthService from '../services/auth.service';
 import Skeleton from '../components/Skeleton';
@@ -1520,6 +1520,18 @@ const AdminDashboard = () => {
             <p className="text-2xl font-black text-gray-900">{(products || []).length}</p>
           </div>
         </button>
+        <button 
+          onClick={() => navigate('/purchases')}
+          className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md hover:border-emerald-200 transition text-left w-full group"
+        >
+          <div className={`p-4 rounded-xl transition-colors ${isSuperManager ? 'bg-purple-100 text-purple-600 group-hover:bg-purple-200' : 'bg-emerald-100 text-emerald-600 group-hover:bg-emerald-200'}`}>
+            <ShoppingCart size={24} />
+          </div>
+          <div>
+            <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">Purchases</p>
+            <p className="text-2xl font-black text-gray-900">Manage</p>
+          </div>
+        </button>
       </div>
 
       <div className="flex overflow-x-auto no-scrollbar border-b border-gray-100 mb-8 gap-2 md:gap-8 pb-1">
@@ -1556,7 +1568,6 @@ const AdminDashboard = () => {
                 ? 'text-primary-600'
                 : 'text-gray-400 hover:text-gray-600'
             }`}
-            onClick={() => setActiveTab(tab.id)}
           >
             <tab.icon size={18} />
             {tab.label}
