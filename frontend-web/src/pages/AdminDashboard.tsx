@@ -1474,6 +1474,18 @@ const AdminDashboard = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6 mb-10">
         <button 
+          onClick={() => setActiveTab('purchases')}
+          className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md hover:border-emerald-200 transition text-left w-full group"
+        >
+          <div className={`p-4 rounded-xl transition-colors ${isSuperManager ? 'bg-purple-100 text-purple-600 group-hover:bg-purple-200' : 'bg-emerald-100 text-emerald-600 group-hover:bg-emerald-200'}`}>
+            <ShoppingCart size={24} />
+          </div>
+          <div>
+            <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">Purchases</p>
+            <p className="text-2xl font-black text-gray-900">Manage</p>
+          </div>
+        </button>
+        <button 
           onClick={() => setActiveTab('users')}
           className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md hover:border-blue-200 transition text-left w-full group"
         >
@@ -1521,25 +1533,13 @@ const AdminDashboard = () => {
             <p className="text-2xl font-black text-gray-900">{(products || []).length}</p>
           </div>
         </button>
-        <button 
-          onClick={() => navigate('/purchases')}
-          className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md hover:border-emerald-200 transition text-left w-full group"
-        >
-          <div className={`p-4 rounded-xl transition-colors ${isSuperManager ? 'bg-purple-100 text-purple-600 group-hover:bg-purple-200' : 'bg-emerald-100 text-emerald-600 group-hover:bg-emerald-200'}`}>
-            <ShoppingCart size={24} />
-          </div>
-          <div>
-            <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">Purchases</p>
-            <p className="text-2xl font-black text-gray-900">Manage</p>
-          </div>
-        </button>
       </div>
 
       <div className="flex overflow-x-auto no-scrollbar border-b border-gray-100 mb-8 gap-2 md:gap-8 pb-1">
         {[
+          { id: 'purchases', label: 'Purchases', icon: ShoppingCart },
           { id: 'users', label: 'Users', icon: Users },
           { id: 'orders', label: 'Transactions', icon: ShoppingBag },
-          { id: 'purchases', label: 'Purchases', icon: ShoppingCart },
           { id: 'requests', label: 'Order Requests', icon: MessageSquare },
           { id: 'invoicing', label: 'Invoicing', icon: FileText },
           { id: 'cashback', label: 'Cashback Points', icon: Star },
