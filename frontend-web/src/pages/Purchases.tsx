@@ -10,7 +10,7 @@ import AuthService from '../services/auth.service';
 const Purchases = () => {
   const { tp } = useLanguage();
   const currentUser = AuthService.getCurrentUser();
-  const isAdmin = currentUser?.roles?.includes(ROLE_ADMIN) || currentUser?.roles?.includes(ROLE_SUPER_MANAGER) || currentUser?.roles?.includes(ROLE_STAFF);
+  const isAdmin = currentUser?.roles?.includes(ROLE_ADMIN) || currentUser?.roles?.includes(ROLE_SUPER_MANAGER);
 
   if (!isAdmin) {
     window.location.href = '/dashboard';
@@ -36,8 +36,6 @@ const Purchases = () => {
     sellingPrice: 0,
     gst: 0,
     totalAmount: 0,
-    dailyAmount: 0,
-    remainingAmount: 0,
     notes: '',
     billImageUrl: '',
     billPdfUrl: ''
@@ -67,18 +65,10 @@ const Purchases = () => {
     if (newPurchase.totalAmount !== total) {
         setNewPurchase(prev => ({ 
           ...prev, 
-          totalAmount: total,
-          remainingAmount: total - (prev.dailyAmount || 0)
+          totalAmount: total
         }));
     }
   }, [newPurchase.quantity, newPurchase.costPrice, newPurchase.gst]);
-
-  useEffect(() => {
-    setNewPurchase(prev => ({
-      ...prev,
-      remainingAmount: (prev.totalAmount || 0) - (prev.dailyAmount || 0)
-    }));
-  }, [newPurchase.dailyAmount]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,6 +111,18 @@ const Purchases = () => {
     }
   };
 
+  const [editingDaily, setEditingDaily] = useState<{ date: string, amount: number } | null>(null);
+
+  const handleUpdateDailyPaid = async (date: string, amount: number) => {
+    try {
+      await api.put(`purchases/daily-paid?date=${date}&amount=${amount}`);
+      setEditingDaily(null);
+      fetchPurchases();
+    } catch (err) {
+      alert('Failed to update daily paid amount');
+    }
+  };
+
   const groupedPurchases = useMemo(() => {
     const groups: { [key: string]: any[] } = {};
     purchases.forEach(p => {
@@ -131,6 +133,7 @@ const Purchases = () => {
     return Object.keys(groups).sort((a, b) => b.localeCompare(a)).map(date => ({
       date,
       items: groups[date],
+      totalBought: groups[date].reduce((sum, item) => sum + (item.totalAmount || 0), 0),
       totalDaily: groups[date].reduce((sum, item) => sum + (item.dailyAmount || 0), 0),
       totalRemaining: groups[date].reduce((sum, item) => sum + (item.remainingAmount || 0), 0)
     }));
@@ -172,8 +175,6 @@ const Purchases = () => {
       sellingPrice: 0,
       gst: 0,
       totalAmount: 0,
-      dailyAmount: 0,
-      remainingAmount: 0,
       notes: '',
       billImageUrl: '',
       billPdfUrl: ''
@@ -313,19 +314,44 @@ const Purchases = () => {
                     <span className="text-lg font-black text-gray-900">{group.date}</span>
                   </div>
                   <div className="flex items-center gap-4">
-                    {group.totalDaily > 0 && (
-                      <div className="flex items-center gap-2 bg-emerald-100 text-emerald-700 px-4 py-1.5 rounded-full">
-                        <DollarSign className="w-4 h-4" />
-                        <span className="text-sm font-bold">Daily Paid: ₹{group.totalDaily.toLocaleString()}</span>
-                      </div>
-                    )}
-                    {group.totalRemaining > 0 && (
-                      <div className="flex items-center gap-2 bg-rose-100 text-rose-700 px-4 py-1.5 rounded-full">
-                        <FileText className="w-4 h-4" />
-                        <span className="text-sm font-bold">Remaining: ₹{group.totalRemaining.toLocaleString()}</span>
-                      </div>
-                    )}
-                  </div>
+                     {group.totalBought > 0 && (
+                       <div className="flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-1.5 rounded-full">
+                         <ShoppingCart className="w-4 h-4" />
+                         <span className="text-sm font-bold">Total Money: ₹{group.totalBought.toLocaleString()}</span>
+                       </div>
+                     )}
+                     <div className="flex items-center gap-2 bg-emerald-100 text-emerald-700 px-4 py-1.5 rounded-full group/edit">
+                       <DollarSign className="w-4 h-4" />
+                       {editingDaily?.date === group.date ? (
+                         <div className="flex items-center gap-2">
+                           <input
+                             type="number"
+                             autoFocus
+                             className="w-24 bg-white border border-emerald-300 rounded px-2 py-0.5 text-sm focus:outline-none"
+                             value={editingDaily.amount}
+                             onChange={(e) => setEditingDaily({ ...editingDaily, amount: Number(e.target.value) })}
+                             onKeyDown={(e) => {
+                               if (e.key === 'Enter') handleUpdateDailyPaid(group.date, editingDaily.amount);
+                               if (e.key === 'Escape') setEditingDaily(null);
+                             }}
+                           />
+                           <button onClick={() => handleUpdateDailyPaid(group.date, editingDaily.amount)} className="text-xs font-bold hover:underline">Save</button>
+                           <button onClick={() => setEditingDaily(null)} className="text-xs font-bold hover:underline">Cancel</button>
+                         </div>
+                       ) : (
+                         <div className="flex items-center gap-2 cursor-pointer" onClick={() => setEditingDaily({ date: group.date, amount: group.totalDaily })}>
+                           <span className="text-sm font-bold">Bought Money: ₹{group.totalDaily.toLocaleString()}</span>
+                           <span className="text-[10px] opacity-0 group-hover/edit:opacity-100 transition-opacity">(Click to edit)</span>
+                         </div>
+                       )}
+                     </div>
+                     {(group.totalBought - group.totalDaily) !== 0 && (
+                       <div className="flex items-center gap-2 bg-rose-100 text-rose-700 px-4 py-1.5 rounded-full">
+                         <FileText className="w-4 h-4" />
+                         <span className="text-sm font-bold">Remaining: ₹{(group.totalBought - group.totalDaily).toLocaleString()}</span>
+                       </div>
+                     )}
+                   </div>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
@@ -557,32 +583,6 @@ const Purchases = () => {
                         readOnly
                         value={newPurchase.totalAmount}
                         className="w-full pl-8 pr-4 py-3 rounded-xl border-2 border-primary-200 bg-primary-50/50 outline-none font-black text-lg text-primary-700 cursor-default"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-gray-500 ml-1">Daily Purchase Money</label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">₹</span>
-                      <input
-                        type="number"
-                        value={newPurchase.dailyAmount}
-                        onChange={(e) => setNewPurchase({ ...newPurchase, dailyAmount: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-3 rounded-xl border border-gray-200 focus:bg-white outline-none transition-all font-bold text-lg"
-                        placeholder="Optional"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-gray-500 ml-1">Remaining Money</label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">₹</span>
-                      <input
-                        type="number"
-                        value={newPurchase.remainingAmount}
-                        onChange={(e) => setNewPurchase({ ...newPurchase, remainingAmount: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-3 rounded-xl border border-gray-200 focus:bg-white outline-none transition-all font-bold text-lg"
-                        placeholder="Optional"
                       />
                     </div>
                   </div>

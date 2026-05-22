@@ -57,6 +57,15 @@ public class PurchaseController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping("/daily-paid")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER') or hasRole('STAFF')")
+    public ResponseEntity<Void> updateDailyPaid(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam java.math.BigDecimal amount) {
+        purchaseService.updateDailyPaidAmount(date, amount);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/by-range")
     @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER') or hasRole('STAFF')")
     public ResponseEntity<List<PurchaseDto>> getPurchasesByRange(

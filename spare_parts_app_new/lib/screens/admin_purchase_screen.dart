@@ -237,8 +237,9 @@ class _AdminPurchaseScreenState extends State<AdminPurchaseScreen> {
         final dateStr = sortedDates[dateIndex];
         final purchasesInGroup = grouped[dateStr]!;
         final displayDate = DateFormat('dd MMM yyyy').format(DateTime.parse(dateStr));
+        final boughtTotal = purchasesInGroup.fold(0.0, (sum, p) => sum + p.totalAmount);
         final dailyTotal = purchasesInGroup.fold(0.0, (sum, p) => sum + (p.dailyAmount ?? 0));
-        final remainingTotal = purchasesInGroup.fold(0.0, (sum, p) => sum + (p.remainingAmount ?? 0));
+        final remainingTotal = boughtTotal - dailyTotal;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -249,24 +250,40 @@ class _AdminPurchaseScreenState extends State<AdminPurchaseScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(displayDate, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue)),
-                  Row(
+                  Wrap(
+                    spacing: 4,
+                    runSpacing: 4,
                     children: [
-                      if (dailyTotal > 0)
+                      if (boughtTotal > 0)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                          child: Text('Paid: ₹${dailyTotal.toStringAsFixed(0)}', 
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green)),
+                          decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                          child: Text('Total Money: ₹${boughtTotal.toStringAsFixed(0)}', 
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blue)),
                         ),
-                      if (remainingTotal > 0) ...[
-                        const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () => _editDailyPaid(DateTime.parse(dateStr), dailyTotal),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('Bought Money: ₹${dailyTotal.toStringAsFixed(0)}', 
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green)),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.edit, size: 10, color: Colors.green),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (remainingTotal != 0)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
                           child: Text('Rem: ₹${remainingTotal.toStringAsFixed(0)}', 
                               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.red)),
                         ),
-                      ],
                     ],
                   ),
                 ],
@@ -305,6 +322,37 @@ class _AdminPurchaseScreenState extends State<AdminPurchaseScreen> {
         );
       },
     );
+  }
+
+  Future<void> _editDailyPaid(DateTime date, double currentAmount) async {
+    final controller = TextEditingController(text: currentAmount.toStringAsFixed(0));
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Bought Money'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(labelText: 'Amount Paid (Bought Money)'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                final amount = double.tryParse(controller.text) ?? 0;
+                await _purchaseService.updateDailyPaid(date, amount);
+                Navigator.pop(context, true);
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update: $e')));
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (result == true) _loadPurchases();
   }
 
   void _showPurchaseDetails(Purchase p) {

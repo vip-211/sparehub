@@ -11,6 +11,7 @@ import java.util.List;
 @Repository
 public interface PurchaseRepository extends JpaRepository<Purchase, Long> {
     List<Purchase> findByPurchaseDateBetween(LocalDate startDate, LocalDate endDate);
+    List<Purchase> findByPurchaseDate(LocalDate date);
     
     @Query("SELECT p FROM Purchase p WHERE " +
            "LOWER(p.supplierName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +

@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -67,6 +68,31 @@ public class PurchaseService {
     @Transactional
     public void deletePurchase(Long id) {
         purchaseRepository.deleteById(id);
+    }
+
+    @Transactional
+    public void updateDailyPaidAmount(LocalDate date, BigDecimal amount) {
+        List<Purchase> purchases = purchaseRepository.findByPurchaseDate(date);
+        if (purchases.isEmpty()) return;
+
+        // Reset all daily amounts for this date
+        for (Purchase p : purchases) {
+            p.setDailyAmount(BigDecimal.ZERO);
+            p.setRemainingAmount(BigDecimal.ZERO);
+        }
+
+        // Set the total daily amount to the first purchase
+        Purchase first = purchases.get(0);
+        first.setDailyAmount(amount);
+        
+        // Calculate remaining for the group
+        BigDecimal totalGroupAmount = purchases.stream()
+                .map(Purchase::getTotalAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        first.setRemainingAmount(totalGroupAmount.subtract(amount));
+        
+        purchaseRepository.saveAll(purchases);
     }
 
     @Transactional(readOnly = true)

@@ -29,6 +29,11 @@ class PurchaseService {
     await _remote.delete('/purchases/$id');
   }
 
+  Future<void> updateDailyPaid(DateTime date, double amount) async {
+    final d = date.toIso8601String().split('T')[0];
+    await _remote.putJson('/purchases/daily-paid?date=$d&amount=$amount', {});
+  }
+
   Future<List<Purchase>> getPurchasesByRange(DateTime start, DateTime end) async {
     final s = start.toIso8601String().split('T')[0];
     final e = end.toIso8601String().split('T')[0];
