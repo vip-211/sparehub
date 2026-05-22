@@ -10,7 +10,7 @@ import AuthService from '../services/auth.service';
 const Purchases = () => {
   const { tp } = useLanguage();
   const currentUser = AuthService.getCurrentUser();
-  const isAdmin = currentUser?.roles?.includes(ROLE_ADMIN) || currentUser?.roles?.includes(ROLE_SUPER_MANAGER);
+  const isAdmin = currentUser?.roles?.includes(ROLE_ADMIN) || currentUser?.roles?.includes(ROLE_SUPER_MANAGER) || currentUser?.roles?.includes(ROLE_STAFF);
 
   if (!isAdmin) {
     window.location.href = '/dashboard';
@@ -65,9 +65,20 @@ const Purchases = () => {
     const gst = Number(newPurchase.gst) || 0;
     const total = (qty * price) + gst;
     if (newPurchase.totalAmount !== total) {
-        setNewPurchase(prev => ({ ...prev, totalAmount: total }));
+        setNewPurchase(prev => ({ 
+          ...prev, 
+          totalAmount: total,
+          remainingAmount: total - (prev.dailyAmount || 0)
+        }));
     }
   }, [newPurchase.quantity, newPurchase.costPrice, newPurchase.gst]);
+
+  useEffect(() => {
+    setNewPurchase(prev => ({
+      ...prev,
+      remainingAmount: (prev.totalAmount || 0) - (prev.dailyAmount || 0)
+    }));
+  }, [newPurchase.dailyAmount]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,8 +131,17 @@ const Purchases = () => {
     return Object.keys(groups).sort((a, b) => b.localeCompare(a)).map(date => ({
       date,
       items: groups[date],
-      totalDaily: groups[date].reduce((sum, item) => sum + (item.dailyAmount || 0), 0)
+      totalDaily: groups[date].reduce((sum, item) => sum + (item.dailyAmount || 0), 0),
+      totalRemaining: groups[date].reduce((sum, item) => sum + (item.remainingAmount || 0), 0)
     }));
+  }, [purchases]);
+
+  const grandTotals = useMemo(() => {
+    return purchases.reduce((acc, p) => ({
+      totalPurchase: acc.totalPurchase + (p.totalAmount || 0),
+      totalDaily: acc.totalDaily + (p.dailyAmount || 0),
+      totalRemaining: acc.totalRemaining + (p.remainingAmount || 0)
+    }), { totalPurchase: 0, totalDaily: 0, totalRemaining: 0 });
   }, [purchases]);
 
   const handleSave = async (e: React.FormEvent) => {
@@ -220,6 +240,33 @@ const Purchases = () => {
         </div>
       </div>
 
+      {/* Grand Totals Summary */}
+      {!loading && purchases.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-gradient-to-br from-primary-500 to-primary-600 rounded-3xl p-6 text-white shadow-lg shadow-primary-200">
+            <div className="flex items-center gap-3 mb-2 opacity-80">
+              <ShoppingCart className="w-5 h-5" />
+              <span className="text-sm font-bold uppercase tracking-wider">Total Purchase</span>
+            </div>
+            <div className="text-3xl font-black">₹{grandTotals.totalPurchase.toLocaleString()}</div>
+          </div>
+          <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-3xl p-6 text-white shadow-lg shadow-emerald-200">
+            <div className="flex items-center gap-3 mb-2 opacity-80">
+              <DollarSign className="w-5 h-5" />
+              <span className="text-sm font-bold uppercase tracking-wider">Total Daily Paid</span>
+            </div>
+            <div className="text-3xl font-black">₹{grandTotals.totalDaily.toLocaleString()}</div>
+          </div>
+          <div className="bg-gradient-to-br from-rose-500 to-rose-600 rounded-3xl p-6 text-white shadow-lg shadow-rose-200">
+            <div className="flex items-center gap-3 mb-2 opacity-80">
+              <FileText className="w-5 h-5" />
+              <span className="text-sm font-bold uppercase tracking-wider">Total Remaining</span>
+            </div>
+            <div className="text-3xl font-black">₹{grandTotals.totalRemaining.toLocaleString()}</div>
+          </div>
+        </div>
+      )}
+
       {/* Search Bar */}
       <form onSubmit={handleSearch} className="flex gap-3">
         <div className="relative flex-1">
@@ -265,12 +312,20 @@ const Purchases = () => {
                     <Calendar className="w-5 h-5 text-primary-600" />
                     <span className="text-lg font-black text-gray-900">{group.date}</span>
                   </div>
-                  {group.totalDaily > 0 && (
-                    <div className="flex items-center gap-2 bg-primary-100 text-primary-700 px-4 py-1.5 rounded-full">
-                      <DollarSign className="w-4 h-4" />
-                      <span className="text-sm font-bold">Daily Purchase: ₹{group.totalDaily.toLocaleString()}</span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-4">
+                    {group.totalDaily > 0 && (
+                      <div className="flex items-center gap-2 bg-emerald-100 text-emerald-700 px-4 py-1.5 rounded-full">
+                        <DollarSign className="w-4 h-4" />
+                        <span className="text-sm font-bold">Daily Paid: ₹{group.totalDaily.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {group.totalRemaining > 0 && (
+                      <div className="flex items-center gap-2 bg-rose-100 text-rose-700 px-4 py-1.5 rounded-full">
+                        <FileText className="w-4 h-4" />
+                        <span className="text-sm font-bold">Remaining: ₹{group.totalRemaining.toLocaleString()}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">

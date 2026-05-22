@@ -130,9 +130,14 @@ const App: React.FC = () => {
                   </Link>
                 )}
                 {currentUser?.roles.includes(ROLE_STAFF) && (
-                  <Link to="/staff" className="text-gray-600 hover:text-primary-600 font-medium">
-                    {t('role.staff')}
-                  </Link>
+                  <>
+                    <Link to="/staff" className="text-gray-600 hover:text-primary-600 font-medium">
+                      {t('role.staff')}
+                    </Link>
+                    <Link to="/purchases" className="text-gray-600 hover:text-primary-600 font-medium">
+                      Purchases
+                    </Link>
+                  </>
                 )}
                 {!currentUser?.roles.includes(ROLE_STAFF) && (
                   <>

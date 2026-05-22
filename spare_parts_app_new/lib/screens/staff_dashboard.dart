@@ -17,6 +17,7 @@ import 'profile_screen.dart';
 import '../widgets/notification_badge.dart';
 import '../providers/theme_provider.dart';
 import 'staff_mechanic_locations_screen.dart';
+import 'admin_purchase_screen.dart';
 
 import '../utils/app_theme.dart';
 
@@ -39,6 +40,8 @@ class _StaffDashboardState extends State<StaffDashboard> {
       case 1:
         return const StaffMechanicLocationsScreen();
       case 2:
+        return const AdminPurchaseScreen();
+      case 3:
       default:
         return const ProfileScreen();
     }
@@ -174,6 +177,11 @@ class _StaffDashboardState extends State<StaffDashboard> {
                 icon: Icon(Icons.location_on_outlined),
                 selectedIcon: Icon(Icons.location_on),
                 label: 'Mechanics',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.shopping_cart_outlined),
+                selectedIcon: Icon(Icons.shopping_cart),
+                label: 'Purchases',
               ),
               NavigationDestination(
                 icon: Icon(Icons.person_outline),

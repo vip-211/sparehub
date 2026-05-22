@@ -65,6 +65,14 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
     
     double total = (qty * price) + gst;
     _totalAmountController.text = total.toStringAsFixed(2);
+    _calculateRemaining();
+  }
+
+  void _calculateRemaining() {
+    double total = double.tryParse(_totalAmountController.text) ?? 0;
+    double daily = double.tryParse(_dailyAmountController.text) ?? 0;
+    double remaining = total - daily;
+    _remainingAmountController.text = remaining.toStringAsFixed(2);
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -181,7 +189,7 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
                       ],
                     ),
                     _buildField(_totalAmountController, 'Total Amount', required: true, keyboardType: TextInputType.number, readOnly: true),
-                    _buildField(_dailyAmountController, 'Daily Purchase Money (Optional)', keyboardType: TextInputType.number),
+                    _buildField(_dailyAmountController, 'Daily Purchase Money (Optional)', keyboardType: TextInputType.number, onChanged: (_) => _calculateRemaining()),
                     _buildField(_remainingAmountController, 'Remaining Money (Optional)', keyboardType: TextInputType.number),
                     
                     const SizedBox(height: 20),

@@ -146,27 +146,41 @@ class _AdminPurchaseScreenState extends State<AdminPurchaseScreen> {
   }
 
   Widget _buildHeader() {
-    double total = _filteredPurchases.fold(0, (sum, p) => sum + p.totalAmount);
+    double totalPurchase = _filteredPurchases.fold(0, (sum, p) => sum + p.totalAmount);
+    double totalDaily = _filteredPurchases.fold(0, (sum, p) => sum + (p.dailyAmount ?? 0));
+    double totalRemaining = _filteredPurchases.fold(0, (sum, p) => sum + (p.remainingAmount ?? 0));
+    
     return Container(
       padding: const EdgeInsets.all(16),
-      color: AppTheme.primaryBlue.withOpacity(0.1),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+      decoration: BoxDecoration(
+        color: AppTheme.primaryBlue.withOpacity(0.05),
+        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+      ),
+      child: Column(
         children: [
-          _buildHeaderCard('Total Entries', _filteredPurchases.length.toString(), Icons.list_alt),
-          _buildHeaderCard('Total Spend', '₹${total.toStringAsFixed(0)}', Icons.account_balance_wallet),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildHeaderCard('Total Purchase', '₹${totalPurchase.toStringAsFixed(0)}', Icons.shopping_cart, Colors.blue),
+              _buildHeaderCard('Total Paid', '₹${totalDaily.toStringAsFixed(0)}', Icons.account_balance_wallet, Colors.green),
+              _buildHeaderCard('Total Remaining', '₹${totalRemaining.toStringAsFixed(0)}', Icons.money_off, Colors.red),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text('Total Entries: ${_filteredPurchases.length}', 
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade600)),
         ],
       ),
     );
   }
 
-  Widget _buildHeaderCard(String title, String value, IconData icon) {
+  Widget _buildHeaderCard(String title, String value, IconData icon, Color color) {
     return Column(
       children: [
-        Icon(icon, color: AppTheme.primaryBlue),
+        Icon(icon, color: color, size: 20),
         const SizedBox(height: 4),
-        Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        Text(title, style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
+        Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
       ],
     );
   }
@@ -224,6 +238,7 @@ class _AdminPurchaseScreenState extends State<AdminPurchaseScreen> {
         final purchasesInGroup = grouped[dateStr]!;
         final displayDate = DateFormat('dd MMM yyyy').format(DateTime.parse(dateStr));
         final dailyTotal = purchasesInGroup.fold(0.0, (sum, p) => sum + (p.dailyAmount ?? 0));
+        final remainingTotal = purchasesInGroup.fold(0.0, (sum, p) => sum + (p.remainingAmount ?? 0));
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -233,14 +248,27 @@ class _AdminPurchaseScreenState extends State<AdminPurchaseScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(displayDate, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue)),
-                  if (dailyTotal > 0)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(color: AppTheme.primaryBlue.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-                      child: Text('Daily: ₹${dailyTotal.toStringAsFixed(0)}', 
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue)),
-                    ),
+                  Text(displayDate, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue)),
+                  Row(
+                    children: [
+                      if (dailyTotal > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                          child: Text('Paid: ₹${dailyTotal.toStringAsFixed(0)}', 
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green)),
+                        ),
+                      if (remainingTotal > 0) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                          child: Text('Rem: ₹${remainingTotal.toStringAsFixed(0)}', 
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.red)),
+                        ),
+                      ],
+                    ],
+                  ),
                 ],
               ),
             ),

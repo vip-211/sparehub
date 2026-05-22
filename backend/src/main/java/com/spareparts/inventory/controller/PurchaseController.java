@@ -27,38 +27,38 @@ public class PurchaseController {
     private PurchaseService purchaseService;
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER') or hasRole('STAFF')")
     public ResponseEntity<PurchaseDto> createPurchase(@RequestBody PurchaseDto purchaseDto, @AuthenticationPrincipal UserDetailsImpl userDetails) {
         return ResponseEntity.ok(purchaseService.createPurchase(purchaseDto, userDetails.getId()));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER') or hasRole('STAFF')")
     public ResponseEntity<PurchaseDto> updatePurchase(@PathVariable Long id, @RequestBody PurchaseDto purchaseDto) {
         return ResponseEntity.ok(purchaseService.updatePurchase(id, purchaseDto));
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER') or hasRole('STAFF')")
     public ResponseEntity<List<PurchaseDto>> getAllPurchases() {
         return ResponseEntity.ok(purchaseService.getAllPurchases());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER') or hasRole('STAFF')")
     public ResponseEntity<PurchaseDto> getPurchaseById(@PathVariable Long id) {
         return ResponseEntity.ok(purchaseService.getPurchaseById(id));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER') or hasRole('STAFF')")
     public ResponseEntity<Void> deletePurchase(@PathVariable Long id) {
         purchaseService.deletePurchase(id);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/by-range")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER') or hasRole('STAFF')")
     public ResponseEntity<List<PurchaseDto>> getPurchasesByRange(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
@@ -66,13 +66,13 @@ public class PurchaseController {
     }
 
     @GetMapping("/search")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER') or hasRole('STAFF')")
     public ResponseEntity<List<PurchaseDto>> searchPurchases(@RequestParam String query) {
         return ResponseEntity.ok(purchaseService.searchPurchases(query));
     }
 
     @GetMapping("/export/excel")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER') or hasRole('STAFF')")
     public ResponseEntity<Resource> exportExcel(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) throws IOException {
