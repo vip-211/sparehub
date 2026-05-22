@@ -339,7 +339,10 @@ const MobileDashboard = () => {
               );
             case 'stats':
               const isAdmin = currentUser?.roles?.includes(ROLE_ADMIN) || currentUser?.roles?.includes(ROLE_SUPER_MANAGER);
-              if (!isAdmin) return (
+              const isStaff = currentUser?.roles?.includes(ROLE_STAFF);
+              const canManagePurchases = isAdmin || isStaff;
+
+              if (!isAdmin && !isStaff) return (
                 <div key="stats" className="grid grid-cols-2 gap-4">
                   <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center space-y-2">
                     <div className="w-12 h-12 bg-primary-50 rounded-2xl flex items-center justify-center text-primary-600">
@@ -380,22 +383,26 @@ const MobileDashboard = () => {
                     ))}
                   </div>
 
-                  {/* Admin Quick Actions */}
+                  {/* Quick Actions */}
                   <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
-                    <button 
-                      onClick={() => navigate('/purchases')}
-                      className="flex-shrink-0 flex items-center gap-3 bg-primary-600 text-white px-6 py-4 rounded-3xl shadow-lg shadow-primary-100 font-bold active:scale-95 transition-all"
-                    >
-                      <ShoppingCart size={20} />
-                      Manage Purchases
-                    </button>
-                    <button 
-                      onClick={() => navigate('/stock')}
-                      className="flex-shrink-0 flex items-center gap-3 bg-white border border-gray-100 px-6 py-4 rounded-3xl shadow-sm text-gray-700 font-bold active:scale-95 transition-all"
-                    >
-                      <Package size={20} />
-                      Check Stock
-                    </button>
+                    {canManagePurchases && (
+                      <button 
+                        onClick={() => navigate('/purchases')}
+                        className="flex-shrink-0 flex items-center gap-3 bg-primary-600 text-white px-6 py-4 rounded-3xl shadow-lg shadow-primary-100 font-bold active:scale-95 transition-all"
+                      >
+                        <ShoppingCart size={20} />
+                        Manage Purchases
+                      </button>
+                    )}
+                    {(isAdmin || isStaff) && (
+                      <button 
+                        onClick={() => navigate('/stock')}
+                        className="flex-shrink-0 flex items-center gap-3 bg-white border border-gray-100 px-6 py-4 rounded-3xl shadow-sm text-gray-700 font-bold active:scale-95 transition-all"
+                      >
+                        <Package size={20} />
+                        Check Stock
+                      </button>
+                    )}
                   </div>
                 </div>
               );

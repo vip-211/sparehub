@@ -90,7 +90,7 @@ public class PurchaseService {
                 .map(Purchase::getTotalAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         
-        first.setRemainingAmount(totalGroupAmount.subtract(amount));
+        first.setRemainingAmount(amount.subtract(totalGroupAmount));
         
         purchaseRepository.saveAll(purchases);
     }

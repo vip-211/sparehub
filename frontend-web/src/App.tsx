@@ -108,6 +108,15 @@ const App: React.FC = () => {
             {currentUser ? (
               <>
                 <span className="text-gray-600 font-medium hidden sm:inline">Welcome, {currentUser.name || currentUser.email}</span>
+                
+                {/* Common Management Links for Admin & Staff */}
+                {(isAdminOrSuper || currentUser?.roles.includes(ROLE_STAFF)) && (
+                  <Link to="/purchases" className="text-primary-600 hover:text-primary-700 font-bold flex items-center gap-1.5 bg-primary-50 px-3 py-1.5 rounded-lg border border-primary-100 transition-all shadow-sm">
+                    <ShoppingCart size={18} />
+                    Purchases
+                  </Link>
+                )}
+
                 {isAdminOrSuper && (
                   <>
                     <Link to="/admin" className="text-gray-600 hover:text-primary-600 font-medium">
@@ -118,9 +127,6 @@ const App: React.FC = () => {
                     </Link>
                     <Link to="/stock" className="text-gray-600 hover:text-primary-600 font-medium">
                       Stock
-                    </Link>
-                    <Link to="/purchases" className="text-gray-600 hover:text-primary-600 font-medium">
-                      Purchases
                     </Link>
                   </>
                 )}
@@ -133,9 +139,6 @@ const App: React.FC = () => {
                   <>
                     <Link to="/staff" className="text-gray-600 hover:text-primary-600 font-medium">
                       {t('role.staff')}
-                    </Link>
-                    <Link to="/purchases" className="text-gray-600 hover:text-primary-600 font-medium">
-                      Purchases
                     </Link>
                   </>
                 )}

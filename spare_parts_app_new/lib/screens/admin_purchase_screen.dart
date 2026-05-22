@@ -239,7 +239,7 @@ class _AdminPurchaseScreenState extends State<AdminPurchaseScreen> {
         final displayDate = DateFormat('dd MMM yyyy').format(DateTime.parse(dateStr));
         final boughtTotal = purchasesInGroup.fold(0.0, (sum, p) => sum + p.totalAmount);
         final dailyTotal = purchasesInGroup.fold(0.0, (sum, p) => sum + (p.dailyAmount ?? 0));
-        final remainingTotal = boughtTotal - dailyTotal;
+        final remainingTotal = dailyTotal - boughtTotal;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -250,9 +250,8 @@ class _AdminPurchaseScreenState extends State<AdminPurchaseScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(displayDate, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue)),
-                  Wrap(
-                    spacing: 4,
-                    runSpacing: 4,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       if (boughtTotal > 0)
                         Container(
@@ -261,6 +260,7 @@ class _AdminPurchaseScreenState extends State<AdminPurchaseScreen> {
                           child: Text('Total Money: ₹${boughtTotal.toStringAsFixed(0)}', 
                               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blue)),
                         ),
+                      const SizedBox(height: 4),
                       GestureDetector(
                         onTap: () => _editDailyPaid(DateTime.parse(dateStr), dailyTotal),
                         child: Container(
@@ -278,11 +278,23 @@ class _AdminPurchaseScreenState extends State<AdminPurchaseScreen> {
                         ),
                       ),
                       if (remainingTotal != 0)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                          child: Text('Rem: ₹${remainingTotal.toStringAsFixed(0)}', 
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.red)),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: (remainingTotal > 0 ? Colors.green : Colors.red).withOpacity(0.1), 
+                              borderRadius: BorderRadius.circular(12)
+                            ),
+                            child: Text(
+                              'Rem: ₹${remainingTotal.toStringAsFixed(0)}', 
+                              style: TextStyle(
+                                fontSize: 12, 
+                                fontWeight: FontWeight.bold, 
+                                color: remainingTotal > 0 ? Colors.green : Colors.red
+                              )
+                            ),
+                          ),
                         ),
                     ],
                   ),

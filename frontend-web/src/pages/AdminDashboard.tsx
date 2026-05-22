@@ -8,6 +8,7 @@ import { ROLE_SUPER_MANAGER, ROLE_ADMIN, ROLE_MECHANIC, ROLE_RETAILER, ROLE_WHOL
 import AuthService from '../services/auth.service';
 import Skeleton from '../components/Skeleton';
 import AdminCategories from './AdminCategories';
+import Purchases from './Purchases';
 import BarcodeScanner from '../components/BarcodeScanner';
 import { useExternalScanner } from '../hooks/useExternalScanner';
 import useSound from 'use-sound';
@@ -1556,13 +1557,7 @@ const AdminDashboard = () => {
         ].map((tab) => (
           <button
             key={tab.id}
-            onClick={() => {
-              if (tab.id === 'purchases') {
-                navigate('/purchases');
-              } else {
-                setActiveTab(tab.id);
-              }
-            }}
+            onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-2 px-4 py-3 font-bold text-sm whitespace-nowrap transition-all relative ${
               activeTab === tab.id
                 ? 'text-primary-600'
@@ -3847,6 +3842,23 @@ const AdminDashboard = () => {
                 {savingSettings ? 'Saving changes...' : 'Review changes before saving'}
               </span>
             </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'purchases' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between mb-4 px-4">
+            <div>
+              <h2 className="text-2xl font-black text-gray-900 flex items-center gap-3">
+                <ShoppingCart className="text-primary-600" size={28} />
+                Purchase Management
+              </h2>
+              <p className="text-gray-500 font-bold uppercase text-[10px] tracking-widest mt-1">Manage inventory procurement and daily expenses</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-[2.5rem] shadow-xl shadow-gray-100/50 border border-gray-100 overflow-hidden">
+            <Purchases />
           </div>
         </div>
       )}

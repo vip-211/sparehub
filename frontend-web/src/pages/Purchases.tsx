@@ -313,45 +313,51 @@ const Purchases = () => {
                     <Calendar className="w-5 h-5 text-primary-600" />
                     <span className="text-lg font-black text-gray-900">{group.date}</span>
                   </div>
-                  <div className="flex items-center gap-4">
-                     {group.totalBought > 0 && (
-                       <div className="flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-1.5 rounded-full">
-                         <ShoppingCart className="w-4 h-4" />
-                         <span className="text-sm font-bold">Total Money: ₹{group.totalBought.toLocaleString()}</span>
-                       </div>
-                     )}
-                     <div className="flex items-center gap-2 bg-emerald-100 text-emerald-700 px-4 py-1.5 rounded-full group/edit">
-                       <DollarSign className="w-4 h-4" />
-                       {editingDaily?.date === group.date ? (
-                         <div className="flex items-center gap-2">
-                           <input
-                             type="number"
-                             autoFocus
-                             className="w-24 bg-white border border-emerald-300 rounded px-2 py-0.5 text-sm focus:outline-none"
-                             value={editingDaily.amount}
-                             onChange={(e) => setEditingDaily({ ...editingDaily, amount: Number(e.target.value) })}
-                             onKeyDown={(e) => {
-                               if (e.key === 'Enter') handleUpdateDailyPaid(group.date, editingDaily.amount);
-                               if (e.key === 'Escape') setEditingDaily(null);
-                             }}
-                           />
-                           <button onClick={() => handleUpdateDailyPaid(group.date, editingDaily.amount)} className="text-xs font-bold hover:underline">Save</button>
-                           <button onClick={() => setEditingDaily(null)} className="text-xs font-bold hover:underline">Cancel</button>
-                         </div>
-                       ) : (
-                         <div className="flex items-center gap-2 cursor-pointer" onClick={() => setEditingDaily({ date: group.date, amount: group.totalDaily })}>
-                           <span className="text-sm font-bold">Bought Money: ₹{group.totalDaily.toLocaleString()}</span>
-                           <span className="text-[10px] opacity-0 group-hover/edit:opacity-100 transition-opacity">(Click to edit)</span>
-                         </div>
-                       )}
-                     </div>
-                     {(group.totalBought - group.totalDaily) !== 0 && (
-                       <div className="flex items-center gap-2 bg-rose-100 text-rose-700 px-4 py-1.5 rounded-full">
-                         <FileText className="w-4 h-4" />
-                         <span className="text-sm font-bold">Remaining: ₹{(group.totalBought - group.totalDaily).toLocaleString()}</span>
-                       </div>
-                     )}
-                   </div>
+                  <div className="flex flex-col items-end gap-2">
+                      {group.totalBought > 0 && (
+                        <div className="flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-1.5 rounded-full">
+                          <ShoppingCart className="w-4 h-4" />
+                          <span className="text-sm font-bold">Total Money: ₹{group.totalBought.toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 bg-emerald-100 text-emerald-700 px-4 py-1.5 rounded-full group/edit">
+                        <DollarSign className="w-4 h-4" />
+                        {editingDaily?.date === group.date ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              autoFocus
+                              className="w-24 bg-white border border-emerald-300 rounded px-2 py-0.5 text-sm focus:outline-none"
+                              value={editingDaily.amount}
+                              onChange={(e) => setEditingDaily({ ...editingDaily, amount: Number(e.target.value) })}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleUpdateDailyPaid(group.date, editingDaily.amount);
+                                if (e.key === 'Escape') setEditingDaily(null);
+                              }}
+                            />
+                            <button onClick={() => handleUpdateDailyPaid(group.date, editingDaily.amount)} className="text-xs font-bold hover:underline">Save</button>
+                            <button onClick={() => setEditingDaily(null)} className="text-xs font-bold hover:underline">Cancel</button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setEditingDaily({ date: group.date, amount: group.totalDaily })}>
+                            <span className="text-sm font-bold">Bought Money: ₹{group.totalDaily.toLocaleString()}</span>
+                            <span className="text-[10px] opacity-0 group-hover/edit:opacity-100 transition-opacity">(Click to edit)</span>
+                          </div>
+                        )}
+                      </div>
+                      {(group.totalDaily - group.totalBought) !== 0 && (
+                        <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full ${
+                          (group.totalDaily - group.totalBought) > 0 
+                            ? 'bg-emerald-100 text-emerald-700' 
+                            : 'bg-rose-100 text-rose-700'
+                        }`}>
+                          <FileText className="w-4 h-4" />
+                          <span className="text-sm font-bold">
+                            Remaining: ₹{(group.totalDaily - group.totalBought).toLocaleString()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">

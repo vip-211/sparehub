@@ -1,11 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { ShoppingBag, CheckCircle, Truck, MapPin, Search, MessageSquare } from 'lucide-react';
+import { ShoppingBag, CheckCircle, Truck, MapPin, Search, MessageSquare, ShoppingCart } from 'lucide-react';
 import { ROLE_STAFF } from '../services/constants';
 import AuthService from '../services/auth.service';
+import { useNavigate } from 'react-router-dom';
 
 const StaffDashboard = () => {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,7 +94,7 @@ const StaffDashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <button 
           onClick={() => setActiveTab('orders')}
           className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4 hover:shadow-md hover:border-blue-200 transition text-left group"
@@ -101,10 +103,11 @@ const StaffDashboard = () => {
             <ShoppingBag size={24} />
           </div>
           <div>
-            <p className="text-gray-500 text-sm">Active Orders</p>
-            <p className="text-2xl font-bold">{(orders || []).filter(o => o.status !== 'DELIVERED' && o.status !== 'CANCELLED').length}</p>
+            <p className="text-gray-500 text-sm font-medium">Active Orders</p>
+            <p className="text-2xl font-bold text-gray-900">{(orders || []).filter(o => o.status !== 'DELIVERED' && o.status !== 'CANCELLED').length}</p>
           </div>
         </button>
+
         <button 
           onClick={() => setActiveTab('users')}
           className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4 hover:shadow-md hover:border-indigo-200 transition text-left group"
@@ -113,8 +116,21 @@ const StaffDashboard = () => {
             <MapPin size={24} />
           </div>
           <div>
-            <p className="text-gray-500 text-sm">Total Users</p>
-            <p className="text-2xl font-bold">{(users || []).length}</p>
+            <p className="text-gray-500 text-sm font-medium">Total Users</p>
+            <p className="text-2xl font-bold text-gray-900">{(users || []).length}</p>
+          </div>
+        </button>
+
+        <button 
+          onClick={() => navigate('/purchases')}
+          className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4 hover:shadow-md hover:border-emerald-200 transition text-left group"
+        >
+          <div className="p-3 rounded-lg bg-emerald-100 text-emerald-600 group-hover:bg-emerald-200 transition-colors">
+            <ShoppingCart size={24} />
+          </div>
+          <div>
+            <p className="text-gray-500 text-sm font-medium">Purchases</p>
+            <p className="text-2xl font-bold text-gray-900">Manage</p>
           </div>
         </button>
       </div>
