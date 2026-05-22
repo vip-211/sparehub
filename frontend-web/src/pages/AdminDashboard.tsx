@@ -1472,7 +1472,7 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6 mb-10">
         <button 
           onClick={() => setActiveTab('users')}
           className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md hover:border-blue-200 transition text-left w-full group"
@@ -1539,6 +1539,7 @@ const AdminDashboard = () => {
         {[
           { id: 'users', label: 'Users', icon: Users },
           { id: 'orders', label: 'Transactions', icon: ShoppingBag },
+          { id: 'purchases', label: 'Purchases', icon: ShoppingCart },
           { id: 'requests', label: 'Order Requests', icon: MessageSquare },
           { id: 'invoicing', label: 'Invoicing', icon: FileText },
           { id: 'cashback', label: 'Cashback Points', icon: Star },
@@ -1553,7 +1554,6 @@ const AdminDashboard = () => {
           { id: 'offers', label: 'Offer Page', icon: Star },
           { id: 'layout', label: 'Layout Editor', icon: LayoutGrid },
           { id: 'settings', label: 'Settings', icon: Settings },
-          { id: 'purchases', label: 'Purchases', icon: ShoppingCart },
         ].map((tab) => (
           <button
             key={tab.id}
