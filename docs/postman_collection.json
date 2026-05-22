@@ -52,7 +52,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"email\": \"john@example.com\",\n    \"password\": \"password123\"\n}"
+							"raw": "{\n    \"identifier\": \"john@example.com\",\n    \"password\": \"password123\"\n}"
 						},
 						"url": {
 							"raw": "http://localhost:8080/api/auth/signin",
