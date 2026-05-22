@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, Navigate, Link, useNavigate, useLocation } from 'react-router-dom';
-import AuthService from './services/auth.service';
+import { ShoppingCart } from 'lucide-react';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -107,25 +107,25 @@ const App: React.FC = () => {
             
             {currentUser ? (
               <>
-                <span className="text-gray-600 font-medium hidden sm:inline">Welcome, {currentUser.name || currentUser.email}</span>
+                <span className="text-gray-600 font-medium hidden lg:inline mr-2">Welcome, {currentUser.name || currentUser.email}</span>
                 
                 {/* Common Management Links for Admin & Staff */}
                 {(isAdminOrSuper || currentUser?.roles.includes(ROLE_STAFF)) && (
-                  <Link to="/purchases" className="text-primary-600 hover:text-primary-700 font-bold flex items-center gap-1.5 bg-primary-50 px-3 py-1.5 rounded-lg border border-primary-100 transition-all shadow-sm">
-                    <ShoppingCart size={18} />
+                  <Link to="/purchases" className="text-primary-600 hover:text-primary-700 font-black flex items-center gap-1.5 bg-primary-50 px-4 py-2 rounded-xl border-2 border-primary-100 transition-all shadow-sm hover:shadow-md active:scale-95 text-xs uppercase tracking-wider">
+                    <ShoppingCart size={16} />
                     Purchases
                   </Link>
                 )}
 
                 {isAdminOrSuper && (
                   <>
-                    <Link to="/admin" className="text-gray-600 hover:text-primary-600 font-medium">
+                    <Link to="/admin" className="text-gray-600 hover:text-primary-600 font-bold text-xs uppercase tracking-wider">
                       {t('role.admin')}
                     </Link>
-                    <Link to="/admin-categories" className="text-gray-600 hover:text-primary-600 font-medium">
+                    <Link to="/admin-categories" className="text-gray-600 hover:text-primary-600 font-bold text-xs uppercase tracking-wider">
                       Categories
                     </Link>
-                    <Link to="/stock" className="text-gray-600 hover:text-primary-600 font-medium">
+                    <Link to="/stock" className="text-gray-600 hover:text-primary-600 font-bold text-xs uppercase tracking-wider">
                       Stock
                     </Link>
                   </>
