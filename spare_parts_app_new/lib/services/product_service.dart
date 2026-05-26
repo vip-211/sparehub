@@ -572,6 +572,29 @@ class ProductService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getSuggestions(String query) async {
+    if (query.isEmpty) return [];
+    try {
+      if (Constants.useRemote) {
+        final list = await _remote.getList('/products/suggest?query=${Uri.encodeComponent(query)}');
+        return list.cast<Map<String, dynamic>>();
+      }
+      // Local search suggestions
+      final db = await _dbService.database;
+      final List<Map<String, dynamic>> maps = await db.query(
+        'products',
+        columns: ['name', 'partNumber', 'sellingPrice as price', 'stock'],
+        where: '(name LIKE ? OR partNumber LIKE ?) AND deleted = 0',
+        whereArgs: ['%$query%', '%$query%'],
+        limit: 5,
+      );
+      return maps;
+    } catch (e) {
+      debugPrint('Get suggestions error: $e');
+      return [];
+    }
+  }
+
   Future<List<Product>> searchProducts(String query,
       {int page = 0, int size = 10}) async {
     if (query.isEmpty) return [];

@@ -375,81 +375,133 @@ class _AdminPurchaseScreenState extends State<AdminPurchaseScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Purchase Details', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
-              ],
-            ),
-            const Divider(),
-            _detailRow('Supplier', p.supplierName),
-            _detailRow('Mobile', p.supplierMobile ?? 'N/A'),
-            _detailRow('Invoice', p.invoiceNumber),
-            _detailRow('Date', DateFormat('dd MMM yyyy').format(p.purchaseDate)),
-            const SizedBox(height: 10),
-            const Text('Products:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            ...p.items.map((item) => Padding(
-              padding: const EdgeInsets.only(top: 8.0, left: 8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        builder: (_, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(item.productName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  Text('${item.quantity} x ₹${item.costPrice.toStringAsFixed(2)} + ₹${item.gst?.toStringAsFixed(2) ?? '0'} GST = ₹${item.totalAmount.toStringAsFixed(2)}', 
-                      style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                  if (item.partNumber != null) Text('Part No: ${item.partNumber}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  const Text('Purchase Details', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
                 ],
               ),
-            )).toList(),
-            const Divider(height: 20),
-            if (p.discount != null && p.discount! > 0)
-                _detailRow('Discount', '₹${p.discount!.toStringAsFixed(2)}'),
-            _detailRow('Grand Total', '₹${p.totalAmount.toStringAsFixed(2)}'),
-            if (p.dailyAmount != null && p.dailyAmount! > 0)
-                _detailRow('Daily Money', '₹${p.dailyAmount!.toStringAsFixed(2)}'),
-            if (p.remainingAmount != null && p.remainingAmount! > 0)
-                _detailRow('Remaining Money', '₹${p.remainingAmount!.toStringAsFixed(2)}'),
-            if (p.notes != null && p.notes!.isNotEmpty) _detailRow('Notes', p.notes!),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                if (p.billImageUrl != null || p.billPdfUrl != null)
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => BillViewerScreen(
-                              url: p.billImageUrl ?? p.billPdfUrl!,
-                              isPdf: p.billPdfUrl != null,
-                            ),
+              const Divider(),
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  children: [
+                    _detailRow('Supplier', p.supplierName),
+                    _detailRow('Mobile', p.supplierMobile ?? 'N/A'),
+                    _detailRow('Invoice', p.invoiceNumber),
+                    _detailRow('Date', DateFormat('dd MMM yyyy').format(p.purchaseDate)),
+                    const SizedBox(height: 20),
+                    const Text('Products:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    const SizedBox(height: 10),
+                    ...p.items.map((item) => Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade100),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(item.productName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 4),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('${item.quantity} x ₹${item.costPrice.toStringAsFixed(0)}', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                              Text('₹${item.totalAmount.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryBlue)),
+                            ],
                           ),
-                        );
-                      },
-                      icon: const Icon(Icons.visibility),
-                      label: const Text('View Bill'),
-                      style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue, foregroundColor: Colors.white),
+                          if (item.partNumber != null && item.partNumber!.isNotEmpty)
+                            Text('Part No: ${item.partNumber}', style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
+                        ],
+                      ),
+                    )).toList(),
+                    const Divider(height: 30),
+                    if (p.discount != null && p.discount! > 0)
+                        _detailRow('Discount', '₹${p.discount!.toStringAsFixed(0)}'),
+                    _detailRow('Grand Total', '₹${p.totalAmount.toStringAsFixed(0)}'),
+                    if (p.dailyAmount != null && p.dailyAmount! > 0)
+                        _detailRow('Daily Money', '₹${p.dailyAmount!.toStringAsFixed(0)}'),
+                    if (p.remainingAmount != null && p.remainingAmount! > 0)
+                        _detailRow('Remaining Money', '₹${p.remainingAmount!.toStringAsFixed(0)}'),
+                    if (p.notes != null && p.notes!.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      _detailRow('Notes', p.notes!),
+                    ],
+                    const SizedBox(height: 20),
+                    if (p.billImageUrl != null || p.billPdfUrl != null) ...[
+                      const Text('Attachments:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          if (p.billImageUrl != null)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8.0),
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => BillViewerScreen(
+                                        url: p.billImageUrl!,
+                                        isPdf: false,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.image),
+                                label: const Text('View Bill'),
+                              ),
+                            ),
+                          if (p.billPdfUrl != null)
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => BillViewerScreen(
+                                      url: p.billPdfUrl!,
+                                      isPdf: true,
+                                    ),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.picture_as_pdf),
+                              label: const Text('View PDF'),
+                            ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 20),
+                    OutlinedButton.icon(
+                      onPressed: () => _confirmDelete(p),
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      label: const Text('Delete Entry', style: TextStyle(color: Colors.red)),
+                      style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.red)),
                     ),
-                  ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _confirmDelete(p),
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    label: const Text('Delete', style: TextStyle(color: Colors.red)),
-                  ),
+                    const SizedBox(height: 30),
+                  ],
                 ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );

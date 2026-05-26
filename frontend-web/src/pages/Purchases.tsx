@@ -24,6 +24,8 @@ const Purchases = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const [newPurchase, setNewPurchase] = useState({
     supplierName: '',
@@ -63,6 +65,24 @@ const Purchases = () => {
   useEffect(() => {
     fetchPurchases();
   }, []);
+
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (searchTerm.length < 2) {
+        setSuggestions([]);
+        return;
+      }
+      try {
+        const res = await api.get(`products/suggest?query=${encodeURIComponent(searchTerm)}`);
+        setSuggestions(res.data || []);
+      } catch (err) {
+        console.error('Failed to fetch suggestions', err);
+      }
+    };
+
+    const timer = setTimeout(fetchSuggestions, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   useEffect(() => {
     let grandTotal = 0;
@@ -377,9 +397,42 @@ const Purchases = () => {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            onFocus={() => setShowSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
             placeholder="Search by supplier, product, or invoice number..."
             className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-gray-200 focus:outline-none focus:ring-4 focus:ring-primary-50 focus:border-primary-400 transition-all text-gray-700 font-medium shadow-sm"
           />
+          
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-2xl shadow-2xl z-[100] overflow-hidden">
+              {suggestions.map((s, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    setSearchTerm(s.name);
+                    setShowSuggestions(false);
+                  }}
+                  className="w-full text-left px-5 py-4 hover:bg-primary-50 flex items-center justify-between group/item transition-colors border-b border-gray-50 last:border-0"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 bg-gray-50 text-gray-400 group-hover/item:bg-white group-hover/item:text-primary-500 rounded-xl transition-colors">
+                      <Search size={16} />
+                    </div>
+                    <div>
+                      <div className="font-bold text-gray-900 group-hover/item:text-primary-600 transition-colors">{s.name}</div>
+                      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{s.partNumber}</div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <div className="text-xs font-black text-primary-600">₹{s.price}</div>
+                    <div className={`text-[9px] font-black uppercase tracking-tighter ${s.stock > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                      {s.stock > 0 ? `${s.stock} in stock` : 'Out of Stock'}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <button
           type="submit"

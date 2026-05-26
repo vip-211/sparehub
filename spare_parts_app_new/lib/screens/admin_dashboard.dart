@@ -892,101 +892,103 @@ class _AdminOverviewScreenState extends State<AdminOverviewScreen> {
           title: const Text('Assign User Location'),
           content: SizedBox(
             width: 420,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<User>(
-                  isExpanded: true,
-                  value: selected,
-                  items: users
-                      .map((u) => DropdownMenuItem<User>(
-                            value: u,
-                            child: Text(u.name ?? u.email),
-                          ))
-                      .toList(),
-                  onChanged: (val) => setState(() => selected = val),
-                  decoration: const InputDecoration(
-                    labelText: 'Select User',
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<User>(
+                    isExpanded: true,
+                    value: selected,
+                    items: users
+                        .map((u) => DropdownMenuItem<User>(
+                              value: u,
+                              child: Text(u.name ?? u.email),
+                            ))
+                        .toList(),
+                    onChanged: (val) => setState(() => selected = val),
+                    decoration: const InputDecoration(
+                      labelText: 'Select User',
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: latCtrl,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(labelText: 'Latitude'),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: lonCtrl,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(labelText: 'Longitude'),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: addrCtrl,
-                  maxLines: 2,
-                  decoration: const InputDecoration(labelText: 'Address'),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          final serviceEnabled =
-                              await Geolocator.isLocationServiceEnabled();
-                          if (!serviceEnabled) return;
-                          var permission = await Geolocator.checkPermission();
-                          if (permission == LocationPermission.denied) {
-                            permission = await Geolocator.requestPermission();
-                            if (permission == LocationPermission.denied) return;
-                          }
-                          if (permission == LocationPermission.deniedForever) {
-                            return;
-                          }
-                          final pos = await Geolocator.getCurrentPosition(
-                              locationSettings: const LocationSettings(
-                                  accuracy: LocationAccuracy.high));
-                          setState(() {
-                            latCtrl.text = pos.latitude.toStringAsFixed(6);
-                            lonCtrl.text = pos.longitude.toStringAsFixed(6);
-                          });
-                        },
-                        icon: const Icon(Icons.gps_fixed, size: 18),
-                        label: const Text('Use My GPS'),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () async {
-                          final lat = double.tryParse(latCtrl.text);
-                          final lon = double.tryParse(lonCtrl.text);
-                          if (lat == null || lon == null) return;
-                          try {
-                            final uri = Uri.parse(
-                                'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=$lat&lon=$lon');
-                            final res = await http.get(uri,
-                                headers: {'User-Agent': 'spares-hub-app'});
-                            if (res.statusCode >= 200 && res.statusCode < 300) {
-                              final data =
-                                  jsonDecode(res.body) as Map<String, dynamic>;
-                              final disp =
-                                  data['display_name']?.toString() ?? '';
-                              setState(() {
-                                addrCtrl.text = disp;
-                              });
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: latCtrl,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: 'Latitude'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: lonCtrl,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: 'Longitude'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: addrCtrl,
+                    maxLines: 2,
+                    decoration: const InputDecoration(labelText: 'Address'),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            final serviceEnabled =
+                                await Geolocator.isLocationServiceEnabled();
+                            if (!serviceEnabled) return;
+                            var permission = await Geolocator.checkPermission();
+                            if (permission == LocationPermission.denied) {
+                              permission = await Geolocator.requestPermission();
+                              if (permission == LocationPermission.denied) return;
                             }
-                          } catch (_) {}
-                        },
-                        child: const Text('Reverse Geocode'),
+                            if (permission == LocationPermission.deniedForever) {
+                              return;
+                            }
+                            final pos = await Geolocator.getCurrentPosition(
+                                locationSettings: const LocationSettings(
+                                    accuracy: LocationAccuracy.high));
+                            setState(() {
+                              latCtrl.text = pos.latitude.toStringAsFixed(6);
+                              lonCtrl.text = pos.longitude.toStringAsFixed(6);
+                            });
+                          },
+                          icon: const Icon(Icons.gps_fixed, size: 18),
+                          label: const Text('Use My GPS'),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () async {
+                            final lat = double.tryParse(latCtrl.text);
+                            final lon = double.tryParse(lonCtrl.text);
+                            if (lat == null || lon == null) return;
+                            try {
+                              final uri = Uri.parse(
+                                  'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=$lat&lon=$lon');
+                              final res = await http.get(uri,
+                                  headers: {'User-Agent': 'spares-hub-app'});
+                              if (res.statusCode >= 200 && res.statusCode < 300) {
+                                final data =
+                                    jsonDecode(res.body) as Map<String, dynamic>;
+                                final disp =
+                                    data['display_name']?.toString() ?? '';
+                                setState(() {
+                                  addrCtrl.text = disp;
+                                });
+                              }
+                            } catch (_) {}
+                          },
+                          child: const Text('Reverse Geocode'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
           actions: [
@@ -1189,138 +1191,143 @@ class _ManageHomeLayoutScreenState extends State<ManageHomeLayoutScreen> {
     };
 
     return Scaffold(
-      body: Row(
-        children: [
-          // Main Editor
-          Expanded(
-            flex: 2,
-            child: Column(
-              children: [
-                const Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Text(
-                    'Drag and drop to reorder. Swipe left to remove.',
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                ),
-                Expanded(
-                  child: ReorderableListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    onReorder: (oldIndex, newIndex) {
-                      setState(() {
-                        if (newIndex > oldIndex) newIndex -= 1;
-                        final item = _layout.removeAt(oldIndex);
-                        _layout.insert(newIndex, item);
-                      });
-                    },
-                    children: List.generate(_layout.length, (index) {
-                      final comp = _layout[index];
-                      return Dismissible(
-                        key: ValueKey('$comp-$index'),
-                        direction: DismissDirection.endToStart,
-                        background: Container(
-                          alignment: Alignment.centerRight,
-                          padding: const EdgeInsets.only(right: 20),
-                          color: Colors.red,
-                          child: const Icon(Icons.delete, color: Colors.white),
-                        ),
-                        onDismissed: (direction) {
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          bool isWide = constraints.maxWidth > 600;
+          return Row(
+            children: [
+              // Main Editor
+              Expanded(
+                flex: 3,
+                child: Column(
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Text(
+                        'Drag and drop to reorder. Swipe left to remove.',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                    ),
+                    Expanded(
+                      child: ReorderableListView(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        onReorder: (oldIndex, newIndex) {
                           setState(() {
-                            _layout.removeAt(index);
+                            if (newIndex > oldIndex) newIndex -= 1;
+                            final item = _layout.removeAt(oldIndex);
+                            _layout.insert(newIndex, item);
                           });
                         },
-                        child: Card(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          elevation: 2,
+                        children: List.generate(_layout.length, (index) {
+                          final comp = _layout[index];
+                          return Dismissible(
+                            key: ValueKey('$comp-$index'),
+                            direction: DismissDirection.endToStart,
+                            background: Container(
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.only(right: 20),
+                              color: Colors.red,
+                              child: const Icon(Icons.delete, color: Colors.white),
+                            ),
+                            onDismissed: (direction) {
+                              setState(() {
+                                _layout.removeAt(index);
+                              });
+                            },
+                            child: Card(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8),
+                                leading: CircleAvatar(
+                                  backgroundColor: Colors.blue.shade50,
+                                  child: Icon(componentIcons[comp] ?? Icons.extension,
+                                      color: Colors.blue),
+                                ),
+                                title: Text(
+                                  componentNames[comp] ?? comp,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                ),
+                                trailing: const Icon(Icons.drag_handle, color: Colors.grey),
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: ElevatedButton.icon(
+                        onPressed: _saveLayout,
+                        icon: const Icon(Icons.save),
+                        label: const Text('Save Layout'),
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 50),
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12)),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
-                            leading: CircleAvatar(
-                              backgroundColor: Colors.blue.shade50,
-                              child: Icon(componentIcons[comp] ?? Icons.extension,
-                                  color: Colors.blue),
-                            ),
-                            title: Text(
-                              componentNames[comp] ?? comp,
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            trailing: const Icon(Icons.drag_handle, color: Colors.grey),
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: ElevatedButton.icon(
-                    onPressed: _saveLayout,
-                    icon: const Icon(Icons.save),
-                    label: const Text('Save Home Layout'),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 50),
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Component Library Sidebar
-          const VerticalDivider(width: 1),
-          Container(
-            width: 120,
-            color: Colors.grey.shade50,
-            child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              children: [
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8),
-                  child: Text('Add Items',
-                      style:
-                          TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                ),
-                const SizedBox(height: 12),
-                ...componentNames.entries.map((entry) {
-                  return Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    child: InkWell(
-                      onTap: () {
-                        setState(() {
-                          _layout.add(entry.key);
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey.shade200),
-                        ),
-                        child: Column(
-                          children: [
-                            Icon(componentIcons[entry.key] ?? Icons.extension,
-                                color: Colors.blue, size: 24),
-                            const SizedBox(height: 4),
-                            Text(entry.value.split(' ')[0],
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(fontSize: 10)),
-                          ],
                         ),
                       ),
                     ),
-                  );
-                }).toList(),
-              ],
-            ),
-          ),
-        ],
+                  ],
+                ),
+              ),
+              // Component Library Sidebar
+              const VerticalDivider(width: 1),
+              Container(
+                width: isWide ? 120 : 80,
+                color: Colors.grey.shade50,
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(isWide ? 'Add Items' : 'Add',
+                          style:
+                              const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    ),
+                    const SizedBox(height: 12),
+                    ...componentNames.entries.map((entry) {
+                      return Padding(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                        child: InkWell(
+                          onTap: () {
+                            setState(() {
+                              _layout.add(entry.key);
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey.shade200),
+                            ),
+                            child: Column(
+                              children: [
+                                Icon(componentIcons[entry.key] ?? Icons.extension,
+                                    color: Colors.blue, size: 20),
+                                const SizedBox(height: 4),
+                                Text(entry.value.split(' ')[0],
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(fontSize: 9)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

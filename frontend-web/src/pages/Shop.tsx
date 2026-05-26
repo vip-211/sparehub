@@ -20,6 +20,8 @@ const Shop: React.FC = () => {
   const [isListening, setIsListening] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [scannerMode, setScannerMode] = useState<'camera' | 'external'>('camera');
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const { addItem } = useCart();
 
   // Listen for external hardware scanner
@@ -88,6 +90,24 @@ const Shop: React.FC = () => {
     };
     recognition.start();
   };
+
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (searchTerm.length < 2) {
+        setSuggestions([]);
+        return;
+      }
+      try {
+        const res = await api.get(`products/suggest?query=${encodeURIComponent(searchTerm)}`);
+        setSuggestions(res.data || []);
+      } catch (err) {
+        console.error('Failed to fetch suggestions', err);
+      }
+    };
+
+    const timer = setTimeout(fetchSuggestions, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   useEffect(() => {
     const run = async () => {
@@ -204,8 +224,48 @@ const Shop: React.FC = () => {
               placeholder={t('shop.search')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
               className="w-full pl-12 pr-4 py-4 bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 shadow-sm transition-all text-lg font-bold"
             />
+            
+            <AnimatePresence>
+              {showSuggestions && suggestions.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-2xl shadow-2xl z-[100] overflow-hidden"
+                >
+                  {suggestions.map((s, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setSearchTerm(s.name);
+                        setShowSuggestions(false);
+                      }}
+                      className="w-full text-left px-5 py-4 hover:bg-primary-50 flex items-center justify-between group/item transition-colors border-b border-gray-50 last:border-0"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="p-2 bg-gray-50 text-gray-400 group-hover/item:bg-white group-hover/item:text-primary-500 rounded-xl transition-colors">
+                          <Search size={18} />
+                        </div>
+                        <div>
+                          <div className="font-black text-gray-900 group-hover/item:text-primary-600 transition-colors">{s.name}</div>
+                          <div className="text-xs font-bold text-gray-400 uppercase tracking-widest">{s.partNumber}</div>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <div className="text-sm font-black text-primary-600">₹{s.price}</div>
+                        <div className={`text-[10px] font-black uppercase tracking-tighter ${s.stock > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                          {s.stock > 0 ? `${s.stock} in stock` : 'Out of Stock'}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
           <div className="relative group">
             <button
