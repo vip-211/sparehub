@@ -27,10 +27,15 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
   final ProductService _productService = ProductService();
   final OrderService _orderService = OrderService();
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
   List<Product> _hotDeals = [];
   List<Map<String, dynamic>> _categories = [];
   List<Map<String, dynamic>> _banners = [];
+  List<Map<String, dynamic>> _suggestions = [];
   bool _isLoading = true;
+  OverlayEntry? _overlayEntry;
+  final LayerLink _layerLink = LayerLink();
+  Timer? _debounce;
   String _homeTitle = 'Parts Mitra';
   late PageController _bannerPageController;
   Timer? _bannerTimer;
@@ -40,14 +45,83 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
   void initState() {
     super.initState();
     _bannerPageController = PageController();
+    _searchFocusNode.addListener(() {
+      if (!_searchFocusNode.hasFocus) {
+        Future.delayed(const Duration(milliseconds: 200), () {
+          _removeOverlay();
+        });
+      } else if (_searchController.text.length >= 2 && _suggestions.isNotEmpty) {
+        _showOverlay();
+      }
+    });
     _loadData();
+  }
+
+  void _showOverlay() {
+    _removeOverlay();
+    _overlayEntry = _createOverlayEntry();
+    Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  void _removeOverlay() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
+
+  OverlayEntry _createOverlayEntry() {
+    RenderBox renderBox = context.findRenderObject() as RenderBox;
+    var size = renderBox.size;
+
+    return OverlayEntry(
+      builder: (context) => Positioned(
+        width: size.width - 40,
+        child: CompositedTransformFollower(
+          link: _layerLink,
+          showWhenUnlinked: false,
+          offset: const Offset(0, 65),
+          child: Material(
+            elevation: 8,
+            borderRadius: BorderRadius.circular(20),
+            color: Colors.white,
+            child: Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.4,
+              ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.grey.shade100),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: _suggestions.map((s) => ListTile(
+                    leading: const Icon(Icons.search, size: 18, color: AppTheme.primaryBlue),
+                    title: Text(s['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text(s['partNumber'] ?? '', style: const TextStyle(fontSize: 12)),
+                    trailing: Text('₹${s['price']}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryBlue)),
+                    onTap: () {
+                      _searchController.text = s['name'];
+                      _removeOverlay();
+                      Navigator.pushNamed(context, '/search', arguments: {'query': s['name']});
+                    },
+                  )).toList(),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   void dispose() {
+    _removeOverlay();
     _searchController.dispose();
+    _searchFocusNode.dispose();
     _bannerPageController.dispose();
     _bannerTimer?.cancel();
+    _debounce?.cancel();
     super.dispose();
   }
 
@@ -85,6 +159,40 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
     });
   }
 
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    
+    if (query.length < 2) {
+      setState(() {
+        _suggestions = [];
+      });
+      _removeOverlay();
+      return;
+    }
+
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      _fetchSuggestions(query);
+    });
+  }
+
+  Future<void> _fetchSuggestions(String query) async {
+    try {
+      final list = await _productService.getSuggestions(query);
+      if (mounted) {
+        setState(() {
+          _suggestions = list;
+        });
+        if (list.isNotEmpty && _searchFocusNode.hasFocus) {
+          _showOverlay();
+        } else {
+          _removeOverlay();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching suggestions: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = Provider.of<AuthProvider>(context).user;
@@ -112,11 +220,13 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
       expandedHeight: 220,
       pinned: true,
       elevation: 0,
+      clipBehavior: Clip.none,
       backgroundColor: AppTheme.primaryBlue,
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
           decoration: BoxDecoration(gradient: AppTheme.primaryGradient),
           child: Stack(
+            clipBehavior: Clip.none,
             children: [
               Positioned(
                 right: -40, top: -40,
@@ -170,36 +280,52 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
   }
 
   Widget _buildSearchBar() {
-    return Container(
-      height: 60,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 20, offset: const Offset(0, 8))],
-      ),
-      child: TextField(
-        controller: _searchController,
-        onSubmitted: (q) => Navigator.pushNamed(context, '/search', arguments: {'query': q}),
-        decoration: InputDecoration(
-          hintText: 'Search spare parts...',
-          hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.w600),
-          prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.primaryBlue, size: 28),
-          suffixIcon: Container(
-            margin: const EdgeInsets.only(right: 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildSearchActionIcon(Icons.mic_none_rounded, AppTheme.secondaryAmber, () {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Voice search coming soon!')));
-                }),
-                _buildSearchActionIcon(Icons.qr_code_scanner_rounded, AppTheme.primaryBlue, () {
-                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Scanner coming soon!')));
-                }),
-              ],
+    return CompositedTransformTarget(
+      link: _layerLink,
+      child: Container(
+        height: 60,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 20, offset: const Offset(0, 8))],
+        ),
+        child: TextField(
+          controller: _searchController,
+          focusNode: _searchFocusNode,
+          onChanged: _onSearchChanged,
+          onSubmitted: (q) {
+            _removeOverlay();
+            Navigator.pushNamed(context, '/search', arguments: {'query': q});
+          },
+          decoration: InputDecoration(
+            hintText: 'Search spare parts...',
+            hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.w600),
+            prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.primaryBlue, size: 28),
+            suffixIcon: Container(
+              margin: const EdgeInsets.only(right: 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_searchController.text.isNotEmpty)
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 20, color: Colors.grey),
+                      onPressed: () {
+                        _searchController.clear();
+                        _onSearchChanged('');
+                      },
+                    ),
+                  _buildSearchActionIcon(Icons.mic_none_rounded, AppTheme.secondaryAmber, () {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Voice search coming soon!')));
+                  }),
+                  _buildSearchActionIcon(Icons.qr_code_scanner_rounded, AppTheme.primaryBlue, () {
+                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Scanner coming soon!')));
+                  }),
+                ],
+              ),
             ),
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(vertical: 18),
           ),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 18),
         ),
       ),
     );

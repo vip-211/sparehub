@@ -46,7 +46,9 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
   List<Map<String, dynamic>> _suggestions = [];
   int? _selectedCategoryId;
   Map<int, double> _prices = {};
-  bool _showSuggestions = false;
+  OverlayEntry? _overlayEntry;
+  final LayerLink _layerLink = LayerLink();
+  final FocusNode _searchFocusNode = FocusNode();
 
   bool _isLoading = false;
   bool _isMoreLoading = false;
@@ -66,6 +68,15 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _searchFocusNode.addListener(() {
+      if (!_searchFocusNode.hasFocus) {
+        Future.delayed(const Duration(milliseconds: 200), () {
+          _removeOverlay();
+        });
+      } else if (_searchController.text.length >= 2 && _suggestions.isNotEmpty) {
+        _showOverlay();
+      }
+    });
     
     // Check for initial query passed from home
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -98,6 +109,68 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
         !_isLoading) {
       _fetchMoreProducts();
     }
+  }
+
+  void _showOverlay() {
+    _removeOverlay();
+    _overlayEntry = _createOverlayEntry();
+    Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  void _removeOverlay() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
+
+  OverlayEntry _createOverlayEntry() {
+    RenderBox renderBox = context.findRenderObject() as RenderBox;
+    var size = renderBox.size;
+
+    return OverlayEntry(
+      builder: (context) => Positioned(
+        width: size.width - 80, // Adjust for screen padding
+        child: CompositedTransformFollower(
+          link: _layerLink,
+          showWhenUnlinked: false,
+          offset: const Offset(0, 60),
+          child: Material(
+            elevation: 8,
+            borderRadius: BorderRadius.circular(20),
+            color: Theme.of(context).colorScheme.surface,
+            child: Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.4,
+              ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                    color: Theme.of(context).colorScheme.outlineVariant),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: _suggestions
+                      .map((s) => ListTile(
+                            leading: const Icon(Icons.search, size: 18),
+                            title: Text(s['name'] ?? '',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold)),
+                            subtitle: Text(s['partNumber'] ?? ''),
+                            trailing: Text('₹${s['price']}'),
+                            onTap: () {
+                              _searchController.text = s['name'];
+                              _removeOverlay();
+                              _searchProducts(s['name']);
+                            },
+                          ))
+                      .toList(),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _fetchInitialData() async {
@@ -254,8 +327,8 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
     if (query.length < 2) {
       setState(() {
         _suggestions = [];
-        _showSuggestions = false;
       });
+      _removeOverlay();
     } else {
       _fetchSuggestions(query);
     }
@@ -275,8 +348,12 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
       if (mounted) {
         setState(() {
           _suggestions = list;
-          _showSuggestions = true;
         });
+        if (list.isNotEmpty && _searchFocusNode.hasFocus) {
+          _showOverlay();
+        } else {
+          _removeOverlay();
+        }
       }
     } catch (e) {
       debugPrint('Error fetching suggestions: $e');
@@ -911,112 +988,78 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                   Row(
                     children: [
                       Expanded(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.03),
-                                blurRadius: 15,
-                                offset: const Offset(0, 5),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              TextField(
-                                controller: _searchController,
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: Theme.of(context).colorScheme.onSurface),
-                                decoration: InputDecoration(
-                                  hintText: 'Search products...',
-                                  hintStyle: TextStyle(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurfaceVariant),
-                                  prefixIcon: Icon(Icons.search_rounded,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurfaceVariant),
-                                  suffixIcon: _searchController.text.isNotEmpty
-                                      ? IconButton(
-                                          icon: Icon(Icons.close_rounded,
-                                              size: 20,
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurfaceVariant),
-                                          onPressed: () {
-                                            _searchController.clear();
-                                            _onSearchChanged('');
-                                          },
-                                        )
-                                      : null,
-                                  filled: true,
-                                  fillColor: Theme.of(context)
-                                      .colorScheme
-                                      .surfaceContainerHighest
-                                      .withOpacity(0.5),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                    borderSide: BorderSide(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary
-                                            .withOpacity(0.3),
-                                        width: 1),
-                                  ),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 20, vertical: 16),
+                        child: CompositedTransformTarget(
+                          link: _layerLink,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.03),
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 5),
                                 ),
-                                onChanged: _onSearchChanged,
-                                onSubmitted: (val) {
-                                  setState(() => _showSuggestions = false);
-                                  _searchProducts(val);
-                                },
-                              ),
-                              if (_showSuggestions && _suggestions.isNotEmpty)
-                                Container(
-                                  margin: const EdgeInsets.only(top: 4),
-                                  constraints: BoxConstraints(
-                                    maxHeight: MediaQuery.of(context).size.height * 0.4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.surface,
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.1),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 5),
-                                      )
-                                    ],
-                                  ),
-                                  child: SingleChildScrollView(
-                                    child: Column(
-                                      children: _suggestions.map((s) => ListTile(
-                                        leading: const Icon(Icons.search, size: 18),
-                                        title: Text(s['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-                                        subtitle: Text(s['partNumber'] ?? ''),
-                                        trailing: Text('₹${s['price']}'),
-                                        onTap: () {
-                                          _searchController.text = s['name'];
-                                          setState(() => _showSuggestions = false);
-                                          _searchProducts(s['name']);
+                              ],
+                            ),
+                            child: TextField(
+                              controller: _searchController,
+                              focusNode: _searchFocusNode,
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).colorScheme.onSurface),
+                              decoration: InputDecoration(
+                                hintText: 'Search products...',
+                                hintStyle: TextStyle(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant),
+                                prefixIcon: Icon(Icons.search_rounded,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant),
+                                suffixIcon: _searchController.text.isNotEmpty
+                                    ? IconButton(
+                                        icon: Icon(Icons.close_rounded,
+                                            size: 20,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurfaceVariant),
+                                        onPressed: () {
+                                          _searchController.clear();
+                                          _onSearchChanged('');
                                         },
-                                      )).toList(),
-                                    ),
-                                  ),
+                                      )
+                                    : null,
+                                filled: true,
+                                fillColor: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerHighest
+                                    .withOpacity(0.5),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                  borderSide: BorderSide.none,
                                 ),
-                            ],
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                  borderSide: BorderSide.none,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                  borderSide: BorderSide(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary
+                                          .withOpacity(0.3),
+                                      width: 1),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 16),
+                              ),
+                              onChanged: _onSearchChanged,
+                              onSubmitted: (val) {
+                                _removeOverlay();
+                                _searchProducts(val);
+                              },
+                            ),
                           ),
                         ),
                       ),

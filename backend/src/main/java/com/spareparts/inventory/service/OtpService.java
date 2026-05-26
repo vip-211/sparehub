@@ -34,6 +34,9 @@ public class OtpService {
     @Autowired
     private SystemSettingRepository systemSettingRepository;
 
+    @Autowired
+    private EmailService emailService;
+
     @Value("${spring.mail.username}")
     private String mailFrom;
 
@@ -88,6 +91,7 @@ public class OtpService {
     }
 
     public void sendOtpEmail(String email, String otp) throws Exception {
+        log.info("FINAL OTP for {}: {}", email, otp);
         String logoUrl = systemSettingRepository.getSettingValue("LOGO_URL", "https://partsmitra.app/logo.png");
         String subject = "Your OTP for Parts Mitra";
         
@@ -116,22 +120,11 @@ public class OtpService {
                 + "</div>"
                 + "</body></html>";
 
-        if ("SENDGRID".equalsIgnoreCase(mailProvider) && sendgridApiKey != null && !sendgridApiKey.isEmpty()) {
-            String from = (sendgridFromEmail != null && !sendgridFromEmail.isEmpty()) ? sendgridFromEmail : mailFrom;
-            String body = "{\"personalizations\":[{\"to\":[{\"email\":\"" + email + "\"}]}],\"from\":{\"email\":\"" + from + "\"},\"subject\":\"" + subject + "\","
-                    + "\"content\":["
-                    + "{\"type\":\"text/plain\",\"value\":\"" + plainText.replace("\n", "\\n") + "\"},"
-                    + "{\"type\":\"text/html\",\"value\":\"" + htmlContent.replace("\"", "\\\"").replace("\n", "") + "\"}"
-                    + "]}";
-            HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create("https://api.sendgrid.com/v3/mail/send"))
-                    .header("Authorization", "Bearer " + sendgridApiKey)
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(body))
-                    .build();
-            HttpClient.newHttpClient().send(req, HttpResponse.BodyHandlers.ofString());
+        if ("SENDGRID".equalsIgnoreCase(mailProvider)) {
+            emailService.sendOtp(email, otp);
             return;
         }
+        if ("MAILGUN".equalsIgnoreCase(mailProvider) && mailgunApiKey != null && !mailgunApiKey.isEmpty() && mailgunDomain != null && !mailgunDomain.isEmpty()) {
         if ("MAILGUN".equalsIgnoreCase(mailProvider) && mailgunApiKey != null && !mailgunApiKey.isEmpty() && mailgunDomain != null && !mailgunDomain.isEmpty()) {
             String from = (mailgunFromEmail != null && !mailgunFromEmail.isEmpty()) ? mailgunFromEmail : mailFrom;
             String form = "from=" + URLEncoder.encode(from, StandardCharsets.UTF_8)
@@ -146,8 +139,14 @@ public class OtpService {
                     .header("Content-Type", "application/x-www-form-urlencoded")
                     .POST(HttpRequest.BodyPublishers.ofString(form))
                     .build();
-            HttpClient.newHttpClient().send(req, HttpResponse.BodyHandlers.ofString());
-            return;
+            HttpResponse<String> response = HttpClient.newHttpClient().send(req, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                log.info("OTP sent via Mailgun to {}", email);
+                return;
+            } else {
+                log.error("Mailgun failed with status {}: {}", response.statusCode(), response.body());
+                // Fall through to SMTP
+            }
         }
         if ("BREVO".equalsIgnoreCase(mailProvider) && brevoApiKey != null && !brevoApiKey.isEmpty()) {
             String from = (brevoFromEmail != null && !brevoFromEmail.isEmpty()) ? brevoFromEmail : mailFrom;
@@ -158,8 +157,14 @@ public class OtpService {
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(body))
                     .build();
-            HttpClient.newHttpClient().send(req, HttpResponse.BodyHandlers.ofString());
-            return;
+            HttpResponse<String> response = HttpClient.newHttpClient().send(req, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                log.info("OTP sent via Brevo to {}", email);
+                return;
+            } else {
+                log.error("Brevo failed with status {}: {}", response.statusCode(), response.body());
+                // Fall through to SMTP
+            }
         }
         if ("NONE".equalsIgnoreCase(mailProvider)) {
             return;
@@ -173,4 +178,4 @@ public class OtpService {
         helper.setText(plainText, htmlContent);
         mailSender.send(message);
     }
-}
+    }}

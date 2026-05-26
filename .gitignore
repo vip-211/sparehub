@@ -34,6 +34,9 @@ spare_parts_app_new/android/.gradle/
 spare_parts_app_new/android/build/
 spare_parts_app_new/android/local.properties
 spare_parts_app_new/android/key.properties
+spare_parts_app_new/android/upload-keystore.jks
+spare_parts_app_new/android/*.hprof
+spare_parts_app_new/android/hs_err_pid*.log
 
 # Flutter app build outputs and local configs
 spare_parts_app/build/
@@ -57,6 +60,7 @@ spare_parts_app/web/.dart_tool/
 
 # Large Heap Dumps and Binaries
 **/*.hprof
+**/hs_err_pid*.log
 **/*.jar
 !bfg.jar
 **/node_modules/
