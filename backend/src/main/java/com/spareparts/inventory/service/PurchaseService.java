@@ -1,7 +1,9 @@
 package com.spareparts.inventory.service;
 
 import com.spareparts.inventory.dto.PurchaseDto;
+import com.spareparts.inventory.dto.PurchaseItemDto;
 import com.spareparts.inventory.entity.Purchase;
+import com.spareparts.inventory.entity.PurchaseItem;
 import com.spareparts.inventory.entity.User;
 import com.spareparts.inventory.repository.PurchaseRepository;
 import com.spareparts.inventory.repository.UserRepository;
@@ -110,7 +112,7 @@ public class PurchaseService {
     }
 
     public ByteArrayInputStream exportToExcel(List<PurchaseDto> purchases) throws IOException {
-        String[] columns = {"Date", "Invoice Number", "Supplier", "Product", "Quantity", "Cost Price", "Selling Price", "GST", "Total", "Bill URL"};
+        String[] columns = {"Date", "Invoice Number", "Supplier", "Product", "Part Number", "Quantity", "Cost Price", "Selling Price", "GST", "Total", "Discount", "Grand Total", "Bill URL"};
 
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("Purchases");
@@ -132,18 +134,39 @@ public class PurchaseService {
 
             int rowIdx = 1;
             for (PurchaseDto p : purchases) {
-                Row row = sheet.createRow(rowIdx++);
-
-                row.createCell(0).setCellValue(p.getPurchaseDate().toString());
-                row.createCell(1).setCellValue(p.getInvoiceNumber());
-                row.createCell(2).setCellValue(p.getSupplierName());
-                row.createCell(3).setCellValue(p.getProductName());
-                row.createCell(4).setCellValue(p.getQuantity());
-                row.createCell(5).setCellValue(p.getCostPrice().doubleValue());
-                row.createCell(6).setCellValue(p.getSellingPrice() != null ? p.getSellingPrice().doubleValue() : 0.0);
-                row.createCell(7).setCellValue(p.getGst() != null ? p.getGst().doubleValue() : 0.0);
-                row.createCell(8).setCellValue(p.getTotalAmount().doubleValue());
-                row.createCell(9).setCellValue(p.getBillImageUrl() != null ? p.getBillImageUrl() : p.getBillPdfUrl());
+                if (p.getItems() != null && !p.getItems().isEmpty()) {
+                    for (PurchaseItemDto item : p.getItems()) {
+                        Row row = sheet.createRow(rowIdx++);
+                        row.createCell(0).setCellValue(p.getPurchaseDate().toString());
+                        row.createCell(1).setCellValue(p.getInvoiceNumber());
+                        row.createCell(2).setCellValue(p.getSupplierName());
+                        row.createCell(3).setCellValue(item.getProductName());
+                        row.createCell(4).setCellValue(item.getPartNumber());
+                        row.createCell(5).setCellValue(item.getQuantity());
+                        row.createCell(6).setCellValue(item.getCostPrice().doubleValue());
+                        row.createCell(7).setCellValue(item.getSellingPrice() != null ? item.getSellingPrice().doubleValue() : 0.0);
+                        row.createCell(8).setCellValue(item.getGst() != null ? item.getGst().doubleValue() : 0.0);
+                        row.createCell(9).setCellValue(item.getTotalAmount().doubleValue());
+                        row.createCell(10).setCellValue(p.getDiscount() != null ? p.getDiscount().doubleValue() : 0.0);
+                        row.createCell(11).setCellValue(p.getTotalAmount().doubleValue());
+                        row.createCell(12).setCellValue(p.getBillImageUrl() != null ? p.getBillImageUrl() : p.getBillPdfUrl());
+                    }
+                } else {
+                    Row row = sheet.createRow(rowIdx++);
+                    row.createCell(0).setCellValue(p.getPurchaseDate().toString());
+                    row.createCell(1).setCellValue(p.getInvoiceNumber());
+                    row.createCell(2).setCellValue(p.getSupplierName());
+                    row.createCell(3).setCellValue("-");
+                    row.createCell(4).setCellValue("-");
+                    row.createCell(5).setCellValue(0);
+                    row.createCell(6).setCellValue(0.0);
+                    row.createCell(7).setCellValue(0.0);
+                    row.createCell(8).setCellValue(0.0);
+                    row.createCell(9).setCellValue(0.0);
+                    row.createCell(10).setCellValue(p.getDiscount() != null ? p.getDiscount().doubleValue() : 0.0);
+                    row.createCell(11).setCellValue(p.getTotalAmount().doubleValue());
+                    row.createCell(12).setCellValue(p.getBillImageUrl() != null ? p.getBillImageUrl() : p.getBillPdfUrl());
+                }
             }
 
             workbook.write(out);
@@ -156,18 +179,35 @@ public class PurchaseService {
         purchase.setSupplierMobile(dto.getSupplierMobile());
         purchase.setInvoiceNumber(dto.getInvoiceNumber());
         purchase.setPurchaseDate(dto.getPurchaseDate());
-        purchase.setProductName(dto.getProductName());
-        purchase.setPartNumber(dto.getPartNumber());
-        purchase.setQuantity(dto.getQuantity());
-        purchase.setCostPrice(dto.getCostPrice());
-        purchase.setSellingPrice(dto.getSellingPrice());
-        purchase.setGst(dto.getGst());
+        purchase.setDiscount(dto.getDiscount());
         purchase.setTotalAmount(dto.getTotalAmount());
         purchase.setNotes(dto.getNotes());
         purchase.setBillImageUrl(dto.getBillImageUrl());
         purchase.setBillPdfUrl(dto.getBillPdfUrl());
         purchase.setDailyAmount(dto.getDailyAmount());
         purchase.setRemainingAmount(dto.getRemainingAmount());
+
+        // Update items
+        if (purchase.getItems() != null) {
+            purchase.getItems().clear();
+        } else {
+            purchase.setItems(new java.util.ArrayList<>());
+        }
+
+        if (dto.getItems() != null) {
+            for (PurchaseItemDto itemDto : dto.getItems()) {
+                PurchaseItem item = new PurchaseItem();
+                item.setPurchase(purchase);
+                item.setProductName(itemDto.getProductName());
+                item.setPartNumber(itemDto.getPartNumber());
+                item.setQuantity(itemDto.getQuantity());
+                item.setCostPrice(itemDto.getCostPrice());
+                item.setSellingPrice(itemDto.getSellingPrice());
+                item.setGst(itemDto.getGst());
+                item.setTotalAmount(itemDto.getTotalAmount());
+                purchase.getItems().add(item);
+            }
+        }
     }
 
     private PurchaseDto convertToDto(Purchase p) {
@@ -177,18 +217,29 @@ public class PurchaseService {
         dto.setSupplierMobile(p.getSupplierMobile());
         dto.setInvoiceNumber(p.getInvoiceNumber());
         dto.setPurchaseDate(p.getPurchaseDate());
-        dto.setProductName(p.getProductName());
-        dto.setPartNumber(p.getPartNumber());
-        dto.setQuantity(p.getQuantity());
-        dto.setCostPrice(p.getCostPrice());
-        dto.setSellingPrice(p.getSellingPrice());
-        dto.setGst(p.getGst());
+        dto.setDiscount(p.getDiscount());
         dto.setTotalAmount(p.getTotalAmount());
         dto.setNotes(p.getNotes());
         dto.setBillImageUrl(p.getBillImageUrl());
         dto.setBillPdfUrl(p.getBillPdfUrl());
         dto.setDailyAmount(p.getDailyAmount());
         dto.setRemainingAmount(p.getRemainingAmount());
+        
+        if (p.getItems() != null) {
+            dto.setItems(p.getItems().stream().map(item -> {
+                PurchaseItemDto itemDto = new PurchaseItemDto();
+                itemDto.setId(item.getId());
+                itemDto.setProductName(item.getProductName());
+                itemDto.setPartNumber(item.getPartNumber());
+                itemDto.setQuantity(item.getQuantity());
+                itemDto.setCostPrice(item.getCostPrice());
+                itemDto.setSellingPrice(item.getSellingPrice());
+                itemDto.setGst(item.getGst());
+                itemDto.setTotalAmount(item.getTotalAmount());
+                return itemDto;
+            }).collect(Collectors.toList()));
+        }
+
         if (p.getCreatedBy() != null) {
             dto.setCreatedById(p.getCreatedBy().getId());
             dto.setCreatedByName(p.getCreatedBy().getName());

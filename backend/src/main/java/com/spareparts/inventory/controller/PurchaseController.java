@@ -2,7 +2,8 @@ package com.spareparts.inventory.controller;
 
 import com.spareparts.inventory.dto.PurchaseDto;
 import com.spareparts.inventory.security.UserDetailsImpl;
-import com.spareparts.inventory.service.PurchaseService;
+import com.spareparts.inventory.service.AIService;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import com.spareparts.inventory.service.PurchaseService;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -25,6 +27,15 @@ public class PurchaseController {
 
     @Autowired
     private PurchaseService purchaseService;
+
+    @Autowired
+    private AIService aiService;
+
+    @PostMapping("/scan-bill")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER') or hasRole('STAFF')")
+    public ResponseEntity<String> scanBill(@RequestParam("file") MultipartFile file) {
+        return ResponseEntity.ok(aiService.parseBillImage(file));
+    }
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_MANAGER') or hasRole('STAFF')")

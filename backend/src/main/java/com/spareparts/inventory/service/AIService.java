@@ -13,6 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.Base64;
 import java.util.Collections;
@@ -20,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.io.IOException;
 
 import org.springframework.transaction.annotation.Transactional;
 
@@ -243,6 +245,102 @@ public class AIService {
             chatMessageRepository.save(bMsg);
         } catch (Exception e) {
             log.error("AIService: Failed to save chat history: {}", e.getMessage());
+        }
+    }
+
+    public String parseBillImage(MultipartFile file) {
+        if (geminiApiKey == null || geminiApiKey.isEmpty()) {
+            return "{\"error\": \"Gemini API key not configured\"}";
+        }
+
+        try {
+            byte[] fileBytes = file.getBytes();
+            String base64Image = Base64.getEncoder().encodeToString(fileBytes);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            String prompt = "You are a specialized OCR agent for auto spare parts bills. Analyze the provided image and extract all product information into a structured JSON format.\n" +
+                    "Extracted JSON should strictly follow this structure:\n" +
+                    "{\n" +
+                    "  \"supplierName\": \"string\",\n" +
+                    "  \"invoiceNumber\": \"string\",\n" +
+                    "  \"purchaseDate\": \"YYYY-MM-DD\",\n" +
+                    "  \"items\": [\n" +
+                    "    {\n" +
+                    "      \"productName\": \"string\",\n" +
+                    "      \"partNumber\": \"string\",\n" +
+                    "      \"quantity\": number,\n" +
+                    "      \"costPrice\": number,\n" +
+                    "      \"gst\": number,\n" +
+                    "      \"totalAmount\": number\n" +
+                    "    }\n" +
+                    "  ],\n" +
+                    "  \"discount\": number,\n" +
+                    "  \"totalAmount\": number,\n" +
+                    "  \"totalQuantity\": number\n" +
+                    "}\n\n" +
+                    "Guidelines:\n" +
+                    "1. 'partNumber' is usually a code like '01721-k01-d00'.\n" +
+                    "2. 'productName' is the description like '6g air fillter'.\n" +
+                    "3. 'quantity' is under the 'QTY' column.\n" +
+                    "4. 'costPrice' is the 'RATE' or 'MRP'.\n" +
+                    "5. 'discount' is under 'DISC%' or 'DISC'. Calculate the total discount amount if only percentage is given.\n" +
+                    "6. 'totalAmount' for the bill is the final 'Grand Total'.\n" +
+                    "7. 'totalQuantity' is the sum of all quantities detected.\n" +
+                    "8. If a value is missing, use null for strings and 0 for numbers.\n" +
+                    "9. Return ONLY the raw JSON object, no markdown blocks.";
+
+            Map<String, Object> requestBody = new HashMap<>();
+            Map<String, Object> content = new HashMap<>();
+            
+            Map<String, Object> textPart = new HashMap<>();
+            textPart.put("text", prompt);
+            
+            Map<String, Object> imagePart = new HashMap<>();
+            Map<String, Object> inlineData = new HashMap<>();
+            inlineData.put("mime_type", file.getContentType());
+            inlineData.put("data", base64Image);
+            imagePart.put("inline_data", inlineData);
+            
+            content.put("parts", List.of(textPart, imagePart));
+            requestBody.put("contents", Collections.singletonList(content));
+
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+            Map<String, Object> response = restTemplate.postForObject(GEMINI_API_URL + geminiApiKey, entity, Map.class);
+            
+            if (response != null && response.containsKey("candidates")) {
+                List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.get("candidates");
+                if (!candidates.isEmpty()) {
+                    Map<String, Object> candidate = candidates.get(0);
+                    Map<String, Object> contentRes = (Map<String, Object>) candidate.get("content");
+                    if (contentRes != null && contentRes.containsKey("parts")) {
+                        List<Map<String, Object>> partsRes = (List<Map<String, Object>>) contentRes.get("parts");
+                        if (!partsRes.isEmpty()) {
+                            Object t = partsRes.get(0).get("text");
+                            if (t != null) {
+                                String result = t.toString().trim();
+                                // Clean up markdown if AI includes it
+                                if (result.startsWith("```json")) {
+                                    result = result.substring(7);
+                                }
+                                if (result.endsWith("```")) {
+                                    result = result.substring(0, result.length() - 3);
+                                }
+                                return result.trim();
+                            }
+                        }
+                    }
+                }
+            }
+            return "{\"error\": \"Failed to parse image with Gemini\"}";
+
+        } catch (IOException e) {
+            log.error("OCR Error: {}", e.getMessage());
+            return "{\"error\": \"Error reading file bytes\"}";
+        } catch (Exception e) {
+            log.error("OCR General Error: {}", e.getMessage());
+            return "{\"error\": \"Unexpected error during OCR\"}";
         }
     }
 

@@ -17,12 +17,8 @@ public class PurchaseDto {
     private String supplierMobile;
     private String invoiceNumber;
     private LocalDate purchaseDate;
-    private String productName;
-    private String partNumber;
-    private Integer quantity;
-    private BigDecimal costPrice;
-    private BigDecimal sellingPrice;
-    private BigDecimal gst;
+    private java.util.List<PurchaseItemDto> items;
+    private BigDecimal discount;
     private BigDecimal totalAmount;
     private String notes;
     private String billImageUrl;

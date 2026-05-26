@@ -38,25 +38,11 @@ public class Purchase {
     @Column(name = "purchase_date")
     private LocalDate purchaseDate;
 
-    @NotBlank
-    @Column(name = "product_name")
-    private String productName;
+    @OneToMany(mappedBy = "purchase", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<PurchaseItem> items = new java.util.ArrayList<>();
 
-    @Column(name = "part_number")
-    private String partNumber;
-
-    @NotNull
-    private Integer quantity;
-
-    @NotNull
-    @Column(name = "cost_price", precision = 10, scale = 2)
-    private BigDecimal costPrice;
-
-    @Column(name = "selling_price", precision = 10, scale = 2)
-    private BigDecimal sellingPrice;
-
-    @Column(name = "gst", precision = 10, scale = 2)
-    private BigDecimal gst;
+    @Column(name = "discount", precision = 10, scale = 2)
+    private BigDecimal discount = BigDecimal.ZERO;
 
     @NotNull
     @Column(name = "total_amount", precision = 10, scale = 2)

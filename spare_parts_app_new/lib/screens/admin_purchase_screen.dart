@@ -50,8 +50,10 @@ class _AdminPurchaseScreenState extends State<AdminPurchaseScreen> {
     setState(() {
       _filteredPurchases = _purchases.where((p) {
         final matchesQuery = p.supplierName.toLowerCase().contains(query.toLowerCase()) ||
-            p.productName.toLowerCase().contains(query.toLowerCase()) ||
-            p.invoiceNumber.toLowerCase().contains(query.toLowerCase());
+            p.invoiceNumber.toLowerCase().contains(query.toLowerCase()) ||
+            p.items.any((item) => 
+                item.productName.toLowerCase().contains(query.toLowerCase()) ||
+                (item.partNumber?.toLowerCase().contains(query.toLowerCase()) ?? false));
         
         if (_selectedDateRange == null) return matchesQuery;
         
@@ -309,12 +311,14 @@ class _AdminPurchaseScreenState extends State<AdminPurchaseScreen> {
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('${p.productName} (${p.quantity} units)'),
+                    Text(p.items.isEmpty ? 'No products' : p.items.length == 1 ? p.items[0].productName : '${p.items[0].productName} (+${p.items.length - 1} more)'),
                     Text('Inv: ${p.invoiceNumber}'),
                     if (p.dailyAmount != null && p.dailyAmount! > 0)
                       Text('Daily Money: ₹${p.dailyAmount!.toStringAsFixed(2)}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w500)),
                     if (p.remainingAmount != null && p.remainingAmount! > 0)
                       Text('Remaining: ₹${p.remainingAmount!.toStringAsFixed(2)}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w500)),
+                    if (p.discount != null && p.discount! > 0)
+                      Text('Discount: ₹${p.discount!.toStringAsFixed(2)}', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.w500)),
                   ],
                 ),
                 trailing: Column(
@@ -390,11 +394,24 @@ class _AdminPurchaseScreenState extends State<AdminPurchaseScreen> {
             _detailRow('Mobile', p.supplierMobile ?? 'N/A'),
             _detailRow('Invoice', p.invoiceNumber),
             _detailRow('Date', DateFormat('dd MMM yyyy').format(p.purchaseDate)),
-            _detailRow('Product', p.productName),
-            _detailRow('Part No', p.partNumber ?? 'N/A'),
-            _detailRow('Quantity', p.quantity.toString()),
-            _detailRow('Cost Price', '₹${p.costPrice.toStringAsFixed(2)}'),
-            _detailRow('Total', '₹${p.totalAmount.toStringAsFixed(2)}'),
+            const SizedBox(height: 10),
+            const Text('Products:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            ...p.items.map((item) => Padding(
+              padding: const EdgeInsets.only(top: 8.0, left: 8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(item.productName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text('${item.quantity} x ₹${item.costPrice.toStringAsFixed(2)} + ₹${item.gst?.toStringAsFixed(2) ?? '0'} GST = ₹${item.totalAmount.toStringAsFixed(2)}', 
+                      style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  if (item.partNumber != null) Text('Part No: ${item.partNumber}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                ],
+              ),
+            )).toList(),
+            const Divider(height: 20),
+            if (p.discount != null && p.discount! > 0)
+                _detailRow('Discount', '₹${p.discount!.toStringAsFixed(2)}'),
+            _detailRow('Grand Total', '₹${p.totalAmount.toStringAsFixed(2)}'),
             if (p.dailyAmount != null && p.dailyAmount! > 0)
                 _detailRow('Daily Money', '₹${p.dailyAmount!.toStringAsFixed(2)}'),
             if (p.remainingAmount != null && p.remainingAmount! > 0)

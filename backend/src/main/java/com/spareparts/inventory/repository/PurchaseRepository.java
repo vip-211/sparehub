@@ -13,11 +13,11 @@ public interface PurchaseRepository extends JpaRepository<Purchase, Long> {
     List<Purchase> findByPurchaseDateBetween(LocalDate startDate, LocalDate endDate);
     List<Purchase> findByPurchaseDate(LocalDate date);
     
-    @Query("SELECT p FROM Purchase p WHERE " +
+    @Query("SELECT DISTINCT p FROM Purchase p LEFT JOIN p.items i WHERE " +
            "LOWER(p.supplierName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
            "LOWER(p.invoiceNumber) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-           "LOWER(p.productName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-           "LOWER(p.partNumber) LIKE LOWER(CONCAT('%', :query, '%'))")
+           "LOWER(i.productName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(i.partNumber) LIKE LOWER(CONCAT('%', :query, '%'))")
     List<Purchase> searchPurchases(String query);
     
     boolean existsByInvoiceNumber(String invoiceNumber);

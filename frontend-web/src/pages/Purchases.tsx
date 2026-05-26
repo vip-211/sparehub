@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api, { API_BASE_URL } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
-import { Search, Plus, FileText, Download, Trash2, Calendar, User, Phone, Tag, Hash, ShoppingCart, DollarSign, Percent, FileCheck, X, Upload, Eye } from 'lucide-react';
+import { Search, Plus, FileText, Download, Trash2, Calendar, User, Phone, Tag, Hash, ShoppingCart, DollarSign, Percent, FileCheck, X, Upload, Eye, Camera, Loader2 } from 'lucide-react';
 import Skeleton from '../components/Skeleton';
 import { ROLE_ADMIN, ROLE_SUPER_MANAGER } from '../services/constants';
 import AuthService from '../services/auth.service';
@@ -23,18 +23,25 @@ const Purchases = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
 
   const [newPurchase, setNewPurchase] = useState({
     supplierName: '',
     supplierMobile: '',
     invoiceNumber: '',
     purchaseDate: new Date().toISOString().split('T')[0],
-    productName: '',
-    partNumber: '',
-    quantity: 0,
-    costPrice: 0,
-    sellingPrice: 0,
-    gst: 0,
+    items: [
+      {
+        productName: '',
+        partNumber: '',
+        quantity: 0,
+        costPrice: 0,
+        sellingPrice: 0,
+        gst: 0,
+        totalAmount: 0
+      }
+    ],
+    discount: 0,
     totalAmount: 0,
     notes: '',
     billImageUrl: '',
@@ -58,17 +65,26 @@ const Purchases = () => {
   }, []);
 
   useEffect(() => {
-    const qty = Number(newPurchase.quantity) || 0;
-    const price = Number(newPurchase.costPrice) || 0;
-    const gst = Number(newPurchase.gst) || 0;
-    const total = (qty * price) + gst;
-    if (newPurchase.totalAmount !== total) {
-        setNewPurchase(prev => ({ 
-          ...prev, 
-          totalAmount: total
-        }));
+    let grandTotal = 0;
+    const updatedItems = newPurchase.items.map(item => {
+      const qty = Number(item.quantity) || 0;
+      const price = Number(item.costPrice) || 0;
+      const gst = Number(item.gst) || 0;
+      const itemTotal = (qty * price) + gst;
+      grandTotal += itemTotal;
+      return { ...item, totalAmount: itemTotal };
+    });
+
+    const finalTotal = grandTotal - (Number(newPurchase.discount) || 0);
+
+    if (JSON.stringify(newPurchase.items) !== JSON.stringify(updatedItems) || newPurchase.totalAmount !== finalTotal) {
+      setNewPurchase(prev => ({
+        ...prev,
+        items: updatedItems,
+        totalAmount: finalTotal
+      }));
     }
-  }, [newPurchase.quantity, newPurchase.costPrice, newPurchase.gst]);
+  }, [newPurchase.items, newPurchase.discount]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,6 +127,54 @@ const Purchases = () => {
     }
   };
 
+  const handleScanBill = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsScanning(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await api.post('purchases/scan-bill', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
+      
+      if (data.error) {
+        alert(data.error);
+        return;
+      }
+
+      setNewPurchase(prev => ({
+        ...prev,
+        supplierName: data.supplierName || prev.supplierName,
+        invoiceNumber: data.invoiceNumber || prev.invoiceNumber,
+        purchaseDate: data.purchaseDate || prev.purchaseDate,
+        items: data.items && data.items.length > 0 ? data.items.map((item: any) => ({
+          productName: item.productName || '',
+          partNumber: item.partNumber || '',
+          quantity: item.quantity || 0,
+          costPrice: item.costPrice || 0,
+          sellingPrice: item.sellingPrice || 0,
+          gst: item.gst || 0,
+          totalAmount: item.totalAmount || 0
+        })) : prev.items,
+        discount: data.discount || 0,
+        totalAmount: data.totalAmount || 0,
+        notes: data.notes || `Total items detected: ${data.totalQuantity || 0}`
+      }));
+      
+      alert('Bill scanned successfully!');
+    } catch (err) {
+      console.error('Scan error:', err);
+      alert('Failed to scan bill. Please try again or enter manually.');
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
   const [editingDaily, setEditingDaily] = useState<{ date: string, amount: number } | null>(null);
 
   const handleUpdateDailyPaid = async (date: string, amount: number) => {
@@ -147,6 +211,37 @@ const Purchases = () => {
     }), { totalPurchase: 0, totalDaily: 0, totalRemaining: 0 });
   }, [purchases]);
 
+  const addItem = () => {
+    setNewPurchase({
+      ...newPurchase,
+      items: [
+        ...newPurchase.items,
+        {
+          productName: '',
+          partNumber: '',
+          quantity: 0,
+          costPrice: 0,
+          sellingPrice: 0,
+          gst: 0,
+          totalAmount: 0
+        }
+      ]
+    });
+  };
+
+  const removeItem = (index: number) => {
+    if (newPurchase.items.length === 1) return;
+    const updatedItems = [...newPurchase.items];
+    updatedItems.splice(index, 1);
+    setNewPurchase({ ...newPurchase, items: updatedItems });
+  };
+
+  const handleItemChange = (index: number, field: string, value: any) => {
+    const updatedItems = [...newPurchase.items];
+    updatedItems[index] = { ...updatedItems[index], [field]: value };
+    setNewPurchase({ ...newPurchase, items: updatedItems });
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -168,12 +263,18 @@ const Purchases = () => {
       supplierMobile: '',
       invoiceNumber: '',
       purchaseDate: new Date().toISOString().split('T')[0],
-      productName: '',
-      partNumber: '',
-      quantity: 0,
-      costPrice: 0,
-      sellingPrice: 0,
-      gst: 0,
+      items: [
+        {
+          productName: '',
+          partNumber: '',
+          quantity: 0,
+          costPrice: 0,
+          sellingPrice: 0,
+          gst: 0,
+          totalAmount: 0
+        }
+      ],
+      discount: 0,
       totalAmount: 0,
       notes: '',
       billImageUrl: '',
@@ -374,72 +475,150 @@ const Purchases = () => {
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                       {group.items.map((p) => (
-                        <tr key={p.id} className="hover:bg-gray-50/50 transition-colors group">
-                          <td className="px-6 py-4">
-                            <span className="text-sm font-bold text-gray-900">#{p.invoiceNumber}</span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex flex-col">
-                              <span className="text-sm font-bold text-gray-900">{p.supplierName}</span>
-                              <span className="text-xs font-medium text-gray-400">{p.supplierMobile}</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex flex-col">
-                              <span className="text-sm font-bold text-gray-900">{p.productName}</span>
-                              <span className="text-xs font-medium text-primary-600 bg-primary-50 px-2 py-0.5 rounded-md inline-block w-fit">
-                                {p.partNumber}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex flex-col">
-                              <span className="text-sm font-black text-gray-900">₹{p.totalAmount?.toLocaleString()}</span>
-                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
-                                {p.quantity} x ₹{p.costPrice} + ₹{p.gst} GST
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex flex-col gap-1">
-                                {p.dailyAmount > 0 && (
-                                    <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md w-fit">
-                                        Daily: ₹{p.dailyAmount.toLocaleString()}
+                        <React.Fragment key={p.id}>
+                          {p.items && p.items.length > 0 ? (
+                            p.items.map((item: any, idx: number) => (
+                              <tr key={`${p.id}-${idx}`} className="hover:bg-gray-50/50 transition-colors group">
+                                {idx === 0 && (
+                                  <>
+                                    <td className="px-6 py-4" rowSpan={p.items.length}>
+                                      <span className="text-sm font-bold text-gray-900">#{p.invoiceNumber}</span>
+                                    </td>
+                                    <td className="px-6 py-4" rowSpan={p.items.length}>
+                                      <div className="flex flex-col">
+                                        <span className="text-sm font-bold text-gray-900">{p.supplierName}</span>
+                                        <span className="text-xs font-medium text-gray-400">{p.supplierMobile}</span>
+                                      </div>
+                                    </td>
+                                  </>
+                                )}
+                                <td className="px-6 py-4">
+                                  <div className="flex flex-col">
+                                    <span className="text-sm font-bold text-gray-900">{item.productName}</span>
+                                    <span className="text-xs font-medium text-primary-600 bg-primary-50 px-2 py-0.5 rounded-md inline-block w-fit">
+                                      {item.partNumber}
                                     </span>
-                                )}
-                                {p.remainingAmount > 0 && (
-                                    <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-md w-fit">
-                                        Remaining: ₹{p.remainingAmount.toLocaleString()}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <div className="flex flex-col">
+                                    <span className="text-sm font-black text-gray-900">₹{item.totalAmount?.toLocaleString()}</span>
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                                      {item.quantity} x ₹{item.costPrice} + ₹{item.gst} GST
                                     </span>
+                                  </div>
+                                </td>
+                                {idx === 0 && (
+                                  <>
+                                    <td className="px-6 py-4" rowSpan={p.items.length}>
+                                      <div className="flex flex-col gap-1">
+                                          {p.dailyAmount > 0 && (
+                                              <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md w-fit">
+                                                  Daily: ₹{p.dailyAmount.toLocaleString()}
+                                              </span>
+                                          )}
+                                          {p.remainingAmount > 0 && (
+                                              <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-md w-fit">
+                                                  Remaining: ₹{p.remainingAmount.toLocaleString()}
+                                              </span>
+                                          )}
+                                          {p.discount > 0 && (
+                                              <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md w-fit">
+                                                  Discount: ₹{p.discount.toLocaleString()}
+                                              </span>
+                                          )}
+                                          {!(p.dailyAmount > 0) && !(p.remainingAmount > 0) && !(p.discount > 0) && (
+                                              <span className="text-sm text-gray-300">-</span>
+                                          )}
+                                      </div>
+                                    </td>
+                                    <td className="px-6 py-4" rowSpan={p.items.length}>
+                                      <div className="flex gap-2">
+                                        {p.billImageUrl && (
+                                          <a href={getImageUrl(p.billImageUrl)} target="_blank" rel="noreferrer" className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors" title="View Image">
+                                            <Eye className="w-4 h-4" />
+                                          </a>
+                                        )}
+                                        {p.billPdfUrl && (
+                                          <a href={getImageUrl(p.billPdfUrl)} target="_blank" rel="noreferrer" className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors" title="View PDF">
+                                            <FileText className="w-4 h-4" />
+                                          </a>
+                                        )}
+                                      </div>
+                                    </td>
+                                    <td className="px-6 py-4 text-right" rowSpan={p.items.length}>
+                                      <button
+                                        onClick={() => handleDelete(p.id)}
+                                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                      >
+                                        <Trash2 className="w-5 h-5" />
+                                      </button>
+                                    </td>
+                                  </>
                                 )}
-                                {!(p.dailyAmount > 0) && !(p.remainingAmount > 0) && (
-                                    <span className="text-sm text-gray-300">-</span>
-                                )}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex gap-2">
-                              {p.billImageUrl && (
-                                <a href={getImageUrl(p.billImageUrl)} target="_blank" rel="noreferrer" className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors" title="View Image">
-                                  <Eye className="w-4 h-4" />
-                                </a>
-                              )}
-                              {p.billPdfUrl && (
-                                <a href={getImageUrl(p.billPdfUrl)} target="_blank" rel="noreferrer" className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors" title="View PDF">
-                                  <FileText className="w-4 h-4" />
-                                </a>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <button
-                              onClick={() => handleDelete(p.id)}
-                              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                            >
-                              <Trash2 className="w-5 h-5" />
-                            </button>
-                          </td>
-                        </tr>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr key={p.id} className="hover:bg-gray-50/50 transition-colors group">
+                              <td className="px-6 py-4">
+                                <span className="text-sm font-bold text-gray-900">#{p.invoiceNumber}</span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-bold text-gray-900">{p.supplierName}</span>
+                                  <span className="text-xs font-medium text-gray-400">{p.supplierMobile}</span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4" colSpan={2}>
+                                <span className="text-sm text-gray-400 italic">No products recorded</span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="flex flex-col gap-1">
+                                    {p.dailyAmount > 0 && (
+                                        <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md w-fit">
+                                            Daily: ₹{p.dailyAmount.toLocaleString()}
+                                        </span>
+                                    )}
+                                    {p.remainingAmount > 0 && (
+                                        <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-md w-fit">
+                                            Remaining: ₹{p.remainingAmount.toLocaleString()}
+                                        </span>
+                                    )}
+                                    {p.discount > 0 && (
+                                        <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md w-fit">
+                                            Discount: ₹{p.discount.toLocaleString()}
+                                        </span>
+                                    )}
+                                    {!(p.dailyAmount > 0) && !(p.remainingAmount > 0) && !(p.discount > 0) && (
+                                        <span className="text-sm text-gray-300">-</span>
+                                    )}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="flex gap-2">
+                                  {p.billImageUrl && (
+                                    <a href={getImageUrl(p.billImageUrl)} target="_blank" rel="noreferrer" className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors" title="View Image">
+                                      <Eye className="w-4 h-4" />
+                                    </a>
+                                  )}
+                                  {p.billPdfUrl && (
+                                    <a href={getImageUrl(p.billPdfUrl)} target="_blank" rel="noreferrer" className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors" title="View PDF">
+                                      <FileText className="w-4 h-4" />
+                                    </a>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <button
+                                  onClick={() => handleDelete(p.id)}
+                                  className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                >
+                                  <Trash2 className="w-5 h-5" />
+                                </button>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
                       ))}
                     </tbody>
                   </table>
@@ -467,9 +646,26 @@ const Purchases = () => {
             <form onSubmit={handleSave} className="flex-grow overflow-y-auto p-8 space-y-8">
               {/* Supplier Info Section */}
               <div className="space-y-4">
-                <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                  <User className="w-3 h-3" /> Supplier Information
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                    <User className="w-3 h-3" /> Supplier Information
+                  </h3>
+                  <div className="flex items-center gap-3">
+                    <label className={`flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg font-bold hover:bg-emerald-100 transition-all text-xs cursor-pointer ${isScanning ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                      {isScanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                      {isScanning ? 'Scanning...' : 'Scan Bill Photo'}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleScanBill} disabled={isScanning} />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={addItem}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-primary-50 text-primary-600 rounded-lg font-bold hover:bg-primary-100 transition-all text-xs"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Another Product
+                    </button>
+                  </div>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-gray-700 ml-1">Supplier Name *</label>
@@ -512,83 +708,126 @@ const Purchases = () => {
                 </div>
               </div>
 
-              {/* Product Info Section */}
-              <div className="space-y-4">
-                <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                  <Tag className="w-3 h-3" /> Product Details
+              {/* Items Section */}
+              <div className="space-y-6">
+                {newPurchase.items.map((item, index) => (
+                  <div key={index} className="space-y-6 p-6 bg-gray-50/50 rounded-[2rem] border border-gray-100 relative group/item">
+                    {newPurchase.items.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeItem(index)}
+                        className="absolute -top-2 -right-2 p-2 bg-white text-rose-500 rounded-full shadow-md border border-rose-100 hover:bg-rose-50 transition-all opacity-0 group-hover/item:opacity-100"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                    
+                    <div className="space-y-4">
+                      <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                        <Tag className="w-3 h-3" /> Product {index + 1}
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-sm font-bold text-gray-700 ml-1">Product Name *</label>
+                          <input
+                            required
+                            value={item.productName}
+                            onChange={(e) => handleItemChange(index, 'productName', e.target.value)}
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary-50 focus:border-primary-400 outline-none transition-all font-medium bg-white"
+                            placeholder="e.g. Brake Pads"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-bold text-gray-700 ml-1">Part Number</label>
+                          <input
+                            value={item.partNumber}
+                            onChange={(e) => handleItemChange(index, 'partNumber', e.target.value)}
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary-50 focus:border-primary-400 outline-none transition-all font-medium bg-white"
+                            placeholder="SKU-8821"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-gray-500 ml-1">Quantity</label>
+                        <input
+                          type="number"
+                          required
+                          value={item.quantity}
+                          onChange={(e) => handleItemChange(index, 'quantity', Number(e.target.value))}
+                          className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:bg-white outline-none transition-all font-bold text-lg bg-white"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-gray-500 ml-1">Cost Price (ea)</label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">₹</span>
+                          <input
+                            type="number"
+                            required
+                            value={item.costPrice}
+                            onChange={(e) => handleItemChange(index, 'costPrice', Number(e.target.value))}
+                            className="w-full pl-8 pr-4 py-3 rounded-xl border border-gray-200 focus:bg-white outline-none transition-all font-bold text-lg bg-white"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-gray-500 ml-1">GST/Tax (Total)</label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">₹</span>
+                          <input
+                            type="number"
+                            value={item.gst}
+                            onChange={(e) => handleItemChange(index, 'gst', Number(e.target.value))}
+                            className="w-full pl-8 pr-4 py-3 rounded-xl border border-gray-200 focus:bg-white outline-none transition-all font-bold text-lg bg-white"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-gray-500 ml-1">Item Total</label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">₹</span>
+                          <input
+                            readOnly
+                            value={item.totalAmount}
+                            className="w-full pl-8 pr-4 py-3 rounded-xl border border-gray-100 bg-gray-50 outline-none font-bold text-lg text-gray-600"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Summary Section */}
+              <div className="bg-primary-50/50 p-6 rounded-[2rem] border border-primary-100 space-y-4">
+                <h3 className="text-xs font-black text-primary-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                  <DollarSign className="w-3 h-3" /> Final Summary
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-gray-700 ml-1">Product Name *</label>
-                    <input
-                      required
-                      value={newPurchase.productName}
-                      onChange={(e) => setNewPurchase({ ...newPurchase, productName: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary-50 focus:border-primary-400 outline-none transition-all font-medium"
-                      placeholder="e.g. Brake Pads"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-gray-700 ml-1">Part Number</label>
-                    <input
-                      value={newPurchase.partNumber}
-                      onChange={(e) => setNewPurchase({ ...newPurchase, partNumber: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary-50 focus:border-primary-400 outline-none transition-all font-medium"
-                      placeholder="SKU-8821"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Pricing Section */}
-              <div className="space-y-4">
-                <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                  <DollarSign className="w-3 h-3" /> Pricing & Quantity
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 bg-gray-50 p-6 rounded-2xl border border-gray-100">
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-gray-500 ml-1">Quantity</label>
-                    <input
-                      type="number"
-                      required
-                      value={newPurchase.quantity}
-                      onChange={(e) => setNewPurchase({ ...newPurchase, quantity: Number(e.target.value) })}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:bg-white outline-none transition-all font-bold text-lg"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-gray-500 ml-1">Cost Price (ea)</label>
+                    <label className="text-sm font-bold text-gray-700 ml-1">Discount Amount</label>
                     <div className="relative">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">₹</span>
                       <input
                         type="number"
-                        required
-                        value={newPurchase.costPrice}
-                        onChange={(e) => setNewPurchase({ ...newPurchase, costPrice: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-3 rounded-xl border border-gray-200 focus:bg-white outline-none transition-all font-bold text-lg"
+                        value={newPurchase.discount}
+                        onChange={(e) => setNewPurchase({ ...newPurchase, discount: Number(e.target.value) })}
+                        className="w-full pl-8 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-4 focus:ring-primary-50 focus:border-primary-400 outline-none transition-all font-bold text-lg bg-white"
+                        placeholder="0"
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-black text-gray-500 ml-1">GST/Tax (Total)</label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">₹</span>
-                      <input
-                        type="number"
-                        value={newPurchase.gst}
-                        onChange={(e) => setNewPurchase({ ...newPurchase, gst: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-3 rounded-xl border border-gray-200 focus:bg-white outline-none transition-all font-bold text-lg"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-gray-500 ml-1">Total Amount</label>
+                    <label className="text-sm font-bold text-gray-700 ml-1">Grand Total</label>
                     <div className="relative">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-primary-600">₹</span>
                       <input
                         readOnly
                         value={newPurchase.totalAmount}
-                        className="w-full pl-8 pr-4 py-3 rounded-xl border-2 border-primary-200 bg-primary-50/50 outline-none font-black text-lg text-primary-700 cursor-default"
+                        className="w-full pl-8 pr-4 py-3 rounded-xl border-2 border-primary-200 bg-white outline-none font-black text-xl text-primary-700"
                       />
                     </div>
                   </div>

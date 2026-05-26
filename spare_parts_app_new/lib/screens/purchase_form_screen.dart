@@ -1,9 +1,11 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models/purchase.dart';
+import '../models/purchase_item.dart';
 import '../services/purchase_service.dart';
 import '../utils/app_theme.dart';
 
@@ -15,6 +17,51 @@ class PurchaseFormScreen extends StatefulWidget {
   State<PurchaseFormScreen> createState() => _PurchaseFormScreenState();
 }
 
+class ItemControllers {
+  final TextEditingController productName;
+  final TextEditingController partNumber;
+  final TextEditingController quantity;
+  final TextEditingController costPrice;
+  final TextEditingController sellingPrice;
+  final TextEditingController gst;
+  final TextEditingController totalAmount;
+
+  ItemControllers({
+    String? productName,
+    String? partNumber,
+    String? quantity,
+    String? costPrice,
+    String? sellingPrice,
+    String? gst,
+    String? totalAmount,
+  })  : productName = TextEditingController(text: productName),
+        partNumber = TextEditingController(text: partNumber),
+        quantity = TextEditingController(text: quantity ?? '0'),
+        costPrice = TextEditingController(text: costPrice ?? '0'),
+        sellingPrice = TextEditingController(text: sellingPrice ?? '0'),
+        gst = TextEditingController(text: gst ?? '0'),
+        totalAmount = TextEditingController(text: totalAmount ?? '0');
+
+  void dispose() {
+    productName.dispose();
+    partNumber.dispose();
+    quantity.dispose();
+    costPrice.dispose();
+    sellingPrice.dispose();
+    gst.dispose();
+    totalAmount.dispose();
+  }
+}
+
+class ActionItem {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Color? color;
+
+  ActionItem({required this.icon, required this.label, required this.onTap, this.color});
+}
+
 class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final PurchaseService _purchaseService = PurchaseService();
@@ -22,19 +69,17 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
   late TextEditingController _supplierNameController;
   late TextEditingController _supplierMobileController;
   late TextEditingController _invoiceNumberController;
-  late TextEditingController _productNameController;
-  late TextEditingController _partNumberController;
-  late TextEditingController _quantityController;
-  late TextEditingController _costPriceController;
-  late TextEditingController _sellingPriceController;
-  late TextEditingController _gstController;
+  late TextEditingController _discountController;
   late TextEditingController _totalAmountController;
   late TextEditingController _notesController;
+  
+  final List<ItemControllers> _itemControllers = [];
   
   DateTime _selectedDate = DateTime.now();
   File? _selectedFile;
   bool _isPdf = false;
   bool _isSaving = false;
+  bool _isScanning = false;
 
   @override
   void initState() {
@@ -43,24 +88,77 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
     _supplierNameController = TextEditingController(text: p?.supplierName);
     _supplierMobileController = TextEditingController(text: p?.supplierMobile);
     _invoiceNumberController = TextEditingController(text: p?.invoiceNumber);
-    _productNameController = TextEditingController(text: p?.productName);
-    _partNumberController = TextEditingController(text: p?.partNumber);
-    _quantityController = TextEditingController(text: p?.quantity.toString());
-    _costPriceController = TextEditingController(text: p?.costPrice.toString());
-    _sellingPriceController = TextEditingController(text: p?.sellingPrice?.toString());
-    _gstController = TextEditingController(text: p?.gst?.toString());
+    _discountController = TextEditingController(text: p?.discount?.toString() ?? '0');
     _totalAmountController = TextEditingController(text: p?.totalAmount.toString());
     _notesController = TextEditingController(text: p?.notes);
+    
+    if (p != null && p.items.isNotEmpty) {
+      for (var item in p.items) {
+        _itemControllers.add(ItemControllers(
+          productName: item.productName,
+          partNumber: item.partNumber,
+          quantity: item.quantity.toString(),
+          costPrice: item.costPrice.toString(),
+          sellingPrice: item.sellingPrice?.toString(),
+          gst: item.gst?.toString(),
+          totalAmount: item.totalAmount.toString(),
+        ));
+      }
+    } else {
+      _itemControllers.add(ItemControllers());
+    }
+
     if (p != null) _selectedDate = p.purchaseDate;
   }
 
-  void _calculateTotal() {
-    double qty = double.tryParse(_quantityController.text) ?? 0;
-    double price = double.tryParse(_costPriceController.text) ?? 0;
-    double gst = double.tryParse(_gstController.text) ?? 0;
+  @override
+  void dispose() {
+    _supplierNameController.dispose();
+    _supplierMobileController.dispose();
+    _invoiceNumberController.dispose();
+    _discountController.dispose();
+    _totalAmountController.dispose();
+    _notesController.dispose();
+    for (var c in _itemControllers) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  void _addItem() {
+    setState(() {
+      _itemControllers.add(ItemControllers());
+    });
+  }
+
+  void _removeItem(int index) {
+    if (_itemControllers.length > 1) {
+      setState(() {
+        _itemControllers[index].dispose();
+        _itemControllers.removeAt(index);
+        _calculateGrandTotal();
+      });
+    }
+  }
+
+  void _calculateItemTotal(int index) {
+    final c = _itemControllers[index];
+    double qty = double.tryParse(c.quantity.text) ?? 0;
+    double price = double.tryParse(c.costPrice.text) ?? 0;
+    double gst = double.tryParse(c.gst.text) ?? 0;
     
     double total = (qty * price) + gst;
-    _totalAmountController.text = total.toStringAsFixed(2);
+    c.totalAmount.text = total.toStringAsFixed(2);
+    _calculateGrandTotal();
+  }
+
+  void _calculateGrandTotal() {
+    double grandTotal = 0;
+    for (var c in _itemControllers) {
+      grandTotal += double.tryParse(c.totalAmount.text) ?? 0;
+    }
+    double discount = double.tryParse(_discountController.text) ?? 0;
+    _totalAmountController.text = (grandTotal - discount).toStringAsFixed(2);
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -71,6 +169,80 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
         _selectedFile = File(picked.path);
         _isPdf = false;
       });
+    }
+  }
+
+  Future<void> _scanBill() async {
+    final picker = ImagePicker();
+    final picked = await showModalBottomSheet<XFile?>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Take Photo'),
+              onTap: () async => Navigator.pop(context, await picker.pickImage(source: ImageSource.camera)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from Gallery'),
+              onTap: () async => Navigator.pop(context, await picker.pickImage(source: ImageSource.gallery)),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (picked == null) return;
+
+    setState(() => _isScanning = true);
+    try {
+      final dataStr = await _purchaseService.scanBill(picked.path);
+      final data = Map<String, dynamic>.from(jsonDecode(dataStr));
+
+      if (data['error'] != null) {
+        throw data['error'];
+      }
+
+      setState(() {
+        if (data['supplierName'] != null) _supplierNameController.text = data['supplierName'];
+        if (data['invoiceNumber'] != null) _invoiceNumberController.text = data['invoiceNumber'];
+        if (data['purchaseDate'] != null) _selectedDate = DateTime.parse(data['purchaseDate']);
+        if (data['discount'] != null) _discountController.text = data['discount'].toString();
+        if (data['totalAmount'] != null) _totalAmountController.text = data['totalAmount'].toString();
+        
+        final items = data['items'] as List?;
+        if (items != null && items.isNotEmpty) {
+          // Clear existing default item if it's empty
+          if (_itemControllers.length == 1 && _itemControllers[0].productName.text.isEmpty) {
+            _itemControllers[0].dispose();
+            _itemControllers.clear();
+          }
+
+          for (var item in items) {
+            _itemControllers.add(ItemControllers(
+              productName: item['productName']?.toString(),
+              partNumber: item['partNumber']?.toString(),
+              quantity: item['quantity']?.toString(),
+              costPrice: item['costPrice']?.toString(),
+              gst: item['gst']?.toString(),
+              totalAmount: item['totalAmount']?.toString(),
+            ));
+          }
+        }
+        
+        if (data['totalQuantity'] != null) {
+           _notesController.text = '${_notesController.text}\nTotal items detected: ${data['totalQuantity']}'.trim();
+        }
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bill scanned successfully!')));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Scan failed: $e')));
+    } finally {
+      setState(() => _isScanning = false);
     }
   }
 
@@ -108,12 +280,16 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
         supplierMobile: _supplierMobileController.text,
         invoiceNumber: _invoiceNumberController.text,
         purchaseDate: _selectedDate,
-        productName: _productNameController.text,
-        partNumber: _partNumberController.text,
-        quantity: int.parse(_quantityController.text),
-        costPrice: double.parse(_costPriceController.text),
-        sellingPrice: double.tryParse(_sellingPriceController.text),
-        gst: double.tryParse(_gstController.text),
+        items: _itemControllers.map((c) => PurchaseItem(
+          productName: c.productName.text,
+          partNumber: c.partNumber.text,
+          quantity: int.parse(c.quantity.text),
+          costPrice: double.parse(c.costPrice.text),
+          sellingPrice: double.tryParse(c.sellingPrice.text),
+          gst: double.tryParse(c.gst.text),
+          totalAmount: double.parse(c.totalAmount.text),
+        )).toList(),
+        discount: double.tryParse(_discountController.text),
         totalAmount: double.parse(_totalAmountController.text),
         notes: _notesController.text,
         billImageUrl: _isPdf ? null : (fileUrl ?? widget.purchase?.billImageUrl),
@@ -148,33 +324,59 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
                 key: _formKey,
                 child: Column(
                   children: [
-                    _buildSection('Supplier Info'),
+                    _buildSectionWithActions(
+                      'Supplier Info',
+                      [
+                        ActionItem(icon: Icons.camera_alt, label: 'Scan Bill', onTap: _scanBill, color: Colors.green),
+                        ActionItem(icon: Icons.add, label: 'Add Product', onTap: _addItem, color: AppTheme.primaryBlue),
+                      ],
+                    ),
                     _buildField(_supplierNameController, 'Supplier Name', required: true),
                     _buildField(_supplierMobileController, 'Supplier Mobile', keyboardType: TextInputType.phone),
                     _buildField(_invoiceNumberController, 'Invoice Number', required: true),
                     
                     const SizedBox(height: 20),
-                    _buildSection('Product Info'),
-                    _buildField(_productNameController, 'Product Name', required: true),
-                    _buildField(_partNumberController, 'Part Number'),
-                    
-                    const SizedBox(height: 20),
-                    _buildSection('Pricing & Quantity'),
-                    Row(
-                      children: [
-                        Expanded(child: _buildField(_quantityController, 'Quantity', required: true, keyboardType: TextInputType.number, onChanged: (_) => _calculateTotal())),
-                        const SizedBox(width: 10),
-                        Expanded(child: _buildField(_costPriceController, 'Cost Price', required: true, keyboardType: TextInputType.number, onChanged: (_) => _calculateTotal())),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Expanded(child: _buildField(_gstController, 'GST/Tax', keyboardType: TextInputType.number, onChanged: (_) => _calculateTotal())),
-                        const SizedBox(width: 10),
-                        Expanded(child: _buildField(_sellingPriceController, 'Selling Price', keyboardType: TextInputType.number)),
-                      ],
-                    ),
-                    _buildField(_totalAmountController, 'Total Amount', required: true, keyboardType: TextInputType.number, readOnly: true),
+                    ..._itemControllers.asMap().entries.map((entry) {
+                      int idx = entry.key;
+                      ItemControllers c = entry.value;
+                      return Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _buildSection('Product ${idx + 1}'),
+                              if (_itemControllers.length > 1)
+                                IconButton(
+                                  icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
+                                  onPressed: () => _removeItem(idx),
+                                ),
+                            ],
+                          ),
+                          _buildField(c.productName, 'Product Name', required: true),
+                          _buildField(c.partNumber, 'Part Number'),
+                          Row(
+                            children: [
+                              Expanded(child: _buildField(c.quantity, 'Quantity', required: true, keyboardType: TextInputType.number, onChanged: (_) => _calculateItemTotal(idx))),
+                              const SizedBox(width: 10),
+                              Expanded(child: _buildField(c.costPrice, 'Cost Price', required: true, keyboardType: TextInputType.number, onChanged: (_) => _calculateItemTotal(idx))),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              Expanded(child: _buildField(c.gst, 'GST/Tax', keyboardType: TextInputType.number, onChanged: (_) => _calculateItemTotal(idx))),
+                              const SizedBox(width: 10),
+                              Expanded(child: _buildField(c.sellingPrice, 'Selling Price', keyboardType: TextInputType.number)),
+                            ],
+                          ),
+                          _buildField(c.totalAmount, 'Item Total', required: true, keyboardType: TextInputType.number, readOnly: true),
+                          const Divider(height: 40),
+                        ],
+                      );
+                    }).toList(),
+
+                    _buildSection('Financial Summary'),
+                    _buildField(_discountController, 'Discount Amount', keyboardType: TextInputType.number, onChanged: (_) => _calculateGrandTotal()),
+                    _buildField(_totalAmountController, 'Grand Total', required: true, keyboardType: TextInputType.number, readOnly: true),
                     
                     const SizedBox(height: 20),
                     _buildSection('Other Info'),
@@ -204,9 +406,40 @@ class _PurchaseFormScreenState extends State<PurchaseFormScreen> {
 
   Widget _buildSection(String title) {
     return Container(
-      width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue)),
+    );
+  }
+
+  Widget _buildSectionWithAction(String title, VoidCallback onAction, String actionLabel) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        _buildSection(title),
+        TextButton.icon(
+          onPressed: onAction,
+          icon: const Icon(Icons.add, size: 18),
+          label: Text(actionLabel),
+          style: TextButton.styleFrom(foregroundColor: AppTheme.primaryBlue),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionWithActions(String title, List<ActionItem> actions) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        _buildSection(title),
+        Row(
+          children: actions.map((action) => TextButton.icon(
+            onPressed: action.onTap,
+            icon: Icon(action.icon, size: 18),
+            label: Text(action.label),
+            style: TextButton.styleFrom(foregroundColor: action.color ?? AppTheme.primaryBlue),
+          )).toList(),
+        ),
+      ],
     );
   }
 

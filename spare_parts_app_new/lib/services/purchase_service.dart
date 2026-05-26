@@ -20,6 +20,37 @@ class PurchaseService {
     return Purchase.fromJson(json);
   }
 
+  Future<String> scanBill(String path) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userStr = prefs.getString('user');
+      String? token;
+      if (userStr != null) {
+        final user = jsonDecode(userStr);
+        token = user['token'];
+      }
+
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('${Constants.baseUrl}/purchases/scan-bill'),
+      );
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+      request.files.add(await http.MultipartFile.fromPath('file', path));
+
+      var response = await request.send();
+      if (response.statusCode == 200) {
+        return await response.stream.bytesToString();
+      } else {
+        throw 'Failed to scan bill: ${response.statusCode}';
+      }
+    } catch (e) {
+      debugPrint('Bill scan error: $e');
+      rethrow;
+    }
+  }
+
   Future<List<Purchase>> getAllPurchases() async {
     final list = await _remote.getList('/purchases');
     return list.map((e) => Purchase.fromJson(e)).toList();
