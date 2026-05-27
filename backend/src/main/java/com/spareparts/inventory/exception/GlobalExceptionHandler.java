@@ -17,17 +17,45 @@ import java.util.Map;
 public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    @ExceptionHandler(org.springframework.security.authentication.BadCredentialsException.class)
+    public ResponseEntity<MessageResponse> handleBadCredentialsException(org.springframework.security.authentication.BadCredentialsException ex) {
+        log.warn("Failed login attempt");
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .body(new MessageResponse("Invalid username or password"));
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<MessageResponse> handleRuntimeException(RuntimeException ex) {
-        log.error("Runtime error caught: {}", ex.getMessage(), ex);
+        String message = ex.getMessage();
+        
+        // Don't log full stack trace for common expected errors
+        boolean isExpectedError = message != null && (
+            message.contains("Invalid") || 
+            message.contains("required") ||
+            message.contains("not found") ||
+            message.contains("Bad credentials") ||
+            ex.getClass().getSimpleName().equals("BadCredentialsException")
+        );
+        
+        if (isExpectedError) {
+            log.warn("Runtime error: {}", message);
+        } else {
+            log.error("Runtime error caught: {}", message, ex);
+        }
+        
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
-        if (ex.getMessage() != null && (ex.getMessage().contains("Invalid") || ex.getMessage().contains("required"))) {
+        if (ex.getClass().getSimpleName().equals("BadCredentialsException")) {
+            status = HttpStatus.UNAUTHORIZED;
+            message = "Invalid username or password";
+        } else if (message != null && (message.contains("Invalid") || message.contains("required"))) {
             status = HttpStatus.BAD_REQUEST;
         }
         return ResponseEntity
                 .status(status)
                 .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
-                .body(new MessageResponse(ex.getMessage()));
+                .body(new MessageResponse(message));
     }
 
     @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)

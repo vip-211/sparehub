@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import jakarta.validation.Valid;      
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -285,33 +286,39 @@ public class AuthController {
 
     @PostMapping(value = "/signin", produces = "application/json")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getIdentifier(), loginRequest.getPassword()));
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.getIdentifier(), loginRequest.getPassword()));
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        String jwt = jwtUtils.generateJwtToken(authentication);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            String jwt = jwtUtils.generateJwtToken(authentication);
 
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        List<String> roles = userDetails.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.toList());
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+            List<String> roles = userDetails.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .collect(Collectors.toList());
 
-        User user = userRepository.findById(userDetails.getId()).orElseThrow(() -> new RuntimeException("User not found"));
+            User user = userRepository.findById(userDetails.getId()).orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (user.getStatus() != User.UserStatus.ACTIVE) {
-            return ResponseEntity.status(403).body(new MessageResponse("Your account is pending admin approval. Current status: " + user.getStatus()));
+            if (user.getStatus() != User.UserStatus.ACTIVE) {
+                return ResponseEntity.status(403).body(new MessageResponse("Your account is pending admin approval. Current status: " + user.getStatus()));
+            }
+
+            return ResponseEntity.ok(new JwtResponse(jwt,
+                    userDetails.getId(),
+                    userDetails.getUsername(),
+                    userDetails.getEmail(),
+                    roles,
+                    user.getAddress(),
+                    user.getStatus().name(),
+                    user.getLatitude(),
+                    user.getLongitude(),
+                    user.getPoints()));
+        } catch (org.springframework.security.authentication.BadCredentialsException e) {
+            log.warn("Failed login attempt for identifier: {}", loginRequest.getIdentifier());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new MessageResponse("Invalid username or password"));
         }
-
-        return ResponseEntity.ok(new JwtResponse(jwt,
-                userDetails.getId(),
-                userDetails.getUsername(),
-                userDetails.getEmail(),
-                roles,
-                user.getAddress(),
-                user.getStatus().name(),
-                user.getLatitude(),
-                user.getLongitude(),
-                user.getPoints()));
     }
 
     @PostMapping(value = "/signup", produces = "application/json")
