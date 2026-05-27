@@ -25,6 +25,9 @@ public class BrevoMailService {
     private String fromEmail;
 
     public void sendEmail(String toEmail, String subject, String htmlContent, String plainTextContent) throws ApiException {
+        log.debug("Brevo API Key (length): {}", (apiKey != null ? apiKey.length() : "null"));
+        log.debug("Brevo From Email: {}", fromEmail);
+        
         ApiClient defaultClient = Configuration.getDefaultApiClient();
         ApiKeyAuth apiKeyAuth = (ApiKeyAuth) defaultClient.getAuthentication("api-key");
         apiKeyAuth.setApiKey(apiKey);
@@ -49,7 +52,8 @@ public class BrevoMailService {
             apiInstance.sendTransacEmail(sendSmtpEmail);
             log.info("Email sent successfully to {} via Brevo API", toEmail);
         } catch (ApiException e) {
-            log.error("Failed to send email to {}. Error: {}", toEmail, e.getMessage());
+            log.error("Failed to send email to {}. Status code: {}, Response: {}, Error message: {}", 
+                      toEmail, e.getCode(), e.getResponseBody(), e.getMessage(), e);
             throw e;
         }
     }
