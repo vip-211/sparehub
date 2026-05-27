@@ -3,12 +3,8 @@ package com.spareparts.inventory.service;
 import com.spareparts.inventory.entity.Otp;
 import com.spareparts.inventory.repository.OtpRepository;
 import com.spareparts.inventory.repository.SystemSettingRepository;
-import jakarta.mail.internet.MimeMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,13 +16,10 @@ public class OtpService {
     private OtpRepository otpRepository;
 
     @Autowired
-    private JavaMailSender mailSender;
+    private BrevoMailService brevoMailService;
 
     @Autowired
     private SystemSettingRepository systemSettingRepository;
-
-    @Value("${spring.mail.username}")
-    private String mailFrom;
 
     @Transactional
     public void saveOtp(String email, String otp) {
@@ -88,19 +81,10 @@ public class OtpService {
                 + "</body></html>";
 
         try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(mailFrom);
-            helper.setTo(email);
-            helper.setSubject(subject);
-            helper.setText(plainText, htmlContent);
-            
-            mailSender.send(message);
-            log.info("OTP sent successfully to {} via SMTP", email);
+            brevoMailService.sendEmail(email, subject, htmlContent, plainText);
         } catch (Exception e) {
             log.error("CRITICAL: Failed to send OTP email to {}. Error: {}", email, e.getMessage());
             log.info("PLEASE USE THE OTP FROM THE LOGS ABOVE TO PROCEED.");
-            // Re-throw to inform the controller, but the OTP is already logged
             throw e;
         }
     }
