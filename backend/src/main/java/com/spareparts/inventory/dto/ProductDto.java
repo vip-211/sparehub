@@ -55,4 +55,7 @@ public class ProductDto {
     
     private String offerType;
     private Integer offerMinQty;
+    private java.math.BigDecimal offerPrice;
+    private Integer offerMinQuantity;
+    private boolean hasActiveOffer;
 }

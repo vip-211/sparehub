@@ -3,6 +3,7 @@ package com.spareparts.inventory.service;
 
 import com.spareparts.inventory.dto.PaginatedResponse;
 import com.spareparts.inventory.dto.ProductDto;
+import com.spareparts.inventory.entity.Offer;
 import com.spareparts.inventory.entity.Product;
 import com.spareparts.inventory.entity.ProductAlias;
 import com.spareparts.inventory.entity.Category;
@@ -12,6 +13,7 @@ import com.spareparts.inventory.repository.ProductRepository;
 import com.spareparts.inventory.repository.ProductAliasRepository;
 import com.spareparts.inventory.repository.UserRepository;
 import com.spareparts.inventory.repository.CategoryRepository;
+import com.spareparts.inventory.repository.OfferRepository;
 import com.spareparts.inventory.observer.ProductObserver;
 import com.spareparts.inventory.observer.ProductSubject;
 import jakarta.annotation.PostConstruct;
@@ -44,6 +46,9 @@ public class ProductService extends ProductSubject {
     
     @Autowired
     private CategoryRepository categoryRepository;
+    
+    @Autowired
+    private OfferRepository offerRepository;
 
     @Autowired
     @Qualifier("inAppNotificationObserver")
@@ -585,6 +590,18 @@ public class ProductService extends ProductSubject {
         dto.setWholesalerId(product.getWholesaler().getId());
         dto.setOfferType(product.getOfferType() != null ? product.getOfferType().name() : null);
         dto.setOfferMinQty(product.getOfferMinQty());
+        
+        // Check for active offer
+        java.util.Optional<Offer> activeOffer = offerRepository.findActiveOfferByProductId(product.getId());
+        if (activeOffer.isPresent()) {
+            Offer offer = activeOffer.get();
+            dto.setOfferPrice(offer.getOfferPrice());
+            dto.setOfferMinQuantity(offer.getMinimumQuantity());
+            dto.setHasActiveOffer(true);
+        } else {
+            dto.setHasActiveOffer(false);
+        }
+        
         if (product.getCategory() != null) {
             dto.setCategoryId(product.getCategory().getId());
             dto.setCategoryName(product.getCategory().getName());
