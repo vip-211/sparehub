@@ -55,7 +55,10 @@ public class OtpService {
     }
 
     public void sendOtpEmail(String email, String otp) throws Exception {
-        log.info("FINAL OTP for {}: {}", email, otp);
+        log.info("**************************************************");
+        log.info("OTP GENERATED FOR {}: {}", email, otp);
+        log.info("**************************************************");
+        
         String logoUrl = systemSettingRepository.getSettingValue("LOGO_URL", "https://partsmitra.app/logo.png");
         String subject = "Your OTP for Parts Mitra";
         
@@ -84,14 +87,21 @@ public class OtpService {
                 + "</div>"
                 + "</body></html>";
 
-        MimeMessage message = mailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-        helper.setFrom(mailFrom);
-        helper.setTo(email);
-        helper.setSubject(subject);
-        helper.setText(plainText, htmlContent);
-        
-        mailSender.send(message);
-        log.info("OTP sent successfully to {} via SMTP", email);
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(mailFrom);
+            helper.setTo(email);
+            helper.setSubject(subject);
+            helper.setText(plainText, htmlContent);
+            
+            mailSender.send(message);
+            log.info("OTP sent successfully to {} via SMTP", email);
+        } catch (Exception e) {
+            log.error("CRITICAL: Failed to send OTP email to {}. Error: {}", email, e.getMessage());
+            log.info("PLEASE USE THE OTP FROM THE LOGS ABOVE TO PROCEED.");
+            // Re-throw to inform the controller, but the OTP is already logged
+            throw e;
+        }
     }
 }
