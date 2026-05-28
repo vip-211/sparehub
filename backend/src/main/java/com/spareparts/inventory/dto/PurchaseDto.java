@@ -24,6 +24,7 @@ public class PurchaseDto {
     private String billImageUrl;
     private String billPdfUrl;
     private BigDecimal costPrice;
+    private Integer quantity;
     private BigDecimal dailyAmount;
     private BigDecimal remainingAmount;
     private Long createdById;

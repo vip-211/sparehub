@@ -60,6 +60,9 @@ public class Purchase {
     @Column(name = "cost_price", precision = 10, scale = 2)
     private BigDecimal costPrice = BigDecimal.ZERO;
 
+    @Column(name = "quantity")
+    private Integer quantity = 0;
+
     @Column(name = "daily_amount", precision = 10, scale = 2)
     private BigDecimal dailyAmount;
 

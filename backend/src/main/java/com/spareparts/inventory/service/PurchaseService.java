@@ -185,6 +185,7 @@ public class PurchaseService {
         purchase.setBillImageUrl(dto.getBillImageUrl());
         purchase.setBillPdfUrl(dto.getBillPdfUrl());
         purchase.setCostPrice(dto.getCostPrice() != null ? dto.getCostPrice() : BigDecimal.ZERO);
+        purchase.setQuantity(dto.getQuantity() != null ? dto.getQuantity() : 0);
         purchase.setDailyAmount(dto.getDailyAmount());
         purchase.setRemainingAmount(dto.getRemainingAmount());
 
@@ -224,6 +225,7 @@ public class PurchaseService {
         dto.setBillImageUrl(p.getBillImageUrl());
         dto.setBillPdfUrl(p.getBillPdfUrl());
         dto.setCostPrice(p.getCostPrice());
+        dto.setQuantity(p.getQuantity());
         dto.setDailyAmount(p.getDailyAmount());
         dto.setRemainingAmount(p.getRemainingAmount());
         

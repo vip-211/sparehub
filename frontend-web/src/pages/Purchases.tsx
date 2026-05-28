@@ -45,6 +45,7 @@ const Purchases = () => {
     ],
     discount: 0,
     totalAmount: 0,
+    quantity: 0,
     notes: '',
     billImageUrl: '',
     billPdfUrl: ''
@@ -96,12 +97,14 @@ const Purchases = () => {
     });
 
     const finalTotal = grandTotal - (Number(newPurchase.discount) || 0);
+    const totalQty = newPurchase.items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
 
-    if (JSON.stringify(newPurchase.items) !== JSON.stringify(updatedItems) || newPurchase.totalAmount !== finalTotal) {
+    if (JSON.stringify(newPurchase.items) !== JSON.stringify(updatedItems) || newPurchase.totalAmount !== finalTotal || newPurchase.quantity !== totalQty) {
       setNewPurchase(prev => ({
         ...prev,
         items: updatedItems,
-        totalAmount: finalTotal
+        totalAmount: finalTotal,
+        quantity: totalQty
       }));
     }
   }, [newPurchase.items, newPurchase.discount]);
@@ -295,10 +298,11 @@ const Purchases = () => {
         }
       ],
       discount: 0,
-      totalAmount: 0,
-      notes: '',
-      billImageUrl: '',
-      billPdfUrl: ''
+    totalAmount: 0,
+    quantity: 0,
+    notes: '',
+    billImageUrl: '',
+    billPdfUrl: ''
     });
   };
 
