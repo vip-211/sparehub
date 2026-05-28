@@ -57,6 +57,9 @@ public class Purchase {
     @Column(name = "bill_pdf_url")
     private String billPdfUrl;
 
+    @Column(name = "cost_price", precision = 10, scale = 2)
+    private BigDecimal costPrice = BigDecimal.ZERO;
+
     @Column(name = "daily_amount", precision = 10, scale = 2)
     private BigDecimal dailyAmount;
 

@@ -23,6 +23,7 @@ public class PurchaseDto {
     private String notes;
     private String billImageUrl;
     private String billPdfUrl;
+    private BigDecimal costPrice;
     private BigDecimal dailyAmount;
     private BigDecimal remainingAmount;
     private Long createdById;
