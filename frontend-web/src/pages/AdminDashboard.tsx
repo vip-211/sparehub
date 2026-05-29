@@ -3,12 +3,13 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import api, { API_BASE_URL } from '../services/api';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
-import { Users, ShoppingBag, ShoppingCart, BarChart2, CheckCircle, XCircle, Plus, Package, UserPlus, Upload, Truck, Trash2, RotateCcw, Settings, Bell, MessageSquare, Search, Star, FileText, List, LayoutGrid, Store, ScanBarcode, Keyboard, Cpu, TrendingUp, Move, Sparkles } from 'lucide-react';
+import { Users, ShoppingBag, ShoppingCart, BarChart2, CheckCircle, XCircle, Plus, Package, UserPlus, Upload, Truck, Trash2, RotateCcw, Settings, Bell, MessageSquare, Search, Star, FileText, List, LayoutGrid, Store, ScanBarcode, Keyboard, Cpu, TrendingUp, Move, Sparkles, Activity } from 'lucide-react';
 import { ROLE_SUPER_MANAGER, ROLE_ADMIN, ROLE_MECHANIC, ROLE_RETAILER, ROLE_WHOLESALER, ROLE_STAFF } from '../services/constants';
 import AuthService from '../services/auth.service';
 import Skeleton from '../components/Skeleton';
 import AdminCategories from './AdminCategories';
 import Purchases from './Purchases';
+import UserActivityDashboard from './UserActivityDashboard';
 import BarcodeScanner from '../components/BarcodeScanner';
 import { useExternalScanner } from '../hooks/useExternalScanner';
 import useSound from 'use-sound';
@@ -1538,6 +1539,7 @@ const AdminDashboard = () => {
       <div className="flex overflow-x-auto no-scrollbar border-b border-gray-100 mb-8 gap-2 md:gap-8 pb-1">
         {[
           { id: 'purchases', label: 'Purchases', icon: ShoppingCart },
+          { id: 'userActivity', label: 'User Activity', icon: Activity },
           { id: 'users', label: 'Users', icon: Users },
           { id: 'orders', label: 'Transactions', icon: ShoppingBag },
           { id: 'requests', label: 'Order Requests', icon: MessageSquare },
@@ -3860,6 +3862,21 @@ const AdminDashboard = () => {
           <div className="bg-white rounded-[2.5rem] shadow-xl shadow-gray-100/50 border border-gray-100 overflow-hidden">
             <Purchases />
           </div>
+        </div>
+      )}
+
+      {activeTab === 'userActivity' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between mb-4 px-4">
+            <div>
+              <h2 className="text-2xl font-black text-gray-900 flex items-center gap-3">
+                <Activity className="text-primary-600" size={28} />
+                User Activity
+              </h2>
+              <p className="text-gray-500 font-bold uppercase text-[10px] tracking-widest mt-1">Monitor user sessions and usage activity</p>
+            </div>
+          </div>
+          <UserActivityDashboard />
         </div>
       )}
 

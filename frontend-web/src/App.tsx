@@ -40,7 +40,11 @@ const App: React.FC = () => {
     navigate('/login');
   };
 
-  const isAdminOrSuper = currentUser?.roles?.includes(ROLE_ADMIN) || currentUser?.roles?.includes(ROLE_SUPER_MANAGER);
+  const userRoles = currentUser?.roles ?? [];
+  const isAdminOrSuper = userRoles.includes(ROLE_ADMIN) || userRoles.includes(ROLE_SUPER_MANAGER);
+  const isStaff = userRoles.includes(ROLE_STAFF);
+  const canManagePurchases = isAdminOrSuper || isStaff;
+  const canViewUserActivity = isAdminOrSuper;
   const isPending = currentUser?.status === 'PENDING';
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/forgot-password' || (location.pathname === '/pending-approval' && isPending);
 
@@ -156,7 +160,7 @@ const App: React.FC = () => {
                 <span className="text-gray-600 font-medium hidden lg:inline mr-2">Welcome, {currentUser.name || currentUser.email}</span>
                 
                 {/* Common Management Links for Admin & Staff */}
-                {(isAdminOrSuper || currentUser?.roles.includes(ROLE_STAFF)) && (
+                {canManagePurchases && (
                   <Link to="/purchases" className="text-primary-600 hover:text-primary-700 font-black flex items-center gap-1.5 bg-primary-50 px-4 py-2 rounded-xl border-2 border-primary-100 transition-all shadow-sm hover:shadow-md active:scale-95 text-xs uppercase tracking-wider">
                     <ShoppingCart size={16} />
                     Purchases
@@ -179,19 +183,19 @@ const App: React.FC = () => {
                     </Link>
                   </>
                 )}
-                {currentUser?.roles.includes(ROLE_WHOLESALER) && (
+                {userRoles.includes(ROLE_WHOLESALER) && (
                   <Link to="/wholesaler" className="text-gray-600 hover:text-primary-600 font-medium">
                     {t('role.wholesaler')}
                   </Link>
                 )}
-                {currentUser?.roles.includes(ROLE_STAFF) && (
+                {isStaff && (
                   <>
                     <Link to="/staff" className="text-gray-600 hover:text-primary-600 font-medium">
                       {t('role.staff')}
                     </Link>
                   </>
                 )}
-                {!currentUser?.roles.includes(ROLE_STAFF) && (
+                {!isStaff && (
                   <>
                     <Link to="/shop" className="text-gray-600 hover:text-primary-600 font-medium">
                       {t('shop.title')}
@@ -277,9 +281,9 @@ const App: React.FC = () => {
             element={
               !currentUser
                 ? <Navigate to="/login" />
-                : (isPending
-                    ? <Navigate to="/pending-approval" />
-                    : (isAdminOrSuper ? <Stock /> : <Navigate to="/shop" />))
+              : (isPending
+                  ? <Navigate to="/pending-approval" />
+                  : (isAdminOrSuper ? <Stock /> : <Navigate to="/shop" />))
             }
           />
           <Route
@@ -303,13 +307,13 @@ const App: React.FC = () => {
           <Route
             path="/user-activity"
             element={
-              isAdminOrSuper ? <UserActivityDashboard /> : <Navigate to="/login" />
+              canViewUserActivity ? <UserActivityDashboard /> : <Navigate to="/login" />
             }
           />
           <Route
             path="/wholesaler/*"
             element={
-              currentUser?.roles.includes(ROLE_WHOLESALER) ? (
+              userRoles.includes(ROLE_WHOLESALER) ? (
                 isPending ? <Navigate to="/pending-approval" /> : <WholesalerDashboard />
               ) : (
                 <Navigate to="/login" />
@@ -319,7 +323,7 @@ const App: React.FC = () => {
           <Route
             path="/staff/*"
             element={
-              currentUser?.roles.includes(ROLE_STAFF) ? (
+              isStaff ? (
                 isPending ? <Navigate to="/pending-approval" /> : <StaffDashboard />
               ) : (
                 <Navigate to="/login" />
