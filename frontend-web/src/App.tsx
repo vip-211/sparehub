@@ -1,7 +1,8 @@
 
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, Link, useNavigate, useLocation } from 'react-router-dom';
 import { ShoppingCart } from 'lucide-react';
+import api from './services/api';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -23,8 +24,8 @@ import PendingApproval from './pages/PendingApproval';
 import { ROLE_MECHANIC, ROLE_RETAILER } from './services/constants';
 import Stock from './pages/Stock';
 import Offers from './pages/Offers';
-
 import Purchases from './pages/Purchases';
+import UserActivityDashboard from './pages/UserActivityDashboard';
 
 const App: React.FC = () => {
   const { currentUser, logout } = useAuth();
@@ -32,6 +33,7 @@ const App: React.FC = () => {
   const location = useLocation();
   const { count } = useCart();
   const { language, toggleLanguage, t } = useLanguage();
+  const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
 
   const logOut = () => {
     logout();
@@ -41,6 +43,50 @@ const App: React.FC = () => {
   const isAdminOrSuper = currentUser?.roles?.includes(ROLE_ADMIN) || currentUser?.roles?.includes(ROLE_SUPER_MANAGER);
   const isPending = currentUser?.status === 'PENDING';
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/forgot-password' || (location.pathname === '/pending-approval' && isPending);
+
+  // User activity session tracking
+  useEffect(() => {
+    if (!currentUser || isAuthPage) return;
+
+    const startSession = async () => {
+      try {
+        const res = await api.post('user-activities/start-session', null, {
+          params: {
+            deviceInfo: navigator.userAgent,
+            appVersion: 'Web v1.0'
+          }
+        });
+        if (res.data && res.data.id) {
+          setCurrentSessionId(res.data.id);
+        }
+      } catch (e) {
+        console.error('Failed to start session:', e);
+      }
+    };
+
+    startSession();
+
+    const endSession = async () => {
+      if (currentSessionId) {
+        try {
+          await api.put(`user-activities/end-session/${currentSessionId}`);
+        } catch (e) {
+          console.error('Failed to end session:', e);
+        }
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      endSession();
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      endSession();
+    };
+  }, [currentUser, isAuthPage]);
 
   useEffect(() => {
     // Listen to foreground webpush events
@@ -127,6 +173,9 @@ const App: React.FC = () => {
                     </Link>
                     <Link to="/stock" className="text-gray-600 hover:text-primary-600 font-bold text-xs uppercase tracking-wider">
                       Stock
+                    </Link>
+                    <Link to="/user-activity" className="text-gray-600 hover:text-primary-600 font-bold text-xs uppercase tracking-wider">
+                      User Activity
                     </Link>
                   </>
                 )}
@@ -249,6 +298,12 @@ const App: React.FC = () => {
             path="/admin-categories"
             element={
               isAdminOrSuper ? <AdminCategories /> : <Navigate to="/login" />
+            }
+          />
+          <Route
+            path="/user-activity"
+            element={
+              isAdminOrSuper ? <UserActivityDashboard /> : <Navigate to="/login" />
             }
           />
           <Route

@@ -31,6 +31,7 @@ import 'screens/trending_products_screen.dart';
 import 'screens/splash_screen.dart';
 import 'services/notification_service.dart';
 import 'services/settings_service.dart';
+import 'services/user_activity_service.dart';
 import 'utils/app_theme.dart';
 
 import 'firebase_options.dart';
@@ -207,15 +208,36 @@ class AuthWrapper extends StatefulWidget {
   State<AuthWrapper> createState() => _AuthWrapperState();
 }
 
-class _AuthWrapperState extends State<AuthWrapper> {
+class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
   bool _showingExpiredDialog = false;
+  final UserActivityService _activityService = UserActivityService();
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       SettingsService.checkAppUpdate(context);
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _activityService.endSession();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    if (state == AppLifecycleState.resumed) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      if (authProvider.user != null && authProvider.user!.status != 'PENDING') {
+        await _activityService.startSession();
+      }
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      await _activityService.endSession();
+    }
   }
 
   @override
@@ -228,11 +250,13 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Widget _buildAuthFlow(BuildContext context, AuthProvider authProvider) {
     if (authProvider.user == null) {
       // Clear notification connection state on logout
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
         final np = Provider.of<NotificationProvider>(context, listen: false);
         if (np.isConnected) {
           np.disconnect();
         }
+        // End user activity session on logout
+        await _activityService.endSession();
 
         // Check if we just logged out due to session expiration
         if (authProvider.sessionWasExpired && !_showingExpiredDialog) {
@@ -265,8 +289,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
       return const PendingApprovalScreen();
     }
 
-    // Initialize notifications
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // Initialize notifications and start activity tracking
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final np = Provider.of<NotificationProvider>(context, listen: false);
       if (authProvider.user != null && !np.isConnected) {
         final rolesString = authProvider.user!.roles.join(',');
@@ -277,6 +301,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
         showBatteryOptimizationPromptIfNeeded(context);
         NotificationService.tryConsumePendingNavigation();
+        
+        // Start user activity tracking
+        await _activityService.startSession();
       }
     });
 

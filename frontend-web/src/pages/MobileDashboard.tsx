@@ -45,7 +45,7 @@ import { useCart } from '../context/CartContext';
 import { ROLE_ADMIN, ROLE_SUPER_MANAGER } from '../services/constants';
 import { useAuth } from '../context/AuthContext';
 
-const MobileDashboard = () => {
+const MobileDashboard: React.FC = () => {
   const { tp } = useLanguage();
   const { reorder } = useCart();
   const { currentUser } = useAuth();
@@ -62,6 +62,7 @@ const MobileDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
   const navigate = useNavigate();
 
   const handleSearch = (e: React.FormEvent) => {
@@ -74,6 +75,50 @@ const MobileDashboard = () => {
   const [playNotification] = useSound('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
   const [period, setPeriod] = useState<'DAILY'|'WEEKLY'|'MONTHLY'>('MONTHLY');
+
+  // Start session tracking on mount, end on unmount
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const startSession = async () => {
+      try {
+        const res = await api.post('user-activities/start-session', null, {
+          params: {
+            deviceInfo: navigator.userAgent,
+            appVersion: 'Web v1.0'
+          }
+        });
+        if (res.data && res.data.id) {
+          setCurrentSessionId(res.data.id);
+        }
+      } catch (e) {
+        console.error('Failed to start session:', e);
+      }
+    };
+
+    startSession();
+
+    const endSession = async () => {
+      if (currentSessionId) {
+        try {
+          await api.put(`user-activities/end-session/${currentSessionId}`);
+        } catch (e) {
+          console.error('Failed to end session:', e);
+        }
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      endSession();
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      endSession();
+    };
+  }, [currentUser]);
 
   const fetchDashboardData = useCallback(async () => {
     try {
