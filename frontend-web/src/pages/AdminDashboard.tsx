@@ -83,6 +83,17 @@ const AdminDashboard = () => {
   const [salesPeriod, setSalesPeriod] = useState<'DAILY'|'WEEKLY'|'MONTHLY'>('MONTHLY');
   const [newCategory, setNewCategory] = useState({ name: '', description: '', imagePath: '', imageLink: '' });
   const [selectedExcelCategory, setSelectedExcelCategory] = useState<string>('');
+  
+  // Notification state
+  const [showSendNotification, setShowSendNotification] = useState(false);
+  const [notificationType, setNotificationType] = useState<'broadcast' | 'role' | 'user'>('broadcast');
+  const [notificationTitle, setNotificationTitle] = useState('');
+  const [notificationMessage, setNotificationMessage] = useState('');
+  const [notificationOfferType, setNotificationOfferType] = useState('');
+  const [notificationImageUrl, setNotificationImageUrl] = useState('');
+  const [notificationTargetRole, setNotificationTargetRole] = useState(ROLE_MECHANIC);
+  const [notificationTargetUserId, setNotificationTargetUserId] = useState<string>('');
+  const [sendingNotification, setSendingNotification] = useState(false);
 
   const [deletedUsers, setDeletedUsers] = useState<any[]>([]);
   const [deletedOrders, setDeletedOrders] = useState<any[]>([]);
@@ -672,6 +683,47 @@ const AdminDashboard = () => {
   const getSetting = (key: string, defaultValue: string = 'false') => {
     const s = localSettings.find(s => s.settingKey === key);
     return s ? s.settingValue : defaultValue;
+  };
+
+  const handleSendNotification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSendingNotification(true);
+    try {
+      const payload = {
+        title: notificationTitle,
+        message: notificationMessage,
+        offerType: notificationOfferType || undefined,
+        imageUrl: notificationImageUrl || undefined
+      };
+
+      if (notificationType === 'broadcast') {
+        await api.post('notifications/send/broadcast', payload);
+      } else if (notificationType === 'role') {
+        await api.post(`notifications/send/role/${notificationTargetRole}`, payload);
+      } else if (notificationType === 'user') {
+        if (!notificationTargetUserId) {
+          alert('Please select a user');
+          return;
+        }
+        await api.post(`notifications/send/user/${notificationTargetUserId}`, payload);
+      }
+
+      alert('Notification sent successfully!');
+      setShowSendNotification(false);
+      // Reset form
+      setNotificationTitle('');
+      setNotificationMessage('');
+      setNotificationOfferType('');
+      setNotificationImageUrl('');
+      setNotificationType('broadcast');
+      setNotificationTargetRole(ROLE_MECHANIC);
+      setNotificationTargetUserId('');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to send notification');
+    } finally {
+      setSendingNotification(false);
+    }
   };
 
   const fetchDeletedItems = async () => {
@@ -1445,6 +1497,16 @@ const AdminDashboard = () => {
             <Plus size={18} />
             <span>Add Product</span>
           </button>
+          
+          {isSuperManager && (
+            <button
+              onClick={() => setShowSendNotification(true)}
+              className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2.5 rounded-xl hover:bg-purple-700 transition shadow-lg shadow-purple-100 font-bold text-sm"
+            >
+              <Bell size={18} />
+              <span>Send Notification</span>
+            </button>
+          )}
           <div className="relative group">
             <button className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-100 font-bold text-sm">
               <Upload size={18} />
@@ -5250,6 +5312,173 @@ const AdminDashboard = () => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Send Notification Modal (Super Manager Only) */}
+      {showSendNotification && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
+          <div className="bg-white rounded-[2.5rem] max-w-lg w-full p-10 shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center mb-8">
+              <h3 className="text-2xl font-black text-gray-900">Send Push Notification</h3>
+              <button onClick={() => setShowSendNotification(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <XCircle size={24} className="text-gray-400" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSendNotification} className="space-y-6">
+              {/* Notification Type */}
+              <div>
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Recipient Type</label>
+                <div className="grid grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setNotificationType('broadcast')}
+                    className={`p-3 rounded-xl border-2 font-bold text-sm transition-all ${
+                      notificationType === 'broadcast' 
+                        ? 'border-purple-500 bg-purple-50 text-purple-700' 
+                        : 'border-gray-100 hover:border-gray-200 text-gray-600'
+                    }`}
+                  >
+                    All Users
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNotificationType('role')}
+                    className={`p-3 rounded-xl border-2 font-bold text-sm transition-all ${
+                      notificationType === 'role' 
+                        ? 'border-purple-500 bg-purple-50 text-purple-700' 
+                        : 'border-gray-100 hover:border-gray-200 text-gray-600'
+                    }`}
+                  >
+                    By Role
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNotificationType('user')}
+                    className={`p-3 rounded-xl border-2 font-bold text-sm transition-all ${
+                      notificationType === 'user' 
+                        ? 'border-purple-500 bg-purple-50 text-purple-700' 
+                        : 'border-gray-100 hover:border-gray-200 text-gray-600'
+                    }`}
+                  >
+                    Single User
+                  </button>
+                </div>
+              </div>
+
+              {/* Conditional Fields based on Type */}
+              {notificationType === 'role' && (
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Select Role</label>
+                  <select
+                    value={notificationTargetRole}
+                    onChange={(e) => setNotificationTargetRole(e.target.value)}
+                    className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold focus:border-purple-500 outline-none transition-all"
+                  >
+                    <option value={ROLE_MECHANIC}>Mechanic</option>
+                    <option value={ROLE_RETAILER}>Retailer</option>
+                    <option value={ROLE_WHOLESALER}>Wholesaler</option>
+                    <option value={ROLE_STAFF}>Staff</option>
+                    <option value={ROLE_ADMIN}>Admin</option>
+                  </select>
+                </div>
+              )}
+
+              {notificationType === 'user' && (
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Select User</label>
+                  <select
+                    value={notificationTargetUserId}
+                    onChange={(e) => setNotificationTargetUserId(e.target.value)}
+                    className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-purple-500 outline-none transition-all"
+                  >
+                    <option value="">Choose a user...</option>
+                    {(users || []).map((user: any) => (
+                      <option key={user.id} value={user.id}>{user.name} ({user.email})</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Title */}
+              <div>
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Notification Title</label>
+                <input
+                  type="text"
+                  className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-purple-500 outline-none transition-all"
+                  value={notificationTitle}
+                  onChange={e => setNotificationTitle(e.target.value)}
+                  placeholder="e.g. Exciting New Offer!"
+                  required
+                />
+              </div>
+
+              {/* Message */}
+              <div>
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Notification Message</label>
+                <textarea
+                  className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-purple-500 outline-none transition-all h-32 resize-none"
+                  value={notificationMessage}
+                  onChange={e => setNotificationMessage(e.target.value)}
+                  placeholder="Type your notification message here..."
+                  required
+                />
+              </div>
+
+              {/* Optional Fields */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Offer Type (Optional)</label>
+                  <input
+                    type="text"
+                    className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-purple-500 outline-none transition-all"
+                    value={notificationOfferType}
+                    onChange={e => setNotificationOfferType(e.target.value)}
+                    placeholder="e.g. SALE"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2 ml-1">Image URL (Optional)</label>
+                  <input
+                    type="url"
+                    className="w-full border-2 border-gray-100 rounded-2xl p-4 font-bold text-gray-700 focus:border-purple-500 outline-none transition-all"
+                    value={notificationImageUrl}
+                    onChange={e => setNotificationImageUrl(e.target.value)}
+                    placeholder="https://..."
+                  />
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex gap-4 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowSendNotification(false)}
+                  className="flex-1 py-4 bg-gray-100 text-gray-600 rounded-2xl font-black hover:bg-gray-200 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={sendingNotification}
+                  className="flex-1 py-4 bg-purple-600 text-white rounded-2xl font-black shadow-xl shadow-purple-100 hover:bg-purple-700 transition-all flex items-center justify-center gap-2"
+                >
+                  {sendingNotification ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Bell size={20} />
+                      Send Notification
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

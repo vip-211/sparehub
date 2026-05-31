@@ -76,8 +76,14 @@ public class User {
     @ColumnDefault("0")
     private Long points = 0L;
 
-    @Column(name = "last_notification_read_at")
+    @Column(name = "lastNotificationReadAt")
     private LocalDateTime lastNotificationReadAt;
+
+    @Column(name = "lastCartNotificationSentAt")
+    private LocalDateTime lastCartNotificationSentAt;
+
+    @Column(name = "lastOrderNotificationSentAt")
+    private LocalDateTime lastOrderNotificationSentAt;
 
     public enum UserStatus {
         PENDING, ACTIVE, REJECTED

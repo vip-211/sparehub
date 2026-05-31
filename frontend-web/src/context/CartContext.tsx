@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import api from '../services/api';
 
 type CartItem = {
+  id?: number;
   productId: number;
   name: string;
   price: number;
@@ -15,21 +17,24 @@ type CartItem = {
 
 type CartContextValue = {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, 'quantity' | 'isLocked' | 'bannerId' | 'offerId'>, qty?: number, isLocked?: boolean, bannerId?: number, offerId?: number) => void;
+  addItem: (item: Omit<CartItem, 'quantity' | 'isLocked' | 'bannerId' | 'offerId' | 'id'>, qty?: number, isLocked?: boolean, bannerId?: number, offerId?: number) => void;
   removeItem: (productId: number) => void;
   updateQty: (productId: number, qty: number) => void;
-  reorder: (items: Omit<CartItem, 'isLocked' | 'bannerId' | 'offerId'>[]) => void;
+  reorder: (items: Omit<CartItem, 'isLocked' | 'bannerId' | 'offerId' | 'id'>[]) => void;
   clear: () => void;
   count: number;
   subtotal: number;
   total: number;
   deliveryCharge: number;
+  loading: boolean;
 };
 
 const CartContext = createContext<CartContextValue | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [settings, setSettings] = useState<Record<string, string>>({});
+  const [items, setItems] = useState<CartItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Fetch public settings for delivery logic
@@ -49,22 +54,61 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchSettings();
   }, []);
 
-  const [items, setItems] = useState<CartItem[]>(() => {
+  // Fetch cart from backend on mount
+  const fetchCart = async () => {
     try {
+      setLoading(true);
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      if (user && user.token) {
+        const res = await api.get('/cart');
+        if (res.data && res.data.items) {
+          setItems(res.data.items);
+        }
+      } else {
+        // Fallback to localStorage if not logged in
+        const raw = localStorage.getItem('cart');
+        if (raw) {
+          setItems(JSON.parse(raw));
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch cart:', e)
+      // Fallback to localStorage
       const raw = localStorage.getItem('cart');
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
+      if (raw) setItems(JSON.parse(raw));
+    } finally {
+      setLoading(false);
     }
-  });
+  };
+
+  // Sync cart with backend when items change
+  const syncCart = async (newItems: CartItem[]) => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      if (user && user.token) {
+        await api.put('/cart', newItems);
+      }
+    } catch (e) {
+      console.error('Failed to sync cart:', e);
+    }
+  };
 
   useEffect(() => {
+    fetchCart();
+  }, []);
+
+  useEffect(() => {
+    // Always sync to localStorage as backup
     try {
       localStorage.setItem('cart', JSON.stringify(items));
     } catch {}
+    // Also sync to backend if we have items and not loading
+    if (!loading && items.length >= 0) {
+      syncCart(items);
+    }
   }, [items]);
 
-  const addItem = (item: Omit<CartItem, 'quantity' | 'isLocked' | 'bannerId' | 'offerId'>, qty: number = 1, isLocked: boolean = false, bannerId?: number, offerId?: number) => {
+  const addItem = (item: Omit<CartItem, 'quantity' | 'isLocked' | 'bannerId' | 'offerId' | 'id'>, qty: number = 1, isLocked: boolean = false, bannerId?: number, offerId?: number) => {
     setItems((prev) => {
       const idx = prev.findIndex((p) => p.productId === item.productId);
       if (idx >= 0) {
@@ -93,9 +137,19 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   };
 
-  const clear = () => setItems([]);
+  const clear = async () => {
+    setItems([]);
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      if (user && user.token) {
+        await api.delete('/cart');
+      }
+    } catch (e) {
+      console.error('Failed to clear cart:', e);
+    }
+  };
 
-  const reorder = (newItems: Omit<CartItem, 'isLocked' | 'bannerId' | 'offerId'>[]) => {
+  const reorder = (newItems: Omit<CartItem, 'isLocked' | 'bannerId' | 'offerId' | 'id'>[]) => {
     setItems((prev) => {
       let current = [...prev];
       newItems.forEach((item) => {
@@ -114,7 +168,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const count = useMemo(() => items.reduce((acc, i) => acc + i.quantity, 0), [items]);
   const subtotal = useMemo(() => items.reduce((acc, i) => acc + (i.price || 0) * i.quantity, 0), [items]);
-  
+
   const deliveryCharge = useMemo(() => {
     if (subtotal === 0) return 0;
     const threshold = parseFloat(settings['DELIVERY_CHARGE_THRESHOLD'] || '1000');
@@ -135,6 +189,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     subtotal,
     total,
     deliveryCharge,
+    loading
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

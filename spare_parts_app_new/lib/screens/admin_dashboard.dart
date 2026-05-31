@@ -41,6 +41,7 @@ import '../widgets/ai_chatbot_widget.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'admin_settings_screen.dart';
+import 'admin_user_activity_screen.dart';
 import 'offers_screen.dart';
 import '../services/settings_service.dart';
 import '../widgets/cart_badge.dart';
@@ -80,6 +81,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     const ManageCmsScreen(),
     const ManageHomeLayoutScreen(),
     const AdminPurchaseScreen(),
+    const AdminUserActivityScreen(),
   ];
 
   void _sendNotification() {
@@ -339,282 +341,292 @@ class _AdminDashboardState extends State<AdminDashboard> {
       child: PopScope(
         canPop: false,
         onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) return;
-        final shouldExit = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Exit App?'),
-            content: const Text('Do you want to exit the application?'),
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text('No')),
-              TextButton(
-                  onPressed: () => Navigator.pop(ctx, true),
-                  child: const Text('Yes')),
-            ],
-          ),
-        );
-        if (shouldExit == true) {
-          SystemNavigator.pop();
-        }
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            isSuperManager ? 'Super Manager Panel' : 'Admin Panel',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          backgroundColor: isSuperManager
-              ? AppTheme.adminColor
-              : Theme.of(context).colorScheme.error,
-          foregroundColor: Colors.white,
-          surfaceTintColor: Colors.transparent,
-          elevation: 0,
-          actions: [
-            const CartBadge(),
-            const NotificationBadge(),
-            IconButton(
-              icon: const Icon(Icons.settings),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const AdminSettingsScreen()),
-                );
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.notifications_active),
-              onPressed: _sendNotification,
-            ),
-            IconButton(
-              icon: const Icon(Icons.logout),
-              onPressed: () async {
-                await auth.logout();
-                if (mounted) {
-                  Navigator.of(context)
-                      .pushNamedAndRemoveUntil('/', (route) => false);
-                }
-              },
-            ),
-          ],
-        ),
-        drawer: Drawer(
-          child: SafeArea(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                UserAccountsDrawerHeader(
-                  accountName: Text(auth.user?.name ?? 'Admin'),
-                  accountEmail: Text(auth.user?.email ?? ''),
-                  currentAccountPicture: CircleAvatar(
-                    backgroundColor: Theme.of(context).colorScheme.surface,
-                    child: Icon(Icons.person,
-                        color: isSuperManager
-                            ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context).colorScheme.error),
-                  ),
-                  decoration: BoxDecoration(
-                    color: isSuperManager
-                        ? AppTheme.adminColor
-                        : Theme.of(context).colorScheme.error,
-                  ),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.dashboard),
-                  title: const Text('Overview'),
-                  selected: _selectedIndex == 0,
-                  onTap: () {
-                    setState(() => _selectedIndex = 0);
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.local_offer),
-                  title: const Text('Offers'),
-                  selected: _selectedIndex == 1,
-                  onTap: () {
-                    setState(() => _selectedIndex = 1);
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.list_alt),
-                  title: const Text('Orders'),
-                  selected: _selectedIndex == 2,
-                  onTap: () {
-                    setState(() => _selectedIndex = 2);
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.assignment),
-                  title: const Text('Requests'),
-                  selected: _selectedIndex == 3,
-                  onTap: () {
-                    setState(() => _selectedIndex = 3);
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.inventory),
-                  title: const Text('Products'),
-                  selected: _selectedIndex == 4,
-                  onTap: () {
-                    setState(() => _selectedIndex = 4);
-                    Navigator.pop(context);
-                  },
-                ),
-                if (hasAdminPrivileges)
-                  ListTile(
-                    leading: const Icon(Icons.category),
-                    title: const Text('Categories'),
-                    selected: _selectedIndex == 5,
-                    onTap: () {
-                      setState(() => _selectedIndex = 5);
-                      Navigator.pop(context);
-                    },
-                  ),
-                ListTile(
-                  leading: const Icon(Icons.bar_chart),
-                  title: const Text('Reports'),
-                  selected: _selectedIndex == 6,
-                  onTap: () {
-                    setState(() => _selectedIndex = 6);
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.receipt),
-                  title: const Text('Invoicing'),
-                  selected: _selectedIndex == 7,
-                  onTap: () {
-                    setState(() => _selectedIndex = 7);
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.shopping_bag),
-                  title: const Text('Purchases'),
-                  selected: _selectedIndex == 14,
-                  onTap: () {
-                    setState(() => _selectedIndex = 14);
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.people),
-                  title: const Text('Users'),
-                  selected: _selectedIndex == 8,
-                  onTap: () {
-                    setState(() => _selectedIndex = 8);
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.psychology),
-                  title: const Text('AI Training Report'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.pushNamed(context, '/admin/ai-training');
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.restore_from_trash),
-                  title: const Text('Recycle Bin'),
-                  selected: _selectedIndex == 9,
-                  onTap: () {
-                    setState(() => _selectedIndex = 9);
-                    Navigator.pop(context);
-                  },
-                ),
-                if (_voiceEnabled)
-                  ListTile(
-                    leading: const Icon(Icons.record_voice_over),
-                    title: const Text('Voice Training'),
-                    selected: _selectedIndex == 10,
-                    onTap: () {
-                      setState(() => _selectedIndex = 10);
-                      Navigator.pop(context);
-                    },
-                  ),
-                ListTile(
-                  leading: const Icon(Icons.person),
-                  title: const Text('Profile'),
-                  selected: _selectedIndex == 11,
-                  onTap: () {
-                    setState(() => _selectedIndex = 11);
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.edit_note),
-                  title: const Text('Home Page CMS'),
-                  selected: _selectedIndex == 12,
-                  onTap: () {
-                    setState(() => _selectedIndex = 12);
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.view_quilt),
-                  title: const Text('Home Layout Editor'),
-                  selected: _selectedIndex == 13,
-                  onTap: () {
-                    setState(() => _selectedIndex = 13);
-                    Navigator.pop(context);
-                  },
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.notifications_active),
-                  title: const Text('Send Notification'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _sendNotification();
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.settings),
-                  title: const Text('Settings'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const AdminSettingsScreen(),
-                      ),
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.logout, color: Colors.red),
-                  title:
-                      const Text('Logout', style: TextStyle(color: Colors.red)),
-                  onTap: () async {
-                    Navigator.pop(context);
-                    await auth.logout();
-                    if (mounted) {
-                      Navigator.of(context)
-                          .pushNamedAndRemoveUntil('/', (route) => false);
-                    }
-                  },
-                ),
+          if (didPop) return;
+          final shouldExit = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Exit App?'),
+              content: const Text('Do you want to exit the application?'),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text('No')),
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: const Text('Yes')),
               ],
             ),
+          );
+          if (shouldExit == true) {
+            SystemNavigator.pop();
+          }
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text(
+              isSuperManager ? 'Super Manager Panel' : 'Admin Panel',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            backgroundColor: isSuperManager
+                ? AppTheme.adminColor
+                : Theme.of(context).colorScheme.error,
+            foregroundColor: Colors.white,
+            surfaceTintColor: Colors.transparent,
+            elevation: 0,
+            actions: [
+              const CartBadge(),
+              const NotificationBadge(),
+              IconButton(
+                icon: const Icon(Icons.settings),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const AdminSettingsScreen()),
+                  );
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.notifications_active),
+                onPressed: _sendNotification,
+              ),
+              IconButton(
+                icon: const Icon(Icons.logout),
+                onPressed: () async {
+                  await auth.logout();
+                  if (mounted) {
+                    Navigator.of(context)
+                        .pushNamedAndRemoveUntil('/', (route) => false);
+                  }
+                },
+              ),
+            ],
+          ),
+          drawer: Drawer(
+            child: SafeArea(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  UserAccountsDrawerHeader(
+                    accountName: Text(auth.user?.name ?? 'Admin'),
+                    accountEmail: Text(auth.user?.email ?? ''),
+                    currentAccountPicture: CircleAvatar(
+                      backgroundColor: Theme.of(context).colorScheme.surface,
+                      child: Icon(Icons.person,
+                          color: isSuperManager
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.error),
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSuperManager
+                          ? AppTheme.adminColor
+                          : Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.dashboard),
+                    title: const Text('Overview'),
+                    selected: _selectedIndex == 0,
+                    onTap: () {
+                      setState(() => _selectedIndex = 0);
+                      Navigator.pop(context);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.local_offer),
+                    title: const Text('Offers'),
+                    selected: _selectedIndex == 1,
+                    onTap: () {
+                      setState(() => _selectedIndex = 1);
+                      Navigator.pop(context);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.list_alt),
+                    title: const Text('Orders'),
+                    selected: _selectedIndex == 2,
+                    onTap: () {
+                      setState(() => _selectedIndex = 2);
+                      Navigator.pop(context);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.assignment),
+                    title: const Text('Requests'),
+                    selected: _selectedIndex == 3,
+                    onTap: () {
+                      setState(() => _selectedIndex = 3);
+                      Navigator.pop(context);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.inventory),
+                    title: const Text('Products'),
+                    selected: _selectedIndex == 4,
+                    onTap: () {
+                      setState(() => _selectedIndex = 4);
+                      Navigator.pop(context);
+                    },
+                  ),
+                  if (hasAdminPrivileges)
+                    ListTile(
+                      leading: const Icon(Icons.category),
+                      title: const Text('Categories'),
+                      selected: _selectedIndex == 5,
+                      onTap: () {
+                        setState(() => _selectedIndex = 5);
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ListTile(
+                    leading: const Icon(Icons.bar_chart),
+                    title: const Text('Reports'),
+                    selected: _selectedIndex == 6,
+                    onTap: () {
+                      setState(() => _selectedIndex = 6);
+                      Navigator.pop(context);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.receipt),
+                    title: const Text('Invoicing'),
+                    selected: _selectedIndex == 7,
+                    onTap: () {
+                      setState(() => _selectedIndex = 7);
+                      Navigator.pop(context);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.shopping_bag),
+                    title: const Text('Purchases'),
+                    selected: _selectedIndex == 14,
+                    onTap: () {
+                      setState(() => _selectedIndex = 14);
+                      Navigator.pop(context);
+                    },
+                  ),
+                  if (isAdmin)
+                    ListTile(
+                      leading: const Icon(Icons.insights),
+                      title: const Text('User Activity'),
+                      selected: _selectedIndex == 15,
+                      onTap: () {
+                        setState(() => _selectedIndex = 15);
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ListTile(
+                    leading: const Icon(Icons.people),
+                    title: const Text('Users'),
+                    selected: _selectedIndex == 8,
+                    onTap: () {
+                      setState(() => _selectedIndex = 8);
+                      Navigator.pop(context);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.psychology),
+                    title: const Text('AI Training Report'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/admin/ai-training');
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.restore_from_trash),
+                    title: const Text('Recycle Bin'),
+                    selected: _selectedIndex == 9,
+                    onTap: () {
+                      setState(() => _selectedIndex = 9);
+                      Navigator.pop(context);
+                    },
+                  ),
+                  if (_voiceEnabled)
+                    ListTile(
+                      leading: const Icon(Icons.record_voice_over),
+                      title: const Text('Voice Training'),
+                      selected: _selectedIndex == 10,
+                      onTap: () {
+                        setState(() => _selectedIndex = 10);
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ListTile(
+                    leading: const Icon(Icons.person),
+                    title: const Text('Profile'),
+                    selected: _selectedIndex == 11,
+                    onTap: () {
+                      setState(() => _selectedIndex = 11);
+                      Navigator.pop(context);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.edit_note),
+                    title: const Text('Home Page CMS'),
+                    selected: _selectedIndex == 12,
+                    onTap: () {
+                      setState(() => _selectedIndex = 12);
+                      Navigator.pop(context);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.view_quilt),
+                    title: const Text('Home Layout Editor'),
+                    selected: _selectedIndex == 13,
+                    onTap: () {
+                      setState(() => _selectedIndex = 13);
+                      Navigator.pop(context);
+                    },
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.notifications_active),
+                    title: const Text('Send Notification'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _sendNotification();
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.settings),
+                    title: const Text('Settings'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AdminSettingsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.logout, color: Colors.red),
+                    title: const Text('Logout',
+                        style: TextStyle(color: Colors.red)),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await auth.logout();
+                      if (mounted) {
+                        Navigator.of(context)
+                            .pushNamedAndRemoveUntil('/', (route) => false);
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          body: Stack(
+            children: [
+              _widgetOptions[_selectedIndex],
+              if (_aiEnabled) const AIChatbotWidget(),
+            ],
           ),
         ),
-        body: Stack(
-          children: [
-            _widgetOptions[_selectedIndex],
-            if (_aiEnabled) const AIChatbotWidget(),
-          ],
-        ),
       ),
-    ),
-  );
-}
+    );
+  }
 }
 
 class AdminOverviewScreen extends StatefulWidget {
@@ -942,9 +954,11 @@ class _AdminOverviewScreenState extends State<AdminOverviewScreen> {
                             var permission = await Geolocator.checkPermission();
                             if (permission == LocationPermission.denied) {
                               permission = await Geolocator.requestPermission();
-                              if (permission == LocationPermission.denied) return;
+                              if (permission == LocationPermission.denied)
+                                return;
                             }
-                            if (permission == LocationPermission.deniedForever) {
+                            if (permission ==
+                                LocationPermission.deniedForever) {
                               return;
                             }
                             final pos = await Geolocator.getCurrentPosition(
@@ -971,9 +985,10 @@ class _AdminOverviewScreenState extends State<AdminOverviewScreen> {
                                   'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=$lat&lon=$lon');
                               final res = await http.get(uri,
                                   headers: {'User-Agent': 'spares-hub-app'});
-                              if (res.statusCode >= 200 && res.statusCode < 300) {
-                                final data =
-                                    jsonDecode(res.body) as Map<String, dynamic>;
+                              if (res.statusCode >= 200 &&
+                                  res.statusCode < 300) {
+                                final data = jsonDecode(res.body)
+                                    as Map<String, dynamic>;
                                 final disp =
                                     data['display_name']?.toString() ?? '';
                                 setState(() {
@@ -1154,7 +1169,8 @@ class _ManageHomeLayoutScreenState extends State<ManageHomeLayoutScreen> {
   Future<void> _loadLayout() async {
     setState(() => _isLoading = true);
     final layoutStr = await _productService.getCmsSetting(
-        'mechanic_home_layout', 'header,search_bar,categories,banner,hot_deals');
+        'mechanic_home_layout',
+        'header,search_bar,categories,banner,hot_deals');
     setState(() {
       _layout = layoutStr.split(',').where((s) => s.isNotEmpty).toList();
       _isLoading = false;
@@ -1163,7 +1179,8 @@ class _ManageHomeLayoutScreenState extends State<ManageHomeLayoutScreen> {
 
   Future<void> _saveLayout() async {
     setState(() => _isLoading = true);
-    await _productService.setCmsSetting('mechanic_home_layout', _layout.join(','));
+    await _productService.setCmsSetting(
+        'mechanic_home_layout', _layout.join(','));
     setState(() => _isLoading = false);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Home layout updated successfully!')),
@@ -1227,7 +1244,8 @@ class _ManageHomeLayoutScreenState extends State<ManageHomeLayoutScreen> {
                               alignment: Alignment.centerRight,
                               padding: const EdgeInsets.only(right: 20),
                               color: Colors.red,
-                              child: const Icon(Icons.delete, color: Colors.white),
+                              child:
+                                  const Icon(Icons.delete, color: Colors.white),
                             ),
                             onDismissed: (direction) {
                               setState(() {
@@ -1244,14 +1262,18 @@ class _ManageHomeLayoutScreenState extends State<ManageHomeLayoutScreen> {
                                     horizontal: 16, vertical: 8),
                                 leading: CircleAvatar(
                                   backgroundColor: Colors.blue.shade50,
-                                  child: Icon(componentIcons[comp] ?? Icons.extension,
+                                  child: Icon(
+                                      componentIcons[comp] ?? Icons.extension,
                                       color: Colors.blue),
                                 ),
                                 title: Text(
                                   componentNames[comp] ?? comp,
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14),
                                 ),
-                                trailing: const Icon(Icons.drag_handle, color: Colors.grey),
+                                trailing: const Icon(Icons.drag_handle,
+                                    color: Colors.grey),
                               ),
                             ),
                           );
@@ -1287,14 +1309,14 @@ class _ManageHomeLayoutScreenState extends State<ManageHomeLayoutScreen> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       child: Text(isWide ? 'Add Items' : 'Add',
-                          style:
-                              const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                          style: const TextStyle(
+                              fontSize: 10, fontWeight: FontWeight.bold)),
                     ),
                     const SizedBox(height: 12),
                     ...componentNames.entries.map((entry) {
                       return Padding(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4, vertical: 4),
                         child: InkWell(
                           onTap: () {
                             setState(() {
@@ -1310,8 +1332,11 @@ class _ManageHomeLayoutScreenState extends State<ManageHomeLayoutScreen> {
                             ),
                             child: Column(
                               children: [
-                                Icon(componentIcons[entry.key] ?? Icons.extension,
-                                    color: Colors.blue, size: 20),
+                                Icon(
+                                    componentIcons[entry.key] ??
+                                        Icons.extension,
+                                    color: Colors.blue,
+                                    size: 20),
                                 const SizedBox(height: 4),
                                 Text(entry.value.split(' ')[0],
                                     textAlign: TextAlign.center,
@@ -2276,7 +2301,8 @@ class _AllOrdersScreenState extends State<AllOrdersScreen> {
                                 onPressed: () =>
                                     _updateStatus(order.id, 'APPROVED'),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color.fromARGB(255, 235, 158, 231),
+                                  backgroundColor:
+                                      const Color.fromARGB(255, 235, 158, 231),
                                   foregroundColor: Colors.white,
                                 ),
                                 child: const Text('Approve'),
@@ -3711,7 +3737,10 @@ class _ManageProductsScreenState extends State<ManageProductsScreen> {
                       ),
                       child: Stack(
                         children: [
-                          if (p.imagePath == null && p.imageLink == null && p.categoryImagePath == null && p.categoryImageLink == null)
+                          if (p.imagePath == null &&
+                              p.imageLink == null &&
+                              p.categoryImagePath == null &&
+                              p.categoryImageLink == null)
                             Center(
                               child: Icon(Icons.inventory_2_outlined,
                                   color: Colors.grey[400], size: 32),
@@ -4122,17 +4151,17 @@ class _InvoicingScreenState extends State<InvoicingScreen> {
                 subtitle: Text(user.roles.first),
                 onTap: () {
                   setState(() {
-                      _selectedUser = {
-                        'id': user.id,
-                        'name': user.name,
-                        'email': user.email,
-                        'phone': user.phone,
-                        'address': user.address,
-                        'role': user.roles.first,
-                      };
-                      _billingItems = [];
-                      _totalAmount = 0;
-                    });
+                    _selectedUser = {
+                      'id': user.id,
+                      'name': user.name,
+                      'email': user.email,
+                      'phone': user.phone,
+                      'address': user.address,
+                      'role': user.roles.first,
+                    };
+                    _billingItems = [];
+                    _totalAmount = 0;
+                  });
                   Navigator.pop(ctx);
                 },
               );
@@ -4610,23 +4639,25 @@ class _InvoicingScreenState extends State<InvoicingScreen> {
                   if (cleanNumber.length == 10) {
                     cleanNumber = '91$cleanNumber';
                   }
-                  
+
                   final itemsText = _billingItems
                       .map((item) =>
                           '- ${item['name']} x ${item['quantity']}: Rs. ${((item['price'] as double) * (1 - ((item['discount'] as double? ?? 0.0) / 100)) * (item['quantity'] as int)).toStringAsFixed(2)}')
                       .join('\n');
-                  
+
                   final message =
                       "Hello ${_selectedUser!['name']},\n\nYour invoice for Rs. ${_totalAmount.toStringAsFixed(2)} has been generated.\n\nItems:\n$itemsText\n\nThank you for shopping with us!";
-                  
+
                   final url =
                       'https://wa.me/$cleanNumber?text=${Uri.encodeComponent(message)}';
                   if (await canLaunchUrl(Uri.parse(url))) {
-                    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                    await launchUrl(Uri.parse(url),
+                        mode: LaunchMode.externalApplication);
                   }
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Customer phone number not found!')),
+                    const SnackBar(
+                        content: Text('Customer phone number not found!')),
                   );
                 }
                 if (context.mounted) Navigator.pop(ctx);
@@ -6290,8 +6321,8 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen> {
                     final XFile? image =
                         await picker.pickImage(source: ImageSource.gallery);
                     if (image != null) {
-                      final url = await _productService
-                          .uploadProductImage(image.path);
+                      final url =
+                          await _productService.uploadProductImage(image.path);
                       if (url != null) {
                         setDialogState(() {
                           imagePath = url;
@@ -6361,7 +6392,8 @@ class _ManageCategoriesScreenState extends State<ManageCategoriesScreen> {
                 const SizedBox(height: 16),
                 SwitchListTile(
                   title: const Text('Show on Home Page'),
-                  subtitle: const Text('If disabled, this category will only appear in the full shop.'),
+                  subtitle: const Text(
+                      'If disabled, this category will only appear in the full shop.'),
                   value: showOnHome,
                   onChanged: (val) => setDialogState(() => showOnHome = val),
                 ),
@@ -6530,10 +6562,10 @@ class _ManageCmsScreenState extends State<ManageCmsScreen> {
         .getCmsSetting('mechanic_home_title', 'Parts Mitra');
     _controllers['mechanic_banner_text']!.text = await _productService
         .getCmsSetting('mechanic_banner_text', 'Banner Text Here');
-    _controllers['mechanic_banner_btn']!.text = await _productService
-        .getCmsSetting('mechanic_banner_btn', 'Buy Now');
-    final hideChat = await _productService
-        .getCmsSetting('hide_chat_support', 'false');
+    _controllers['mechanic_banner_btn']!.text =
+        await _productService.getCmsSetting('mechanic_banner_btn', 'Buy Now');
+    final hideChat =
+        await _productService.getCmsSetting('hide_chat_support', 'false');
     setState(() {
       _hideChatSupport = hideChat == 'true';
       _isLoading = false;
@@ -6545,7 +6577,8 @@ class _ManageCmsScreenState extends State<ManageCmsScreen> {
     for (var entry in _controllers.entries) {
       await _productService.setCmsSetting(entry.key, entry.value.text);
     }
-    await _productService.setCmsSetting('hide_chat_support', _hideChatSupport.toString());
+    await _productService.setCmsSetting(
+        'hide_chat_support', _hideChatSupport.toString());
     setState(() => _isLoading = false);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Settings saved successfully!')),
@@ -6582,7 +6615,8 @@ class _ManageCmsScreenState extends State<ManageCmsScreen> {
             const SizedBox(height: 16),
             SwitchListTile(
               title: const Text('Hide Chat Support globally'),
-              subtitle: const Text('When enabled, users will not see the AI Chatbot'),
+              subtitle:
+                  const Text('When enabled, users will not see the AI Chatbot'),
               value: _hideChatSupport,
               onChanged: (val) => setState(() => _hideChatSupport = val),
             ),
