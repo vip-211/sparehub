@@ -17,6 +17,21 @@ import java.util.Map;
 public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    // Handle ClientAbortException/Broken pipe - happens when client disconnects early
+    @ExceptionHandler({
+        org.apache.catalina.connector.ClientAbortException.class,
+        java.io.IOException.class
+    })
+    public void handleClientAbortException(Exception ex) {
+        // Only log at debug level since this is expected behavior when clients disconnect early
+        String message = ex.getMessage();
+        if (message != null && (message.contains("Broken pipe") || message.contains("Connection reset"))) {
+            log.debug("Client disconnected early: {}", message);
+        } else {
+            log.warn("IO exception caught: {}", message);
+        }
+    }
+
     @ExceptionHandler(org.springframework.security.authentication.BadCredentialsException.class)
     public ResponseEntity<MessageResponse> handleBadCredentialsException(org.springframework.security.authentication.BadCredentialsException ex) {
         log.warn("Failed login attempt");
