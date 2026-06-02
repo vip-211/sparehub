@@ -75,16 +75,21 @@ public class FcmService {
                 if (user.getRole() != null && user.getRole().getName() != null) {
                     roleName = user.getRole().getName().name();
                 }
+                com.google.firebase.messaging.Notification.Builder notificationBuilder =
+                        com.google.firebase.messaging.Notification.builder()
+                                .setTitle(title)
+                                .setBody(message);
+                if (imageUrl != null && !imageUrl.isEmpty()) {
+                    notificationBuilder.setImage(imageUrl);
+                }
                 Message fcmMessage = Message.builder()
                         .setToken(user.getFcmToken())
-                        .setNotification(com.google.firebase.messaging.Notification.builder()
-                                .setTitle(title)
-                                .setBody(message)
-                                .build())
+                        .setNotification(notificationBuilder.build())
                         .setAndroidConfig(AndroidConfig.builder()
                                 .setPriority(AndroidConfig.Priority.HIGH)
                                 .setNotification(AndroidNotification.builder()
                                         .setChannelId("spare_parts_channel")
+                                        .setClickAction("FLUTTER_NOTIFICATION_CLICK")
                                         .build())
                                 .build())
                         .putData("route", "offers")
@@ -124,19 +129,23 @@ public class FcmService {
             log.warn("FcmService: Firebase not initialized, skipping FCM broadcast.");
             return;
         }
-        com.google.firebase.messaging.Notification fcmNotification = com.google.firebase.messaging.Notification.builder()
-                .setTitle(title)
-                .setBody(message)
-                .build();
+        com.google.firebase.messaging.Notification.Builder notificationBuilder =
+                com.google.firebase.messaging.Notification.builder()
+                        .setTitle(title)
+                        .setBody(message);
+        if (imageUrl != null && !imageUrl.isEmpty()) {
+            notificationBuilder.setImage(imageUrl);
+        }
 
         // Using topics for broadcast
         Message fcmMessage = Message.builder()
                 .setTopic("all-users")
-                .setNotification(fcmNotification)
+                .setNotification(notificationBuilder.build())
                 .setAndroidConfig(AndroidConfig.builder()
                         .setPriority(AndroidConfig.Priority.HIGH)
                         .setNotification(AndroidNotification.builder()
                                 .setChannelId("spare_parts_channel")
+                                .setClickAction("FLUTTER_NOTIFICATION_CLICK")
                                 .build())
                         .build())
                 .putData("route", "offers")
@@ -179,17 +188,21 @@ public class FcmService {
             return;
         }
         String roleTopicCondition = buildRoleTopicCondition(role);
-        // Alternatively, use topics per role
+        com.google.firebase.messaging.Notification.Builder notificationBuilder =
+                com.google.firebase.messaging.Notification.builder()
+                        .setTitle(title)
+                        .setBody(message);
+        if (imageUrl != null && !imageUrl.isEmpty()) {
+            notificationBuilder.setImage(imageUrl);
+        }
         Message fcmMessage = Message.builder()
                 .setCondition(roleTopicCondition)
-                .setNotification(com.google.firebase.messaging.Notification.builder()
-                        .setTitle(title)
-                        .setBody(message)
-                        .build())
+                .setNotification(notificationBuilder.build())
                 .setAndroidConfig(AndroidConfig.builder()
                         .setPriority(AndroidConfig.Priority.HIGH)
                         .setNotification(AndroidNotification.builder()
                                 .setChannelId("spare_parts_channel")
+                                .setClickAction("FLUTTER_NOTIFICATION_CLICK")
                                 .build())
                         .build())
                 .putData("route", route != null ? route : "offers")

@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'providers/auth_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/language_provider.dart';
@@ -42,6 +44,70 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   debugPrint("Handling a background message: ${message.messageId}");
+  
+  // Show local notification even when app is in background/terminated
+  if (message.notification != null) {
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    final InitializationSettings initializationSettings =
+        const InitializationSettings(android: initializationSettingsAndroid);
+    final FlutterLocalNotificationsPlugin localNotifications =
+        FlutterLocalNotificationsPlugin();
+    await localNotifications.initialize(initializationSettings);
+    
+    final androidSpecific =
+        localNotifications.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    await androidSpecific?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        'spare_parts_channel',
+        'Spare Parts Notifications',
+        description: 'Order updates and promotional offers',
+        importance: Importance.max,
+      ),
+    );
+    
+    AndroidNotificationDetails androidPlatformChannelSpecifics =
+        const AndroidNotificationDetails(
+      'spare_parts_channel',
+      'Spare Parts Notifications',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+    
+    // Check for image in data or notification
+    String? imageUrl = message.data['imageUrl'];
+    if (imageUrl == null || imageUrl.isEmpty) {
+      imageUrl = message.notification?.android?.imageUrl;
+    }
+    
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      androidPlatformChannelSpecifics = AndroidNotificationDetails(
+        'spare_parts_channel',
+        'Spare Parts Notifications',
+        importance: Importance.max,
+        priority: Priority.high,
+        styleInformation: BigPictureStyleInformation(
+          ByteArrayAndroidBitmap.fromBase64String(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAAtJREFUGFdjYAACAAAFAAGq1chRAAAAAElFTkSuQmCC',
+          ),
+        ),
+      );
+    }
+    
+    final NotificationDetails platformChannelSpecifics =
+        NotificationDetails(android: androidPlatformChannelSpecifics);
+    
+    final payload = jsonEncode(message.data);
+    
+    await localNotifications.show(
+      DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      message.notification?.title ?? 'New Notification',
+      message.notification?.body ?? '',
+      platformChannelSpecifics,
+      payload: payload,
+    );
+  }
 }
 
 final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();

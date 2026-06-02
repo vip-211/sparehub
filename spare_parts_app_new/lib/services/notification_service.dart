@@ -52,7 +52,8 @@ class NotificationService {
         'spare_parts_channel',
         'Spare Parts Notifications',
         description: 'Order updates and promotional offers',
-        importance: Importance.high,
+        importance: Importance.max,
+        playSound: true,
       ),
     );
     await Permission.notification.request();
@@ -63,6 +64,7 @@ class NotificationService {
       alert: true,
       badge: true,
       sound: true,
+      provisional: false,
     );
 
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
@@ -140,6 +142,7 @@ class NotificationService {
           title ?? 'New Notification',
           msg ?? '',
           payload: payloadStr,
+          imageUrl: imageUrl,
         );
       }
     });
@@ -258,18 +261,33 @@ class NotificationService {
   }
 
   static void showLocalNotification(String title, String body,
-      {String? payload}) async {
-    const AndroidNotificationDetails androidPlatformChannelSpecifics =
-        AndroidNotificationDetails(
+      {String? payload, String? imageUrl}) async {
+    AndroidNotificationDetails androidPlatformChannelSpecifics =
+        const AndroidNotificationDetails(
       'spare_parts_channel',
       'Spare Parts Notifications',
       importance: Importance.max,
       priority: Priority.high,
     );
-    const NotificationDetails platformChannelSpecifics =
+    
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      androidPlatformChannelSpecifics = AndroidNotificationDetails(
+        'spare_parts_channel',
+        'Spare Parts Notifications',
+        importance: Importance.max,
+        priority: Priority.high,
+        styleInformation: BigPictureStyleInformation(
+          ByteArrayAndroidBitmap.fromBase64String(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAAtJREFUGFdjYAACAAAFAAGq1chRAAAAAElFTkSuQmCC',
+          ),
+        ),
+      );
+    }
+    
+    final NotificationDetails platformChannelSpecifics =
         NotificationDetails(android: androidPlatformChannelSpecifics);
     await _localNotifications.show(
-      0,
+      DateTime.now().millisecondsSinceEpoch ~/ 1000,
       title,
       body,
       platformChannelSpecifics,
