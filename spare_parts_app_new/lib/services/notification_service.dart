@@ -9,7 +9,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'remote_client.dart';
 
 class NotificationService {
-  static const String _fcmConfigVersion = '2'; // Increment this to force token refresh
+  static const String _fcmConfigVersion =
+      '2'; // Increment this to force token refresh
   static final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
   static FirebaseMessaging get _fcm => FirebaseMessaging.instance;
@@ -59,6 +60,9 @@ class NotificationService {
     await Permission.notification.request();
     // Android 13+ permission prompt will be handled by the system when needed.
 
+    // IMPORTANT: Get fresh token on every app launch and sync to server
+    await _refreshAndSyncFcmToken();
+
     // 2. Request FCM permissions
     NotificationSettings settings = await _fcm.requestPermission(
       alert: true,
@@ -89,12 +93,12 @@ class NotificationService {
         } else if (lastRoleLegacy != null && lastRoleLegacy.isNotEmpty) {
           roles = lastRoleLegacy.split(',').map((e) => e.trim()).toList();
         }
-    if (lastUserId != null) {
-      await updateTokenOnServer(lastUserId, token);
-    }
-    if (roles.isNotEmpty) {
-      await subscribeToTopicsForRoles(roles);
-    }
+        if (lastUserId != null) {
+          await updateTokenOnServer(lastUserId, token);
+        }
+        if (roles.isNotEmpty) {
+          await subscribeToTopicsForRoles(roles);
+        }
         if (kDebugMode) {
           debugPrint(
               'FCM token refreshed and synced. Roles=${roles.join(',')} User=$lastUserId');
@@ -216,13 +220,51 @@ class NotificationService {
 
   static bool get hasPendingNavigation => _pendingNav != null;
 
+  static Future<void> _refreshAndSyncFcmToken() async {
+    try {
+      if (kDebugMode) debugPrint("Refreshing FCM token...");
+
+      // Get fresh token
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        debugPrint("Failed to get FCM token");
+        return;
+      }
+
+      // Check if we have a saved user to sync to backend
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getInt('last_user_id');
+
+      if (userId != null) {
+        if (kDebugMode) debugPrint("Updating FCM token for user $userId");
+        await updateTokenOnServer(userId, token);
+
+        // Also refresh topics
+        final lastRolesJson = prefs.getString('last_roles');
+        if (lastRolesJson != null && lastRolesJson.isNotEmpty) {
+          final decoded = jsonDecode(lastRolesJson);
+          if (decoded is List) {
+            final roles = decoded.map((e) => e.toString()).toList();
+            await subscribeToTopicsForRoles(roles);
+          }
+        }
+      }
+
+      if (kDebugMode) debugPrint("FCM token refresh completed");
+    } catch (e) {
+      debugPrint("Error refreshing FCM token: $e");
+    }
+  }
+
   static Future<String?> getToken() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final currentVersion = prefs.getString('fcm_config_version');
-      
+
       if (currentVersion != _fcmConfigVersion) {
-        if (kDebugMode) debugPrint("NotificationService: Config version mismatch (old: $currentVersion, new: $_fcmConfigVersion). Regenerating token.");
+        if (kDebugMode)
+          debugPrint(
+              "NotificationService: Config version mismatch (old: $currentVersion, new: $_fcmConfigVersion). Regenerating token.");
         try {
           await _fcm.deleteToken();
         } catch (e) {
@@ -230,7 +272,7 @@ class NotificationService {
         }
         await prefs.setString('fcm_config_version', _fcmConfigVersion);
       }
-      
+
       return await _fcm.getToken();
     } catch (e) {
       debugPrint("Error getting FCM token: $e");
@@ -269,7 +311,7 @@ class NotificationService {
       importance: Importance.max,
       priority: Priority.high,
     );
-    
+
     if (imageUrl != null && imageUrl.isNotEmpty) {
       androidPlatformChannelSpecifics = AndroidNotificationDetails(
         'spare_parts_channel',
@@ -283,7 +325,7 @@ class NotificationService {
         ),
       );
     }
-    
+
     final NotificationDetails platformChannelSpecifics =
         NotificationDetails(android: androidPlatformChannelSpecifics);
     await _localNotifications.show(

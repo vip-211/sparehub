@@ -87,6 +87,7 @@ public class FcmService {
                         .setNotification(notificationBuilder.build())
                         .setAndroidConfig(AndroidConfig.builder()
                                 .setPriority(AndroidConfig.Priority.HIGH)
+                                .setTtl(86400000) // 24h TTL
                                 .setNotification(AndroidNotification.builder()
                                         .setChannelId("spare_parts_channel")
                                         .setClickAction("FLUTTER_NOTIFICATION_CLICK")
@@ -143,6 +144,7 @@ public class FcmService {
                 .setNotification(notificationBuilder.build())
                 .setAndroidConfig(AndroidConfig.builder()
                         .setPriority(AndroidConfig.Priority.HIGH)
+                        .setTtl(86400000) // 24h TTL
                         .setNotification(AndroidNotification.builder()
                                 .setChannelId("spare_parts_channel")
                                 .setClickAction("FLUTTER_NOTIFICATION_CLICK")

@@ -5,8 +5,8 @@ class Constants {
       'SERVER_HOST', 'sparehub-0t47.onrender.com');
 
   static String get defaultBase => 'https://$serverHost/api';
-  static const String baseOverride =
-      String.fromEnvironment('BASE_URL', defaultValue: '');
+  static const String baseOverride = String.fromEnvironment('BASE_URL',
+      defaultValue: 'https://sparehub-0t47.onrender.com/api');
   static String get baseUrl {
     final raw = baseOverride.isNotEmpty ? baseOverride : defaultBase;
     // Remove all whitespace characters (newlines, spaces, etc.) which might come from terminal wrapping

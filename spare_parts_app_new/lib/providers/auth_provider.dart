@@ -26,7 +26,8 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> _loadUser() async {
     try {
-      await SettingsService.preloadRemoteSettings(); // Preload settings on start
+      await SettingsService
+          .preloadRemoteSettings(); // Preload settings on start
       _user = await _authService.getCurrentUser();
       if (_user != null) {
         _updateFcmToken();
@@ -43,14 +44,16 @@ class AuthProvider with ChangeNotifier {
     if (_user != null) {
       final token = await NotificationService.getToken();
       if (token != null) {
+        print('NotificationService: Updating FCM token for user $token');
         await NotificationService.updateTokenOnServer(_user!.id, token);
         await NotificationService.attemptPendingFcmSync(userId: _user!.id);
-        
+
         // Ensure topics are subscribed for the current user's roles
         if (_user!.roles.isNotEmpty) {
           await NotificationService.subscribeToTopicsForRoles(_user!.roles);
           final rolesStr = _user!.roles.join(',');
-          await NotificationService.rememberIdentity(rolesStr, userId: _user!.id);
+          await NotificationService.rememberIdentity(rolesStr,
+              userId: _user!.id);
         }
       }
     }
@@ -62,7 +65,8 @@ class AuthProvider with ChangeNotifier {
 
     _user = await _authService.login(email, password);
     if (_user != null) {
-      await SettingsService.preloadRemoteSettings(); // Preload settings on login
+      await SettingsService
+          .preloadRemoteSettings(); // Preload settings on login
       _updateFcmToken();
     }
     _isLoading = false;

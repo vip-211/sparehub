@@ -38,90 +38,100 @@ import 'utils/app_theme.dart';
 
 import 'firebase_options.dart';
 
-@pragma('vm:entry-point')
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
+// Reusable notification showing method for both foreground and background
+Future<void> _showLocalNotification(RemoteMessage message) async {
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+  const InitializationSettings initializationSettings =
+      InitializationSettings(android: initializationSettingsAndroid);
+  final FlutterLocalNotificationsPlugin localNotifications =
+      FlutterLocalNotificationsPlugin();
+
+  // Initialize if needed
+  await localNotifications.initialize(
+    initializationSettings,
+    onDidReceiveNotificationResponse: (NotificationResponse response) {
+      if (response.payload != null) {
+        // Note: In background mode, navigation won't work immediately
+        debugPrint("Background notification clicked: ${response.payload}");
+      }
+    },
   );
-  debugPrint("Handling a background message: ${message.messageId}");
-  
-  // Show local notification even when app is in background/terminated
-  if (message.notification != null) {
-    const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-    final InitializationSettings initializationSettings =
-        const InitializationSettings(android: initializationSettingsAndroid);
-    final FlutterLocalNotificationsPlugin localNotifications =
-        FlutterLocalNotificationsPlugin();
-    await localNotifications.initialize(initializationSettings);
-    
-    final androidSpecific =
-        localNotifications.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
-    await androidSpecific?.createNotificationChannel(
-      const AndroidNotificationChannel(
-        'spare_parts_channel',
-        'Spare Parts Notifications',
-        description: 'Order updates and promotional offers',
-        importance: Importance.max,
-      ),
-    );
-    
-    AndroidNotificationDetails androidPlatformChannelSpecifics =
-        const AndroidNotificationDetails(
+
+  // Create channel if not exists
+  final androidSpecific =
+      localNotifications.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+  await androidSpecific?.createNotificationChannel(
+    const AndroidNotificationChannel(
       'spare_parts_channel',
       'Spare Parts Notifications',
+      description: 'Order updates and promotional offers',
       importance: Importance.max,
-      priority: Priority.high,
-    );
-    
-    // Check for image in data or notification
-    String? imageUrl = message.data['imageUrl'];
-    if (imageUrl == null || imageUrl.isEmpty) {
-      imageUrl = message.notification?.android?.imageUrl;
-    }
-    
-    if (imageUrl != null && imageUrl.isNotEmpty) {
-      androidPlatformChannelSpecifics = AndroidNotificationDetails(
-        'spare_parts_channel',
-        'Spare Parts Notifications',
-        importance: Importance.max,
-        priority: Priority.high,
-        styleInformation: BigPictureStyleInformation(
-          ByteArrayAndroidBitmap.fromBase64String(
-            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAAtJREFUGFdjYAACAAAFAAGq1chRAAAAAElFTkSuQmCC',
-          ),
-        ),
-      );
-    }
-    
-    final NotificationDetails platformChannelSpecifics =
-        NotificationDetails(android: androidPlatformChannelSpecifics);
-    
-    final payload = jsonEncode(message.data);
-    
-    await localNotifications.show(
-      DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      message.notification?.title ?? 'New Notification',
-      message.notification?.body ?? '',
-      platformChannelSpecifics,
-      payload: payload,
+      playSound: true,
+      showBadge: true,
+    ),
+  );
+
+  // Determine title and body - prefer notification payload, fallback to data
+  final title = message.notification?.title ?? message.data['title'] as String?;
+  final body = message.notification?.body ?? message.data['message'] as String?;
+
+  if (title == null && body == null) {
+    debugPrint("No notification title or body found");
+    return;
+  }
+
+  AndroidNotificationDetails androidPlatformChannelSpecifics =
+      const AndroidNotificationDetails(
+    'spare_parts_channel',
+    'Spare Parts Notifications',
+    importance: Importance.max,
+    priority: Priority.high,
+    channelShowBadge: true,
+  );
+
+  final payload = jsonEncode(message.data);
+
+  // Show notification
+  await localNotifications.show(
+    DateTime.now().millisecondsSinceEpoch ~/ 1000,
+    title ?? 'New Notification',
+    body ?? '',
+    NotificationDetails(android: androidPlatformChannelSpecifics),
+    payload: payload,
+  );
+
+  debugPrint("Local notification shown successfully");
+}
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  debugPrint("Handling a background message: ${message.messageId}");
+
+  // Initialize Firebase for isolated isolate
+  if (Firebase.apps.isEmpty) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
     );
   }
+
+  await _showLocalNotification(message);
 }
 
 final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // 1. Centralized Initialization with Duplicate Prevention
   if (Firebase.apps.isEmpty) {
     try {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
-      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+      FirebaseMessaging.onBackgroundMessage(
+          _firebaseMessagingBackgroundHandler);
     } catch (e) {
       debugPrint("Firebase initialization failed: $e");
     }
@@ -301,7 +311,8 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
       if (authProvider.user != null && authProvider.user!.status != 'PENDING') {
         await _activityService.startSession();
       }
-    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
       await _activityService.endSession();
     }
   }
@@ -367,7 +378,7 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
 
         showBatteryOptimizationPromptIfNeeded(context);
         NotificationService.tryConsumePendingNavigation();
-        
+
         // Start user activity tracking
         await _activityService.startSession();
       }
