@@ -78,6 +78,18 @@ tasks.matching { it.name == "assembleDebug" }.configureEach {
     finalizedBy(copyDebugApkToFlutterDir)
 }
 
+val copyReleaseApkToFlutterDir by tasks.register<Copy>("copyReleaseApkToFlutterDir") {
+    val destDir = File(flutterProjectRoot, "build/app/outputs/flutter-apk")
+    from(layout.buildDirectory.dir("outputs/apk/release"))
+    include("app-release.apk")
+    into(destDir)
+    doFirst { destDir.mkdirs() }
+}
+
+tasks.matching { it.name == "assembleRelease" }.configureEach {
+    finalizedBy(copyReleaseApkToFlutterDir)
+}
+
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }

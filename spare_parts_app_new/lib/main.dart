@@ -188,34 +188,34 @@ class MyApp extends StatelessWidget {
         return Stack(
           children: [
             base,
-            if (NotificationService.hasPendingNavigation)
-              Container(
-                color: Colors.black45,
-                child: const Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        height: 56,
-                        width: 56,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 4,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      ),
-                      SizedBox(height: 12),
-                      Text(
-                        'Opening from notification…',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+            // if (NotificationService.hasPendingNavigation)
+            //   Container(
+            //     color: Colors.black45,
+            //     child: const Center(
+            //       child: Column(
+            //         mainAxisSize: MainAxisSize.min,
+            //         children: [
+            //           SizedBox(
+            //             height: 56,
+            //             width: 56,
+            //             child: CircularProgressIndicator(
+            //               strokeWidth: 4,
+            //               valueColor:
+            //                   AlwaysStoppedAnimation<Color>(Colors.white),
+            //             ),
+            //           ),
+            //           SizedBox(height: 12),
+            //           Text(
+            //             'Opening from notification…',
+            //             style: TextStyle(
+            //               color: Colors.white,
+            //               fontWeight: FontWeight.bold,
+            //             ),
+            //           ),
+            //         ],
+            //       ),
+            //     ),
+            //   ),
           ],
         );
       },
