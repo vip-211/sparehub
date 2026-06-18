@@ -73,11 +73,12 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
         Future.delayed(const Duration(milliseconds: 200), () {
           _removeOverlay();
         });
-      } else if (_searchController.text.length >= 2 && _suggestions.isNotEmpty) {
+      } else if (_searchController.text.length >= 2 &&
+          _suggestions.isNotEmpty) {
         _showOverlay();
       }
     });
-    
+
     // Check for initial query passed from home
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final args = ModalRoute.of(context)?.settings.arguments;
@@ -323,7 +324,7 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
 
   void _onSearchChanged(String query) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
-    
+
     if (query.length < 2) {
       setState(() {
         _suggestions = [];
@@ -581,7 +582,9 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                   IconButton(
                     icon: Icon(
                       isListening ? Icons.mic : Icons.mic_none,
-                      color: isListening ? Colors.red : const Color.fromARGB(255, 5, 63, 50),
+                      color: isListening
+                          ? Colors.red
+                          : const Color.fromARGB(255, 5, 63, 50),
                     ),
                     onPressed: () async {
                       if (!isListening) {
@@ -627,7 +630,8 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                   if (pickedImage != null)
                     const Text(
                       'Photo selected',
-                      style: TextStyle(color: Color.fromARGB(255, 10, 197, 141)),
+                      style:
+                          TextStyle(color: Color.fromARGB(255, 10, 197, 141)),
                     ),
                 ],
               ),
@@ -695,7 +699,7 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 0.68,
+        childAspectRatio: 0.8, // Adjusted to prevent overflow
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
       ),
@@ -825,70 +829,44 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                    padding: const EdgeInsets.fromLTRB(12, 2, 12, 12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (p.isCombo)
                           Container(
-                            margin: const EdgeInsets.only(bottom: 4),
+                            margin: const EdgeInsets.only(bottom: 2),
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
+                                horizontal: 4, vertical: 1),
                             decoration: BoxDecoration(
                               color: Colors.purple.shade50,
-                              borderRadius: BorderRadius.circular(6),
+                              borderRadius: BorderRadius.circular(4),
                               border: Border.all(color: Colors.purple.shade200),
                             ),
                             child: Text(
-                              'COMBO OFFER',
+                              'COMBO',
                               style: TextStyle(
                                 color: Colors.purple.shade700,
-                                fontSize: 9,
+                                fontSize: 8,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
                         TranslatedText(
                           p.name,
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontWeight: FontWeight.w800,
-                            fontSize: 14,
+                            fontSize: 12,
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
-                        if (p.isCombo && p.comboItems.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: p.comboItems.take(2).map((item) => 
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 1),
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.check_circle_outline, size: 10, color: Colors.purple),
-                                      const SizedBox(width: 4),
-                                      Expanded(
-                                        child: Text(
-                                          '${item['name']} x ${item['quantity'] ?? 1}',
-                                          style: const TextStyle(fontSize: 10, color: Colors.black54),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                              ).toList(),
-                            ),
-                          ),
                         const SizedBox(height: 2),
                         Text(
                           p.partNumber,
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 9,
                             fontWeight: FontWeight.w600,
                             color: Theme.of(context)
                                 .colorScheme
@@ -897,61 +875,78 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                             letterSpacing: 0.5,
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 8),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Text(
                               '₹${price.toStringAsFixed(0)}',
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w900,
                                 color: Theme.of(context).colorScheme.primary,
                               ),
                             ),
                             if (cart.items.containsKey(p.id))
-                              QuantitySelector(
+                              Flexible(
+                                  child: QuantitySelector(
                                 product: p,
                                 price: price,
-                              )
+                              ))
                             else
-                              GestureDetector(
+                              Flexible(
+                                  child: GestureDetector(
                                 onTap: isOutOfStock
                                     ? null
                                     : () {
                                         cart.addItem(p, price);
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
                                           SnackBar(
-                                            content: Text('${p.name} added to cart'),
+                                            content:
+                                                Text('${p.name} added to cart'),
                                             behavior: SnackBarBehavior.floating,
-                                            duration: const Duration(seconds: 1),
+                                            duration:
+                                                const Duration(seconds: 1),
                                             shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(12),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
                                             ),
-                                            backgroundColor: Theme.of(context).colorScheme.primary,
+                                            backgroundColor: Theme.of(context)
+                                                .colorScheme
+                                                .primary,
                                           ),
                                         );
                                       },
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 6),
                                   decoration: BoxDecoration(
                                     color: isOutOfStock
-                                        ? Theme.of(context).colorScheme.surfaceContainerHighest
+                                        ? Theme.of(context)
+                                            .colorScheme
+                                            .surfaceContainerHighest
                                         : Theme.of(context).colorScheme.primary,
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Text(
-                                    isOutOfStock ? 'Out of Stock' : 'Add to Cart',
+                                    isOutOfStock ? 'Out' : 'Add',
                                     style: TextStyle(
-                                      fontSize: 12,
+                                      fontSize: 11,
                                       fontWeight: FontWeight.w900,
                                       color: isOutOfStock
-                                          ? Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.3)
-                                          : Theme.of(context).colorScheme.onPrimary,
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant
+                                              .withOpacity(0.3)
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .onPrimary,
                                     ),
                                   ),
                                 ),
-                              ),
+                              )),
                           ],
                         ),
                       ],
@@ -1005,7 +1000,8 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                               focusNode: _searchFocusNode,
                               style: TextStyle(
                                   fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).colorScheme.onSurface),
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface),
                               decoration: InputDecoration(
                                 hintText: 'Search products...',
                                 hintStyle: TextStyle(
@@ -1369,12 +1365,23 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                                                               image:
                                                                   DecorationImage(
                                                                 image: getImageProvider(getProductImage(
-                                                                    imageLink: product.imageLink,
-                                                                    imagePath: product.imagePath,
-                                                                    imageLinks: product.imageLinks,
-                                                                    categoryImageLink: product.categoryImageLink,
-                                                                    categoryImagePath: product.categoryImagePath)),
-                                                                fit: BoxFit.cover,
+                                                                    imageLink:
+                                                                        product
+                                                                            .imageLink,
+                                                                    imagePath:
+                                                                        product
+                                                                            .imagePath,
+                                                                    imageLinks:
+                                                                        product
+                                                                            .imageLinks,
+                                                                    categoryImageLink:
+                                                                        product
+                                                                            .categoryImageLink,
+                                                                    categoryImagePath:
+                                                                        product
+                                                                            .categoryImagePath)),
+                                                                fit: BoxFit
+                                                                    .cover,
                                                                 onError: (exception,
                                                                         stackTrace) =>
                                                                     debugPrint(
@@ -1483,32 +1490,66 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                                                               fontSize: 17,
                                                             ),
                                                           ),
-                                                          const SizedBox(height: 8),
+                                                          const SizedBox(
+                                                              height: 8),
                                                           if (!isOutOfStock)
-                                                            cart.items.containsKey(product.id)
-                                                              ? QuantitySelector(product: product, price: price)
-                                                              : GestureDetector(
-                                                                  onTap: () {
-                                                                    cart.addItem(product, price);
-                                                                    ScaffoldMessenger.of(context).showSnackBar(
-                                                                      SnackBar(
-                                                                        content: Text('${product.name} added to cart'),
-                                                                        duration: const Duration(seconds: 1),
-                                                                        backgroundColor: Colors.blue,
+                                                            cart.items
+                                                                    .containsKey(
+                                                                        product
+                                                                            .id)
+                                                                ? QuantitySelector(
+                                                                    product:
+                                                                        product,
+                                                                    price:
+                                                                        price)
+                                                                : GestureDetector(
+                                                                    onTap: () {
+                                                                      cart.addItem(
+                                                                          product,
+                                                                          price);
+                                                                      ScaffoldMessenger.of(
+                                                                              context)
+                                                                          .showSnackBar(
+                                                                        SnackBar(
+                                                                          content:
+                                                                              Text('${product.name} added to cart'),
+                                                                          duration:
+                                                                              const Duration(seconds: 1),
+                                                                          backgroundColor:
+                                                                              Colors.blue,
+                                                                        ),
+                                                                      );
+                                                                    },
+                                                                    child:
+                                                                        Container(
+                                                                      padding: const EdgeInsets
+                                                                          .symmetric(
+                                                                          horizontal:
+                                                                              12,
+                                                                          vertical:
+                                                                              0),
+                                                                      constraints: const BoxConstraints(
+                                                                          minWidth:
+                                                                              60,
+                                                                          minHeight:
+                                                                              32),
+                                                                      decoration:
+                                                                          BoxDecoration(
+                                                                        color: Colors
+                                                                            .blue,
+                                                                        borderRadius:
+                                                                            BorderRadius.circular(8),
                                                                       ),
-                                                                    );
-                                                                  },
-                                                                  child: Container(
-                                                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                                                                    constraints: const BoxConstraints(minWidth: 60, minHeight: 32),
-                                                                    decoration: BoxDecoration(
-                                                                      color: Colors.blue,
-                                                                      borderRadius: BorderRadius.circular(8),
+                                                                      alignment:
+                                                                          Alignment
+                                                                              .center,
+                                                                      child: const Text(
+                                                                          'Add',
+                                                                          style: TextStyle(
+                                                                              fontSize: 13,
+                                                                              color: Colors.white)),
                                                                     ),
-                                                                    alignment: Alignment.center,
-                                                                    child: const Text('Add', style: TextStyle(fontSize: 13, color: Colors.white)),
                                                                   ),
-                                                                ),
                                                         ],
                                                       ),
                                                     ],
@@ -1516,10 +1557,13 @@ class _MechanicSearchScreenState extends State<MechanicSearchScreen> {
                                                 ),
                                               ),
                                             ),
-                                            if (i == _products.length - 1 && _isMoreLoading)
+                                            if (i == _products.length - 1 &&
+                                                _isMoreLoading)
                                               const Padding(
-                                                padding: EdgeInsets.symmetric(vertical: 16),
-                                                child: CircularProgressIndicator(),
+                                                padding: EdgeInsets.symmetric(
+                                                    vertical: 16),
+                                                child:
+                                                    CircularProgressIndicator(),
                                               ),
                                           ],
                                         );

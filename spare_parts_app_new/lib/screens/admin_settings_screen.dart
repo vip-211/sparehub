@@ -52,7 +52,8 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       TextEditingController();
   final TextEditingController _loginBannerCooldownController =
       TextEditingController();
-  final TextEditingController _latestVersionController = TextEditingController();
+  final TextEditingController _latestVersionController =
+      TextEditingController();
   final TextEditingController _updateUrlController = TextEditingController();
   final Map<String, bool> _allowedRoles = {
     Constants.roleMechanic: true,
@@ -82,6 +83,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
   int? _lastOtpErrorAt;
   bool _loginBannerEnabled = false;
   bool _loginBannerShowButton = false;
+  bool _forceUpdateRequired = false;
 
   @override
   void initState() {
@@ -185,8 +187,11 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
               remote['LOGIN_BANNER_BUTTON_TEXT'] ?? 'Check Offers';
           _loginBannerCooldownController.text =
               remote['LOGIN_BANNER_COOLDOWN_HOURS'] ?? '24';
-          _latestVersionController.text = remote['LATEST_APP_VERSION'] ?? '1.0.0';
+          _latestVersionController.text =
+              remote['LATEST_APP_VERSION'] ?? '1.0.0';
           _updateUrlController.text = remote['APP_UPDATE_URL'] ?? '';
+          _forceUpdateRequired =
+              (remote['FORCE_UPDATE_REQUIRED'] ?? 'false') == 'true';
           _loaded = true;
         });
       }
@@ -238,6 +243,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
         'LOGIN_BANNER_COOLDOWN_HOURS': _loginBannerCooldownController.text,
         'LATEST_APP_VERSION': _latestVersionController.text,
         'APP_UPDATE_URL': _updateUrlController.text,
+        'FORCE_UPDATE_REQUIRED': _forceUpdateRequired ? 'true' : 'false',
       };
 
       await SettingsService.saveRemoteSettingsBulk(remoteMap);
@@ -327,13 +333,13 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                     title: 'Appearance',
                     subtitle: 'Customize app look and feel'),
                 const SizedBox(height: 8),
-
                 const SizedBox(height: 12),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text('Primary Color',
                       style: Theme.of(context).textTheme.labelLarge),
-                  subtitle: const Text('Choose a custom seed color for the app'),
+                  subtitle:
+                      const Text('Choose a custom seed color for the app'),
                   trailing: GestureDetector(
                     onTap: _showColorPicker,
                     child: Container(
@@ -483,7 +489,8 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                 ),
                 SwitchListTile(
                   title: const Text('Global AI Chatbot'),
-                  subtitle: const Text('Enable/Disable Chatbot for all clients'),
+                  subtitle:
+                      const Text('Enable/Disable Chatbot for all clients'),
                   value: _aiGlobal,
                   onChanged: (v) => setState(() => _aiGlobal = v),
                 ),
@@ -495,9 +502,11 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                     items: const [
                       DropdownMenuItem(value: 'gemini', child: Text('Gemini')),
                       DropdownMenuItem(value: 'openai', child: Text('OpenAI')),
-                      DropdownMenuItem(value: 'local', child: Text('Local (Basic)')),
+                      DropdownMenuItem(
+                          value: 'local', child: Text('Local (Basic)')),
                     ],
-                    onChanged: (v) => setState(() => _aiProvider = v ?? 'gemini'),
+                    onChanged: (v) =>
+                        setState(() => _aiProvider = v ?? 'gemini'),
                   ),
                 ),
                 SwitchListTile(
@@ -545,6 +554,13 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                     'e.g. 1.0.1 (must match pubspec version)'),
                 _buildTextField('App Update URL', _updateUrlController,
                     'Link to Play Store or APK download'),
+                SwitchListTile(
+                  title: const Text('Force Update Required'),
+                  subtitle:
+                      const Text('Users must update to continue using app'),
+                  value: _forceUpdateRequired,
+                  onChanged: (v) => setState(() => _forceUpdateRequired = v),
+                ),
                 const Divider(),
                 const SectionHeader(
                     title: 'Loyalty & Points',

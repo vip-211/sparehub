@@ -43,10 +43,13 @@ class _AuthHomeScreenState extends State<AuthHomeScreen>
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
     if (state == AppLifecycleState.resumed) {
       // Debounce/Throttle lifecycle refreshes
-      _refresh();
+      await _refresh();
+      if (mounted) {
+        SettingsService.checkAppUpdate(context, force: true);
+      }
     }
   }
 

@@ -59,12 +59,43 @@ class AdminDashboard extends StatefulWidget {
   State<AdminDashboard> createState() => _AdminDashboardState();
 }
 
-class _AdminDashboardState extends State<AdminDashboard> {
+class _AdminDashboardState extends State<AdminDashboard>
+    with WidgetsBindingObserver {
   int _selectedIndex = 0;
   bool _aiEnabled = true;
   bool _voiceEnabled = true;
   String? _incomingOfferType;
   bool _bannerShown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Check for updates when admin dashboard loads
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await SettingsService.preloadRemoteSettings();
+      if (mounted) {
+        SettingsService.checkAppUpdate(context);
+      }
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    if (state == AppLifecycleState.resumed) {
+      await SettingsService.preloadRemoteSettings(force: true);
+      if (mounted) {
+        SettingsService.checkAppUpdate(context, force: true);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
   final List<Widget> _widgetOptions = [
     const AdminOverviewScreen(),
     const OffersScreen(),

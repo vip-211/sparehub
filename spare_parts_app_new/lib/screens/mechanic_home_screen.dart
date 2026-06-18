@@ -9,6 +9,7 @@ import '../screens/category_list_screen.dart';
 import '../screens/wholesaler_shop_screen.dart';
 import '../services/product_service.dart';
 import '../services/order_service.dart';
+import '../services/settings_service.dart';
 import '../models/product.dart';
 import '../models/order.dart';
 import '../providers/auth_provider.dart';
@@ -23,7 +24,8 @@ class MechanicHomeScreen extends StatefulWidget {
   State<MechanicHomeScreen> createState() => _MechanicHomeScreenState();
 }
 
-class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
+class _MechanicHomeScreenState extends State<MechanicHomeScreen>
+    with WidgetsBindingObserver {
   final ProductService _productService = ProductService();
   final OrderService _orderService = OrderService();
   final TextEditingController _searchController = TextEditingController();
@@ -44,17 +46,48 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _bannerPageController = PageController();
     _searchFocusNode.addListener(() {
       if (!_searchFocusNode.hasFocus) {
         Future.delayed(const Duration(milliseconds: 200), () {
           _removeOverlay();
         });
-      } else if (_searchController.text.length >= 2 && _suggestions.isNotEmpty) {
+      } else if (_searchController.text.length >= 2 &&
+          _suggestions.isNotEmpty) {
         _showOverlay();
       }
     });
     _loadData();
+    // Check for updates when home screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await SettingsService.preloadRemoteSettings();
+      if (mounted) {
+        SettingsService.checkAppUpdate(context);
+      }
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    if (state == AppLifecycleState.resumed) {
+      await SettingsService.preloadRemoteSettings(force: true);
+      if (mounted) {
+        SettingsService.checkAppUpdate(context, force: true);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _removeOverlay();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    _bannerPageController.dispose();
+    _bannerTimer?.cancel();
+    _debounce?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   void _showOverlay() {
@@ -94,17 +127,27 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  children: _suggestions.map((s) => ListTile(
-                    leading: const Icon(Icons.search, size: 18, color: AppTheme.primaryBlue),
-                    title: Text(s['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text(s['partNumber'] ?? '', style: const TextStyle(fontSize: 12)),
-                    trailing: Text('₹${s['price']}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryBlue)),
-                    onTap: () {
-                      _searchController.text = s['name'];
-                      _removeOverlay();
-                      Navigator.pushNamed(context, '/search', arguments: {'query': s['name']});
-                    },
-                  )).toList(),
+                  children: _suggestions
+                      .map((s) => ListTile(
+                            leading: const Icon(Icons.search,
+                                size: 18, color: AppTheme.primaryBlue),
+                            title: Text(s['name'] ?? '',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold)),
+                            subtitle: Text(s['partNumber'] ?? '',
+                                style: const TextStyle(fontSize: 12)),
+                            trailing: Text('₹${s['price']}',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.primaryBlue)),
+                            onTap: () {
+                              _searchController.text = s['name'];
+                              _removeOverlay();
+                              Navigator.pushNamed(context, '/search',
+                                  arguments: {'query': s['name']});
+                            },
+                          ))
+                      .toList(),
                 ),
               ),
             ),
@@ -114,29 +157,23 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
     );
   }
 
-  @override
-  void dispose() {
-    _removeOverlay();
-    _searchController.dispose();
-    _searchFocusNode.dispose();
-    _bannerPageController.dispose();
-    _bannerTimer?.cancel();
-    _debounce?.cancel();
-    super.dispose();
-  }
-
   Future<void> _loadData() async {
     try {
       final allCats = await _productService.getCategories();
-      final cats = allCats.where((c) => c['showOnHome'] == 1 || c['showOnHome'] == true).toList();
+      final cats = allCats
+          .where((c) => c['showOnHome'] == 1 || c['showOnHome'] == true)
+          .toList();
       final trending = await _productService.getTrendingProducts();
       final bannerData = await _productService.getActiveBanners();
-      final homeTitle = await _productService.getCmsSetting('mechanic_home_title', 'Parts Mitra');
-      
+      final homeTitle = await _productService.getCmsSetting(
+          'mechanic_home_title', 'Parts Mitra');
+
       if (mounted) {
         setState(() {
           _categories = cats;
-          _banners = (bannerData['banners'] as List? ?? []).map((e) => e as Map<String, dynamic>).toList();
+          _banners = (bannerData['banners'] as List? ?? [])
+              .map((e) => e as Map<String, dynamic>)
+              .toList();
           _hotDeals = trending;
           _homeTitle = homeTitle;
           _isLoading = false;
@@ -154,14 +191,16 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
     _bannerTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
       _currentBannerIndex = (_currentBannerIndex + 1) % _banners.length;
       if (_bannerPageController.hasClients) {
-        _bannerPageController.animateToPage(_currentBannerIndex, duration: const Duration(milliseconds: 800), curve: Curves.fastOutSlowIn);
+        _bannerPageController.animateToPage(_currentBannerIndex,
+            duration: const Duration(milliseconds: 800),
+            curve: Curves.fastOutSlowIn);
       }
     });
   }
 
   void _onSearchChanged(String query) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
-    
+
     if (query.length < 2) {
       setState(() {
         _suggestions = [];
@@ -229,8 +268,12 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
             clipBehavior: Clip.none,
             children: [
               Positioned(
-                right: -40, top: -40,
-                child: Opacity(opacity: 0.1, child: Icon(Icons.settings_suggest, size: 200, color: Colors.white)),
+                right: -40,
+                top: -40,
+                child: Opacity(
+                    opacity: 0.1,
+                    child: Icon(Icons.settings_suggest,
+                        size: 200, color: Colors.white)),
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 60, 24, 0),
@@ -241,12 +284,17 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                       children: [
                         Container(
                           padding: const EdgeInsets.all(2),
-                          decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                          decoration: const BoxDecoration(
+                              color: Colors.white, shape: BoxShape.circle),
                           child: CircleAvatar(
                             radius: 24,
                             backgroundColor: Colors.grey.shade200,
-                            backgroundImage: getImageProvider(user?.shopImagePath),
-                            child: user?.shopImagePath == null ? const Icon(Icons.person, color: AppTheme.primaryBlue) : null,
+                            backgroundImage:
+                                getImageProvider(user?.shopImagePath),
+                            child: user?.shopImagePath == null
+                                ? const Icon(Icons.person,
+                                    color: AppTheme.primaryBlue)
+                                : null,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -254,8 +302,17 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Good Morning,', style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14, fontWeight: FontWeight.w500)),
-                              Text(user?.name ?? 'Mechanic', style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+                              Text('Good Morning,',
+                                  style: TextStyle(
+                                      color: Colors.white.withOpacity(0.8),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500)),
+                              Text(user?.name ?? 'Mechanic',
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: -0.5)),
                             ],
                           ),
                         ),
@@ -287,7 +344,12 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 20, offset: const Offset(0, 8))],
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 8))
+          ],
         ),
         child: TextField(
           controller: _searchController,
@@ -299,8 +361,10 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
           },
           decoration: InputDecoration(
             hintText: 'Search spare parts...',
-            hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.w600),
-            prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.primaryBlue, size: 28),
+            hintStyle: TextStyle(
+                color: Colors.grey.shade400, fontWeight: FontWeight.w600),
+            prefixIcon: const Icon(Icons.search_rounded,
+                color: AppTheme.primaryBlue, size: 28),
             suffixIcon: Container(
               margin: const EdgeInsets.only(right: 8),
               child: Row(
@@ -308,17 +372,22 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                 children: [
                   if (_searchController.text.isNotEmpty)
                     IconButton(
-                      icon: const Icon(Icons.close_rounded, size: 20, color: Colors.grey),
+                      icon: const Icon(Icons.close_rounded,
+                          size: 20, color: Colors.grey),
                       onPressed: () {
                         _searchController.clear();
                         _onSearchChanged('');
                       },
                     ),
-                  _buildSearchActionIcon(Icons.mic_none_rounded, AppTheme.secondaryAmber, () {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Voice search coming soon!')));
+                  _buildSearchActionIcon(
+                      Icons.mic_none_rounded, AppTheme.secondaryAmber, () {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text('Voice search coming soon!')));
                   }),
-                  _buildSearchActionIcon(Icons.qr_code_scanner_rounded, AppTheme.primaryBlue, () {
-                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Scanner coming soon!')));
+                  _buildSearchActionIcon(
+                      Icons.qr_code_scanner_rounded, AppTheme.primaryBlue, () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Scanner coming soon!')));
                   }),
                 ],
               ),
@@ -331,7 +400,8 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
     );
   }
 
-  Widget _buildSearchActionIcon(IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildSearchActionIcon(
+      IconData icon, Color color, VoidCallback onTap) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -349,12 +419,16 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionHeader('Top Categories', () => Navigator.pushNamed(context, '/categories')),
+        _buildSectionHeader('Top Categories',
+            () => Navigator.pushNamed(context, '/categories')),
         _buildCategoriesList(),
         const SizedBox(height: 32),
         _buildBannerSlider(),
         const SizedBox(height: 32),
-        _buildSectionHeader('Trending Deals', () => Navigator.pushNamed(context, '/search', arguments: {'query': ''})),
+        _buildSectionHeader(
+            'Trending Deals',
+            () => Navigator.pushNamed(context, '/search',
+                arguments: {'query': ''})),
         _buildTrendingGrid(),
         const SizedBox(height: 40),
       ],
@@ -367,7 +441,12 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppTheme.charcoalBlack, letterSpacing: -0.5)),
+          Text(title,
+              style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  color: AppTheme.charcoalBlack,
+                  letterSpacing: -0.5)),
           InkWell(
             onTap: onTap,
             borderRadius: BorderRadius.circular(12),
@@ -379,9 +458,14 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
               ),
               child: const Row(
                 children: [
-                  Text('View All', style: TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.w800, fontSize: 13)),
+                  Text('View All',
+                      style: TextStyle(
+                          color: AppTheme.primaryBlue,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13)),
                   SizedBox(width: 4),
-                  Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppTheme.primaryBlue),
+                  Icon(Icons.arrow_forward_ios_rounded,
+                      size: 12, color: AppTheme.primaryBlue),
                 ],
               ),
             ),
@@ -393,9 +477,11 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
 
   Widget _buildCategoriesList() {
     if (_categories.isEmpty && !_isLoading) {
-      return const Center(child: Padding(
+      return const Center(
+          child: Padding(
         padding: EdgeInsets.all(20.0),
-        child: Text('No categories available', style: TextStyle(color: Colors.grey)),
+        child: Text('No categories available',
+            style: TextStyle(color: Colors.grey)),
       ));
     }
     return SizedBox(
@@ -407,8 +493,11 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
         itemCount: _categories.length,
         itemBuilder: (context, i) {
           final cat = _categories[i];
-          final imgPath = cat['imageLink'] ?? cat['imagePath'] ?? cat['categoryImageLink'] ?? cat['categoryImagePath'];
-          
+          final imgPath = cat['imageLink'] ??
+              cat['imagePath'] ??
+              cat['categoryImageLink'] ??
+              cat['categoryImagePath'];
+
           return FadeInRight(
             delay: Duration(milliseconds: i * 50),
             child: Container(
@@ -456,7 +545,8 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                                 fit: BoxFit.cover,
                                 errorBuilder: (_, __, ___) => Container(
                                   color: AppTheme.primaryBlue.withOpacity(0.05),
-                                  child: const Icon(Icons.category_outlined, color: AppTheme.primaryBlue, size: 30),
+                                  child: const Icon(Icons.category_outlined,
+                                      color: AppTheme.primaryBlue, size: 30),
                                 ),
                               ),
                               Container(
@@ -464,7 +554,10 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                                   gradient: LinearGradient(
                                     begin: Alignment.topCenter,
                                     end: Alignment.bottomCenter,
-                                    colors: [Colors.transparent, Colors.black.withOpacity(0.1)],
+                                    colors: [
+                                      Colors.transparent,
+                                      Colors.black.withOpacity(0.1)
+                                    ],
                                   ),
                                 ),
                               ),
@@ -478,7 +571,10 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppTheme.charcoalBlack),
+                        style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.charcoalBlack),
                       ),
                     ],
                   ),
@@ -514,7 +610,8 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                   return Center(
                     child: SizedBox(
                       height: Curves.easeInOut.transform(value) * 190,
-                      width: Curves.easeInOut.transform(value) * MediaQuery.of(context).size.width,
+                      width: Curves.easeInOut.transform(value) *
+                          MediaQuery.of(context).size.width,
                       child: child,
                     ),
                   );
@@ -532,7 +629,8 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                         ),
                       );
                     } else {
-                      Navigator.pushNamed(context, '/search', arguments: {'query': b['title'] ?? ''});
+                      Navigator.pushNamed(context, '/search',
+                          arguments: {'query': b['title'] ?? ''});
                     }
                   },
                   child: Container(
@@ -552,11 +650,18 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                         fit: StackFit.expand,
                         children: [
                           Image(
-                            image: getImageProvider(b['imageUrl'] ?? b['imageLink'] ?? b['imagePath'] ?? b['categoryImageLink'] ?? b['categoryImagePath']),
+                            image: getImageProvider(b['imageUrl'] ??
+                                b['imageLink'] ??
+                                b['imagePath'] ??
+                                b['categoryImageLink'] ??
+                                b['categoryImagePath']),
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Container(
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
                               color: AppTheme.primaryBlue.withOpacity(0.1),
-                              child: const Icon(Icons.image_not_supported_outlined, color: AppTheme.primaryBlue),
+                              child: const Icon(
+                                  Icons.image_not_supported_outlined,
+                                  color: AppTheme.primaryBlue),
                             ),
                           ),
                           Container(
@@ -564,7 +669,10 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                               gradient: LinearGradient(
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
-                                colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black.withOpacity(0.7)
+                                ],
                               ),
                             ),
                           ),
@@ -575,9 +683,18 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
                                 if (b['subtitle'] != null)
-                                  Text(b['subtitle'].toString().toUpperCase(), style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 2)),
+                                  Text(b['subtitle'].toString().toUpperCase(),
+                                      style: TextStyle(
+                                          color: Colors.white.withOpacity(0.8),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 2)),
                                 const SizedBox(height: 4),
-                                Text(b['title'] ?? '', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+                                Text(b['title'] ?? '',
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w900)),
                               ],
                             ),
                           ),
@@ -593,15 +710,19 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
         const SizedBox(height: 12),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(_banners.length, (index) => Container(
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            width: _currentBannerIndex == index ? 24 : 8,
-            height: 8,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(4),
-              color: _currentBannerIndex == index ? AppTheme.primaryBlue : AppTheme.primaryBlue.withOpacity(0.2),
-            ),
-          )),
+          children: List.generate(
+              _banners.length,
+              (index) => Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    width: _currentBannerIndex == index ? 24 : 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(4),
+                      color: _currentBannerIndex == index
+                          ? AppTheme.primaryBlue
+                          : AppTheme.primaryBlue.withOpacity(0.2),
+                    ),
+                  )),
         ),
       ],
     );
@@ -613,16 +734,17 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 24),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2, 
-        childAspectRatio: 0.7, 
-        mainAxisSpacing: 20, 
-        crossAxisSpacing: 20
-      ),
+          crossAxisCount: 2,
+          childAspectRatio: 0.7,
+          mainAxisSpacing: 20,
+          crossAxisSpacing: 20),
       itemCount: _hotDeals.length.clamp(0, 4),
       itemBuilder: (context, i) {
         final p = _hotDeals[i];
-        final discount = p.mrp > p.sellingPrice ? (((p.mrp - p.sellingPrice) / p.mrp) * 100).round() : 0;
-        
+        final discount = p.mrp > p.sellingPrice
+            ? (((p.mrp - p.sellingPrice) / p.mrp) * 100).round()
+            : 0;
+
         return FadeInUp(
           delay: Duration(milliseconds: i * 100),
           child: GestureDetector(
@@ -651,16 +773,23 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                 children: [
                   Expanded(
                     child: ClipRRect(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(28)),
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
                           Image(
-                            image: getImageProvider(p.imageLink ?? p.imagePath ?? p.categoryImageLink ?? p.categoryImagePath),
+                            image: getImageProvider(p.imageLink ??
+                                p.imagePath ??
+                                p.categoryImageLink ??
+                                p.categoryImagePath),
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => Container(
                               color: AppTheme.primaryBlue.withOpacity(0.05),
-                              child: const Icon(Icons.image_not_supported_outlined, color: AppTheme.primaryBlue, size: 30),
+                              child: const Icon(
+                                  Icons.image_not_supported_outlined,
+                                  color: AppTheme.primaryBlue,
+                                  size: 30),
                             ),
                           ),
                           if (discount > 0)
@@ -668,20 +797,28 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                               top: 12,
                               left: 12,
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(10)),
-                                child: Text('$discount% OFF', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    borderRadius: BorderRadius.circular(10)),
+                                child: Text('$discount% OFF',
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold)),
                               ),
                             ),
                           Positioned(
-                            top: 12,
-                            right: 12,
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                              child: const Icon(Icons.favorite_border, size: 18, color: Colors.red)
-                            )
-                          ),
+                              top: 12,
+                              right: 12,
+                              child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle),
+                                  child: const Icon(Icons.favorite_border,
+                                      size: 18, color: Colors.red))),
                         ],
                       ),
                     ),
@@ -691,17 +828,32 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(p.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, height: 1.2, color: AppTheme.charcoalBlack)),
+                        Text(p.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 14,
+                                height: 1.2,
+                                color: AppTheme.charcoalBlack)),
                         const SizedBox(height: 8),
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text('₹${p.sellingPrice}', style: const TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.w900, fontSize: 18)),
+                            Text('₹${p.sellingPrice}',
+                                style: const TextStyle(
+                                    color: AppTheme.primaryBlue,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 18)),
                             const SizedBox(width: 6),
                             if (discount > 0)
                               Padding(
                                 padding: const EdgeInsets.only(bottom: 2),
-                                child: Text('₹${p.mrp}', style: TextStyle(color: Colors.grey.shade400, decoration: TextDecoration.lineThrough, fontSize: 12)),
+                                child: Text('₹${p.mrp}',
+                                    style: TextStyle(
+                                        color: Colors.grey.shade400,
+                                        decoration: TextDecoration.lineThrough,
+                                        fontSize: 12)),
                               ),
                           ],
                         ),
@@ -725,9 +877,22 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            Row(children: List.generate(4, (_) => Expanded(child: Container(height: 80, margin: const EdgeInsets.all(8), decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle))))),
+            Row(
+                children: List.generate(
+                    4,
+                    (_) => Expanded(
+                        child: Container(
+                            height: 80,
+                            margin: const EdgeInsets.all(8),
+                            decoration: const BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle))))),
             const SizedBox(height: 24),
-            Container(height: 180, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24))),
+            Container(
+                height: 180,
+                decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24))),
           ],
         ),
       ),

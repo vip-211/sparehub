@@ -41,13 +41,14 @@ class QuantitySelector extends StatelessWidget {
                   ),
                 ],
               ),
-              child: const Icon(Icons.add_shopping_cart_rounded, size: 22, color: Colors.white),
+              child: const Icon(Icons.add_shopping_cart_rounded,
+                  size: 22, color: Colors.white),
             ),
           );
         }
 
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
           decoration: BoxDecoration(
             color: Theme.of(context).primaryColor.withOpacity(0.1),
             borderRadius: BorderRadius.circular(15),
@@ -65,13 +66,13 @@ class QuantitySelector extends StatelessWidget {
                 isDecrement: true,
               ),
               Container(
-                constraints: const BoxConstraints(minWidth: 32),
+                constraints: const BoxConstraints(minWidth: 24),
                 alignment: Alignment.center,
                 child: Text(
                   '${cartItem.quantity}',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                    fontSize: 12,
                     color: Theme.of(context).primaryColor,
                   ),
                 ),
@@ -96,15 +97,16 @@ class QuantitySelector extends StatelessWidget {
   }) {
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: Container(
-        padding: const EdgeInsets.all(6),
+        padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
           color: Theme.of(context).primaryColor,
           shape: BoxShape.circle,
         ),
         child: Icon(
           icon,
-          size: 18,
+          size: 16,
           color: Colors.white,
         ),
       ),

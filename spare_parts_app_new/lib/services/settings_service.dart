@@ -35,8 +35,8 @@ class SettingsService {
     return getCachedRemoteSetting('DELIVERY_START_HOUR', '10') + ':00 AM';
   }
 
-  static Future<void> checkAppUpdate(BuildContext context) async {
-    if (_updateCheckedInThisSession) return;
+  static Future<void> checkAppUpdate(BuildContext context, {bool force = false}) async {
+    if (_updateCheckedInThisSession && !force) return;
 
     try {
       final latestVersion = getCachedRemoteSetting('LATEST_APP_VERSION', '1.0.0');

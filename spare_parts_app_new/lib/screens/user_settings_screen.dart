@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../providers/theme_provider.dart';
 import '../widgets/section_header.dart';
 
@@ -63,6 +64,27 @@ class UserSettingsScreen extends StatelessWidget {
             divisions: 6,
             label: '${tp.textScale.toStringAsFixed(2)}x',
             onChanged: (v) => tp.setTextScale(v),
+          ),
+          const SizedBox(height: 32),
+          const Divider(),
+          const SizedBox(height: 16),
+          FutureBuilder<PackageInfo>(
+            future: PackageInfo.fromPlatform(),
+            builder: (context, snapshot) {
+              if (snapshot.hasData) {
+                return Center(
+                  child: Text(
+                    'Version ${snapshot.data!.version}+${snapshot.data!.buildNumber}',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 12,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
           ),
         ],
       ),
