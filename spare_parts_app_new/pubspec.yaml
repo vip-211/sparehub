@@ -100,6 +100,7 @@ dependencies:
   connectivity_plus: ^7.1.1
   cached_network_image: ^3.4.1
   syncfusion_flutter_pdfviewer: ^33.2.6
+  app_links: ^6.3.2
 
 
 dev_dependencies:

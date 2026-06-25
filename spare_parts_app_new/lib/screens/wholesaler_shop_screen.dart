@@ -6,6 +6,7 @@ import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/product.dart';
 import '../providers/cart_provider.dart';
 import '../providers/auth_provider.dart';
@@ -563,8 +564,26 @@ class ProductDetailSheetState extends State<ProductDetailSheet> {
                               decoration: BoxDecoration(color: AppTheme.primaryBlue.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
                               child: Text(p.categoryName?.toUpperCase() ?? 'GENERAL', style: const TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 1.5)),
                             ),
-                            if (p.stock > 0)
-                              const Row(children: [Icon(Icons.check_circle, color: AppTheme.accentGreen, size: 16), SizedBox(width: 4), Text('In Stock', style: TextStyle(color: AppTheme.accentGreen, fontWeight: FontWeight.w800, fontSize: 12))]),
+                            Row(
+                              children: [
+                                if (p.stock > 0)
+                                  const Row(children: [Icon(Icons.check_circle, color: AppTheme.accentGreen, size: 16), SizedBox(width: 4), Text('In Stock', style: TextStyle(color: AppTheme.accentGreen, fontWeight: FontWeight.w800, fontSize: 12))]),
+                                const SizedBox(width: 16),
+                                IconButton(
+                                  icon: const Icon(Icons.share, color: AppTheme.primaryBlue),
+                                  onPressed: () {
+                                    final shareLink = 'https://sparehub-0t47.onrender.com/product/${p.id}';
+                                    SharePlus.instance.share(
+                                      ShareParams(
+                                        text: 'Check out this product: ${p.name}\n$shareLink',
+                                        subject: p.name,
+                                      ),
+                                    );
+                                  },
+                                  tooltip: 'Share Product',
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                         const SizedBox(height: 16),

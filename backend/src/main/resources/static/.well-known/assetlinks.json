@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.partsmitra.app",
+      "sha256_cert_fingerprints": "85:F2:92:1B:A4:25:0A:62:97:A3:FD:5B:B1:58:43:89:F7:81:58:78:2F:7F:82:F9:63:93:52:E4:7B:6D:EF:85"
+    }
+  }
+]

@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:app_links/app_links.dart';
 import 'providers/auth_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/language_provider.dart';
@@ -29,6 +31,8 @@ import 'screens/pending_approval_screen.dart';
 import 'screens/mechanic_search_screen.dart';
 import 'screens/category_list_screen.dart';
 import 'screens/trending_products_screen.dart';
+import 'screens/wholesaler_shop_screen.dart';
+import 'services/product_service.dart';
 
 import 'screens/splash_screen.dart';
 import 'services/notification_service.dart';
@@ -37,6 +41,7 @@ import 'services/user_activity_service.dart';
 import 'utils/app_theme.dart';
 
 import 'firebase_options.dart';
+import 'models/product.dart';
 
 // Reusable notification showing method for both foreground and background
 Future<void> _showLocalNotification(RemoteMessage message) async {
@@ -261,6 +266,94 @@ class SplashScreenWrapper extends StatefulWidget {
 
 class _SplashScreenWrapperState extends State<SplashScreenWrapper> {
   bool _isInitialized = false;
+  StreamSubscription<Uri>? _sub;
+  final ProductService _productService = ProductService();
+  late final AppLinks _appLinks;
+
+  @override
+  void initState() {
+    super.initState();
+    _initDeepLinks();
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _initDeepLinks() async {
+    _appLinks = AppLinks();
+
+    // Handle initial link when app is opened
+    try {
+      final initialUri = await _appLinks.getInitialLink();
+      if (initialUri != null) {
+        await _handleDeepLink(initialUri);
+      }
+    } catch (e) {
+      debugPrint('Error getting initial deep link: $e');
+    }
+
+    // Handle incoming links while app is running
+    _sub = _appLinks.uriLinkStream.listen((Uri uri) async {
+      await _handleDeepLink(uri);
+    }, onError: (err) {
+      debugPrint('Error listening to deep links: $err');
+    });
+  }
+
+  Future<void> _handleDeepLink(Uri uri) async {
+    // Handle both custom scheme (spareparts://product/123) and web URLs (https://sparehub.../product/123)
+    List<String> pathSegments = uri.pathSegments;
+    
+    // If it's a web URL and starts with /product, process it
+    if ((uri.scheme == 'spareparts' && uri.host == 'product') || 
+        (uri.scheme == 'https' && uri.host == 'sparehub-0t47.onrender.com' && pathSegments.isNotEmpty && pathSegments[0] == 'product')) {
+      
+      // Get product id - for custom scheme it's first path segment, for web it's second
+      String? productIdStr;
+      if (uri.scheme == 'spareparts') {
+        if (pathSegments.isNotEmpty) productIdStr = pathSegments[0];
+      } else {
+        if (pathSegments.length > 1) productIdStr = pathSegments[1];
+      }
+      
+      if (productIdStr != null) {
+        final productId = int.tryParse(productIdStr);
+        if (productId != null) {
+          final product = await _productService.getProductById(productId);
+          if (product != null && mounted) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (_isInitialized) {
+                _showProduct(product);
+              } else {
+                // Wait until initialization is complete
+                Future.doWhile(() async {
+                  await Future.delayed(const Duration(milliseconds: 100));
+                  return !_isInitialized;
+                }).then((_) {
+                  if (mounted) _showProduct(product);
+                });
+              }
+            });
+          }
+        }
+      }
+    }
+  }
+
+  void _showProduct(Product product) {
+    // Get the navigator key from MyApp to show the product
+    if (_navigatorKey.currentContext != null) {
+      showModalBottomSheet(
+        context: _navigatorKey.currentContext!,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => ProductDetailSheet(product: product),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
