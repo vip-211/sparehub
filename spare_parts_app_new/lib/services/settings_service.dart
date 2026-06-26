@@ -15,8 +15,6 @@ class SettingsService {
   static Stream<String> get onSettingsChanged =>
       _settingsChangedController.stream;
 
-  static bool _updateCheckedInThisSession = false;
-
   static bool isOutsideDeliveryHours() {
     final now = DateTime.now();
     final startHour = int.tryParse(getCachedRemoteSetting('DELIVERY_START_HOUR', '10')) ?? 10;
@@ -36,20 +34,15 @@ class SettingsService {
   }
 
   static Future<void> checkAppUpdate(BuildContext context, {bool force = false}) async {
-    if (_updateCheckedInThisSession && !force) return;
-
     try {
       final latestVersion = getCachedRemoteSetting('LATEST_APP_VERSION', '1.0.0');
-      final updateUrl = getCachedRemoteSetting('APP_UPDATE_URL', '');
+      final updateUrl = getCachedRemoteSetting('APP_UPDATE_URL', 'https://play.google.com/store/apps/details?id=com.partsmitra.app');
       final isForceUpdate = getCachedRemoteSetting('FORCE_UPDATE_REQUIRED', 'false') == 'true';
       
-      if (updateUrl.isEmpty) return;
-
       final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version;
 
       if (_isVersionNewer(currentVersion, latestVersion)) {
-        _updateCheckedInThisSession = true;
         if (!context.mounted) return;
         
         showDialog(
@@ -71,8 +64,13 @@ class SettingsService {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'A newer version ($latestVersion) of the app is available. Please update to continue using the latest features and security improvements.',
+                    'We are back with new update! Please update it now.',
                     style: const TextStyle(fontSize: 15),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Latest version: $latestVersion',
+                    style: TextStyle(color: Colors.grey.shade600),
                   ),
                   if (isForceUpdate)
                     const Padding(
