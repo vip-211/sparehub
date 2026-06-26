@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:share_plus/share_plus.dart';
 import '../providers/theme_provider.dart';
 import '../widgets/section_header.dart';
 
@@ -65,8 +66,27 @@ class UserSettingsScreen extends StatelessWidget {
             label: '${tp.textScale.toStringAsFixed(2)}x',
             onChanged: (v) => tp.setTextScale(v),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 16),
           const Divider(),
+          const SizedBox(height: 16),
+          const SectionHeader(
+            title: 'Share',
+            subtitle: 'Share the app with friends and family',
+          ),
+          const SizedBox(height: 8),
+          ElevatedButton.icon(
+            onPressed: () {
+              const playStoreUrl = 'https://play.google.com/store/apps/details?id=com.partsmitra.app';
+              SharePlus.instance.share(
+                ShareParams(
+                  text: 'Check out Parts Mitra - the spare parts management app!\n$playStoreUrl',
+                  subject: 'Parts Mitra App',
+                ),
+              );
+            },
+            icon: const Icon(Icons.share),
+            label: const Text('Share App'),
+          ),
           const SizedBox(height: 16),
           FutureBuilder<PackageInfo>(
             future: PackageInfo.fromPlatform(),
