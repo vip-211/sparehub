@@ -265,7 +265,8 @@ class SplashScreenWrapper extends StatefulWidget {
 }
 
 class _SplashScreenWrapperState extends State<SplashScreenWrapper> {
-  bool _isInitialized = false;
+  bool _isSplashComplete = false;
+  bool _isAuthLoaded = false;
   StreamSubscription<Uri>? _sub;
   final ProductService _productService = ProductService();
   late final AppLinks _appLinks;
@@ -325,13 +326,13 @@ class _SplashScreenWrapperState extends State<SplashScreenWrapper> {
           final product = await _productService.getProductById(productId);
           if (product != null && mounted) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (_isInitialized) {
+              if (_isSplashComplete && _isAuthLoaded) {
                 _showProduct(product);
               } else {
                 // Wait until initialization is complete
                 Future.doWhile(() async {
                   await Future.delayed(const Duration(milliseconds: 100));
-                  return !_isInitialized;
+                  return !(_isSplashComplete && _isAuthLoaded);
                 }).then((_) {
                   if (mounted) _showProduct(product);
                 });
@@ -357,11 +358,14 @@ class _SplashScreenWrapperState extends State<SplashScreenWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_isInitialized) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    _isAuthLoaded = !authProvider.isLoading;
+
+    if (!_isSplashComplete || !_isAuthLoaded) {
       return SplashScreen(
         onInitializationComplete: () {
           setState(() {
-            _isInitialized = true;
+            _isSplashComplete = true;
           });
         },
       );
