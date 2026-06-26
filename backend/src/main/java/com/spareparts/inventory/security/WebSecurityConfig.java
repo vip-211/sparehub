@@ -99,6 +99,8 @@ public class WebSecurityConfig {
                                 .requestMatchers("/api/settings/public").permitAll()
                                 .requestMatchers("/ws/**").permitAll()
                                 .requestMatchers("/error").permitAll()
+                                .requestMatchers("/product/**").permitAll()
+                                .requestMatchers("/.well-known/**").permitAll()
                                 .anyRequest().authenticated()
                 );
 
